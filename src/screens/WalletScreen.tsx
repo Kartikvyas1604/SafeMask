@@ -23,6 +23,9 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import Header from '../components/Header';
 import BalanceCard from '../components/BalanceCard';
 import AssetCard from '../components/AssetCard';
@@ -31,6 +34,8 @@ import TransactionItem from '../components/TransactionItem';
 import PrivacyStatus from '../components/PrivacyStatus';
 import MeshNetwork from '../components/MeshNetwork';
 import Statistics from '../components/Statistics';
+
+type WalletScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Wallet'>;
 
 // Wallet integration (would be passed via context/props in production)
 // import { useWallet } from '../contexts/WalletContext';
@@ -60,6 +65,8 @@ interface Transaction {
 }
 
 export default function WalletScreen() {
+  const navigation = useNavigation<WalletScreenNavigationProp>();
+  
   // State
   const [balanceHidden, setBalanceHidden] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -216,41 +223,15 @@ export default function WalletScreen() {
   };
 
   const handleSend = () => {
-    Alert.alert(
-      'Send Crypto',
-      'Choose transaction type:',
-      [
-        {
-          text: 'Public Transaction',
-          onPress: () => Alert.alert('Send', 'Standard transaction initiated'),
-        },
-        {
-          text: 'Private Transaction',
-          onPress: () => Alert.alert('Send', 'Confidential transaction with Bulletproofs range proof'),
-        },
-        {
-          text: 'Shielded (Zcash)',
-          onPress: () => Alert.alert('Send', 'Zcash shielded transaction with zk-SNARKs'),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    navigation.navigate('Send');
   };
 
   const handleReceive = () => {
-    Alert.alert(
-      'Receive Crypto',
-      'Generate receive address',
-      [
-        { text: 'Standard Address', onPress: () => {} },
-        { text: 'Stealth Address', onPress: () => Alert.alert('Receive', 'Stealth address generated for privacy') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    navigation.navigate('Receive');
   };
 
   const handleSwap = () => {
-    Alert.alert('Swap', 'Decentralized exchange integration coming soon!');
+    navigation.navigate('Swap');
   };
 
   const handleNFCPay = () => {

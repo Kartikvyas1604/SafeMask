@@ -31,6 +31,10 @@ export const initializeWallet = async () => {
 
     // Initialize bridge
     bridgeInstance = new CrossChainBridge({
+      sourceChain: 'ethereum' as any,
+      targetChain: 'polygon' as any,
+      privacyMode: 'shielded',
+      relayerEndpoint: 'https://relayer.meshcrypt.io',
       minConfirmations: 6,
     });
 

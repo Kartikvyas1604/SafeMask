@@ -1,20 +1,3 @@
-/**
- * Privacy-Preserving Analytics Engine
- * 
- * Implements homomorphic encryption and secure multi-party computation
- * for transaction insights without data exposure.
- * 
- * Features:
- * - Homomorphic computation on encrypted balances
- * - Zero-knowledge query processor
- * - Differential privacy aggregation
- * - Secure multi-party computation (SMPC)
- * 
- * Based on CipherMesh specification Layer 6
- */
-
-/* eslint-disable no-console, @typescript-eslint/no-unused-vars */
-
 import { sha256 } from '@noble/hashes/sha256';
 import { randomBytes } from '@noble/hashes/utils';
 import { CryptoUtils } from '../utils/crypto';
