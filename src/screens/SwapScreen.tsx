@@ -298,7 +298,7 @@ export default function SwapScreen({ navigation }: { navigation: any }) {
   const isCrossChain = fromToken.chain !== toToken.chain;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>

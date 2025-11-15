@@ -299,7 +299,7 @@ export default function WalletScreen() {
 
   if (loading && assets.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#A855F7" />
           <Text style={styles.loadingText}>Loading wallet...</Text>
@@ -309,7 +309,7 @@ export default function WalletScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
