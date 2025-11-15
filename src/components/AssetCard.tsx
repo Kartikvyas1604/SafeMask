@@ -8,9 +8,19 @@ interface AssetCardProps {
   value: string;
   icon: string;
   color: string;
+  chain?: string;
+  privacyEnabled?: boolean;
 }
 
-export default function AssetCard({ name, symbol, amount, value, icon, color }: AssetCardProps) {
+export default function AssetCard({
+  name,
+  symbol,
+  amount,
+  value,
+  icon,
+  color,
+  privacyEnabled = false,
+}: AssetCardProps) {
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.8}>
       <View style={styles.header}>
@@ -21,6 +31,11 @@ export default function AssetCard({ name, symbol, amount, value, icon, color }: 
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.symbol}>{symbol}</Text>
         </View>
+        {privacyEnabled && (
+          <View style={styles.privacyBadge}>
+            <Text style={styles.privacyText}>🔒</Text>
+          </View>
+        )}
       </View>
       <Text style={styles.amount}>{amount}</Text>
       <Text style={styles.value}>{value}</Text>
@@ -71,5 +86,11 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 13,
     color: '#9ca3af',
+  },
+  privacyBadge: {
+    marginLeft: 'auto',
+  },
+  privacyText: {
+    fontSize: 12,
   },
 });

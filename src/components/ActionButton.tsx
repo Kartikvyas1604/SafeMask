@@ -6,18 +6,19 @@ interface ActionButtonProps {
   icon: string;
   label: string;
   color: string;
+  onPress?: () => void;
 }
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   send: 'send',
   receive: 'arrow-back',
   swap: 'swap-horizontal',
   nfc: 'phone-portrait',
 };
 
-export default function ActionButton({ icon, label, color }: ActionButtonProps) {
+export default function ActionButton({ icon, label, color, onPress }: ActionButtonProps) {
   return (
-    <TouchableOpacity style={styles.button} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.button} activeOpacity={0.8} onPress={onPress}>
       <View style={[styles.iconContainer, { backgroundColor: color }]}>
         <Ionicons name={iconMap[icon]} size={24} color="#ffffff" />
       </View>

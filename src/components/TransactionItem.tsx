@@ -10,6 +10,8 @@ interface TransactionItemProps {
   description?: string;
   time: string;
   color: string;
+  isPrivate?: boolean;
+  confirmations?: number;
 }
 
 const getIcon = (type: string) => {
@@ -50,6 +52,8 @@ export default function TransactionItem({
   description,
   time,
   color,
+  isPrivate = false,
+  confirmations = 0,
 }: TransactionItemProps) {
   const isNegative = amount.startsWith('-');
 
@@ -60,7 +64,10 @@ export default function TransactionItem({
           <Ionicons name={getIcon(type)} size={20} color="#ffffff" />
         </View>
         <View>
-          <Text style={styles.title}>{getTitle(type, token)}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{getTitle(type, token)}</Text>
+            {isPrivate && <Text style={styles.privacyBadge}>🔒 Private</Text>}
+          </View>
           <Text style={styles.subtitle}>
             {description || (address ? `${type === 'send' ? 'To' : 'From'}: ${address}` : '')}
           </Text>
@@ -71,6 +78,9 @@ export default function TransactionItem({
           {amount} {token}
         </Text>
         <Text style={styles.time}>{time}</Text>
+        {confirmations > 0 && (
+          <Text style={styles.confirmations}>✓ {confirmations} conf</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -98,11 +108,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   title: {
     fontSize: 14,
     fontWeight: '500',
     color: '#ffffff',
-    marginBottom: 4,
+  },
+  privacyBadge: {
+    fontSize: 11,
+    color: '#A855F7',
   },
   subtitle: {
     fontSize: 13,
@@ -125,5 +144,10 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 13,
     color: '#9ca3af',
+  },
+  confirmations: {
+    fontSize: 11,
+    color: '#10B981',
+    marginTop: 2,
   },
 });
