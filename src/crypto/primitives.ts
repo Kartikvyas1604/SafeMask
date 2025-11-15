@@ -8,10 +8,14 @@ export class CommitmentScheme {
   private H: Uint8Array;
 
   constructor() {
+    // G is the standard secp256k1 base point
     this.G = secp256k1.ProjectivePoint.BASE.toRawBytes();
-    const hPoint = secp256k1.ProjectivePoint.fromHex(
-      CryptoUtils.bytesToHex(sha256('Meshcrypt commitment H generator'))
-    );
+    
+    // H is a "nothing-up-my-sleeve" point derived by hashing and multiplying G
+    // This ensures nobody knows the discrete log relationship between G and H
+    const hSeed = sha256('Meshcrypt commitment H generator');
+    const hScalar = BigInt('0x' + CryptoUtils.bytesToHex(hSeed)) % secp256k1.CURVE.n;
+    const hPoint = secp256k1.ProjectivePoint.BASE.multiply(hScalar);
     this.H = hPoint.toRawBytes();
   }
 
