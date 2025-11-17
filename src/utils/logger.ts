@@ -23,3 +23,9 @@ export class Logger {
     }
   }
 }
+
+// Export functions for easier usage
+export const debug = (...args: Parameters<typeof Logger.debug>) => Logger.debug(...args);
+export const info = (...args: Parameters<typeof Logger.info>) => Logger.info(...args);
+export const error = (...args: Parameters<typeof Logger.error>) => Logger.error(...args);
+export const warn = (...args: Parameters<typeof Logger.warn>) => Logger.warn(...args);

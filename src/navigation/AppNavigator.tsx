@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import WalletScreen from '../screens/WalletScreen';
+import EnhancedWalletScreen from '../screens/EnhancedWalletScreen';
 import SendScreen from '../screens/SendScreen';
 import ReceiveScreen from '../screens/ReceiveScreen';
 import SwapScreen from '../screens/SwapScreen';
@@ -69,7 +69,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ImportPrivateKey" component={ImportPrivateKeyScreen} />
       
       {/* Main Wallet Screens */}
-      <Stack.Screen name="Wallet" component={WalletScreen} />
+      <Stack.Screen name="Wallet" component={EnhancedWalletScreen} />
       <Stack.Screen name="Send" component={SendScreen} />
       <Stack.Screen name="Receive" component={ReceiveScreen} />
       <Stack.Screen name="Swap" component={SwapScreen} />
