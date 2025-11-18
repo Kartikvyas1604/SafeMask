@@ -1,4 +1,7 @@
 import { Balance, TransactionRequest, Address } from '../types';
+import { CircuitBreaker } from '../utils/circuitBreaker';
+import { retryAsync, RetryConfig } from '../utils/retry';
+import { NetworkError, RpcError, parseEthersError } from '../utils/errors';
 
 export interface BlockchainAdapter {
   getChainName(): string;
@@ -29,10 +32,19 @@ export interface BlockchainEvent {
 export abstract class BaseAdapter implements BlockchainAdapter {
   protected network: 'mainnet' | 'testnet' | 'polygon' | 'arbitrum' | 'optimism' | string;
   protected nodeUrl: string;
+  protected circuitBreaker: CircuitBreaker;
 
   constructor(network: string, nodeUrl: string) {
     this.network = network;
     this.nodeUrl = nodeUrl;
+    this.circuitBreaker = new CircuitBreaker(`${network}-rpc`, {
+      failureThreshold: 5,
+      resetTimeoutMs: 60000,
+      successThreshold: 2,
+      onStateChange: (state) => {
+        console.log(`[${network}] Circuit breaker state changed to: ${state}`);
+      },
+    });
   }
 
   abstract getChainName(): string;
@@ -44,24 +56,44 @@ export abstract class BaseAdapter implements BlockchainAdapter {
   abstract subscribeToEvents(callback: (event: BlockchainEvent) => void): void;
   abstract sync(): Promise<void>;
 
-  protected async retryRequest<T>(fn: () => Promise<T>, maxRetries: number = 3): Promise<T> {
-    let lastError: Error | undefined;
-    
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        return await fn();
-      } catch (error) {
-        lastError = error as Error;
-        if (i < maxRetries - 1) {
-          await this.delay(Math.pow(2, i) * 1000);
-        }
-      }
-    }
-    
-    throw lastError || new Error('Request failed after retries');
+  protected async retryRequest<T>(
+    fn: () => Promise<T>,
+    retryConfig?: Partial<RetryConfig>
+  ): Promise<T> {
+    return this.circuitBreaker.execute(async () => {
+      return retryAsync(fn, {
+        maxRetries: 3,
+        initialDelayMs: 1000,
+        maxDelayMs: 10000,
+        backoffMultiplier: 2,
+        jitterFactor: 0.1,
+        onRetry: (attempt, error, delayMs) => {
+          console.log(
+            `[${this.network}] Retry attempt ${attempt} after ${delayMs}ms`,
+            error instanceof Error ? error.message : String(error)
+          );
+        },
+        ...retryConfig,
+      });
+    });
   }
 
-  protected delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  /**
+   * Execute RPC request with error handling
+   */
+  protected async executeRpc<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await this.retryRequest(fn);
+    } catch (error) {
+      // Parse and throw structured error
+      throw parseEthersError(error);
+    }
+  }
+
+  /**
+   * Get circuit breaker stats
+   */
+  getCircuitStats() {
+    return this.circuitBreaker.getStats();
   }
 }

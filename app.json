@@ -15,8 +15,8 @@
       "bundleIdentifier": "com.kartikvyas.meshcrypt",
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Allow CipherMesh to use the camera for QR code scanning",
-        "NSLocationWhenInUseUsageDescription": "Allow CipherMesh to access your location for mesh network features"
+        "NSCameraUsageDescription": "Allow Meshcrypt to use the camera for QR code scanning",
+        "NSLocationWhenInUseUsageDescription": "Allow Meshcrypt to access your location for mesh network features"
       }
     },
     "android": {

@@ -90,7 +90,7 @@ export class EthereumAdapter extends BaseAdapter {
    * Get native token (ETH/MATIC/etc) balance
    */
   async getBalance(address: string): Promise<Balance> {
-    const balance = await this.retryRequest(() => 
+    const balance = await this.executeRpc(() => 
       this.provider.getBalance(address)
     );
 
@@ -111,11 +111,11 @@ export class EthereumAdapter extends BaseAdapter {
   async getTokenBalance(address: string, tokenAddress: string): Promise<Balance> {
     const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
     
-    const [balance, decimals, symbol] = await Promise.all([
+    const [balance, decimals, symbol] = await this.executeRpc(() => Promise.all([uteRpc(() => Promise.all([
       contract.balanceOf(address),
       contract.decimals(),
       contract.symbol()
-    ]);
+    ]));
 
     const formatted = ethers.formatUnits(balance, decimals);
 

@@ -1,6 +1,6 @@
 /**
  * Settings Screen - Complete wallet settings interface
- * Based on CipherMesh specification
+ * Based on Meshcrypt specification
  */
 
 import React, { useState } from 'react';
@@ -292,7 +292,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
               <Text style={styles.settingIcon}>ℹ️</Text>
               <View>
                 <Text style={styles.settingLabel}>Version</Text>
-                <Text style={styles.settingDescription}>1.0.0 (CipherMesh)</Text>
+                <Text style={styles.settingDescription}>1.0.0 (Meshcrypt)</Text>
               </View>
             </View>
           </View>
@@ -320,7 +320,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            CipherMesh Privacy-First Wallet
+            Meshcrypt Privacy-First Wallet
           </Text>
           <Text style={styles.footerSubtext}>
             Your keys, your crypto, your privacy

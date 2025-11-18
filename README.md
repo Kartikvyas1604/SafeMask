@@ -625,7 +625,7 @@ For questions, issues, or feature requests:
 
 ## ⚠️ Disclaimer
 
-**CipherMesh is experimental software under active development.**
+**Meshcrypt is experimental software under active development.**
 
 - ⚠️ Use at your own risk
 - 💰 Only use with test funds

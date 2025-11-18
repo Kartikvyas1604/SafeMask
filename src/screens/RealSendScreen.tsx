@@ -1,6 +1,6 @@
 /**
  * Real Send Screen - Actual blockchain transaction sending
- * Based on CipherMesh specification from prompt.txt
+ * Based on Meshcrypt specification from prompt.txt
  * Supports: ETH, MATIC, SOL, BTC, ZEC
  */
 

@@ -133,7 +133,7 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>CipherMesh</Text>
+          <Text style={styles.headerTitle}>Meshcrypt</Text>
           <Text style={styles.headerSubtitle}>
             {activeAccount?.name || 'Account 1'}
           </Text>

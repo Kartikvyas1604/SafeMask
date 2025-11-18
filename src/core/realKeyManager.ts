@@ -10,16 +10,21 @@ import { HDKey } from '@scure/bip32';
 import { sha256 } from '@noble/hashes/sha256';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
+import { getAddress } from 'ethers';
 
 export class RealKeyManager {
   private hdKey: HDKey | null = null;
   private mnemonic: string | null = null;
   
   /**
-   * REAL: Generate 24-word mnemonic using BIP-39
+   * REAL: Generate mnemonic using BIP-39
+   * @param strength - Entropy in bits (128 for 12 words, 256 for 24 words)
    */
-  static generateMnemonic(): string {
-    return generateMnemonic(wordlist, 256); // 256 bits = 24 words
+  static generateMnemonic(strength: number = 256): string {
+    if (strength !== 128 && strength !== 256) {
+      throw new Error('Strength must be 128 or 256 bits');
+    }
+    return generateMnemonic(wordlist, strength);
   }
   
   /**
@@ -50,7 +55,16 @@ export class RealKeyManager {
    * REAL: Derive Ethereum address (BIP-44: m/44'/60'/0'/0/index)
    */
   deriveEthereumKey(index: number = 0): { address: string; privateKey: string; publicKey: string } {
-    if (!this.hdKey) throw new Error('Not initialized');
+    if (!this.hdKey) throw new Error('Wallet not initialized');
+    
+    // Validate index
+    if (!Number.isInteger(index) || index < 0) {
+      throw new Error('Invalid derivation index: must be non-negative integer');
+    }
+    
+    if (index > 0x7FFFFFFF) { // 2^31 - 1 (BIP32 max non-hardened index)
+      throw new Error('Invalid derivation index: exceeds maximum value');
+    }
     
     // REAL BIP-44 path for Ethereum
     const path = `m/44'/60'/0'/0/${index}`;
@@ -61,11 +75,12 @@ export class RealKeyManager {
     // REAL: Ethereum address from public key
     const publicKeyUncompressed = secp256k1.ProjectivePoint.fromPrivateKey(child.privateKey).toRawBytes(false).slice(1);
     const addressHash = keccak_256(publicKeyUncompressed);
-    const address = '0x' + Buffer.from(addressHash.slice(-20)).toString('hex');
-    
+    const rawAddress = '0x' + Buffer.from(addressHash.slice(-20)).toString('hex');
+    const checksumAddress = getAddress(rawAddress);
+
     return {
-      address,
-      privateKey: '0x' + Buffer.from(child.privateKey).toString('hex'),
+      address: checksumAddress,
+      privateKey: Buffer.from(child.privateKey).toString('hex'),
       publicKey: '0x' + Buffer.from(child.publicKey!).toString('hex')
     };
   }
