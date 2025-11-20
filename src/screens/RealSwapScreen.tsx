@@ -1,8 +1,3 @@
-/**
- * Real Swap Screen - Production DEX Integration
- * REAL swaps on Uniswap V3 and QuickSwap
- */
-
 import React, { useState, useEffect } from 'react';
 import {
   View,

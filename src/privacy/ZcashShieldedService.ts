@@ -1,15 +1,3 @@
-/**
- * Zcash Shielded Transaction Service
- * Implements Sapling protocol for private transactions
- * 
- * Features:
- * - Shielded addresses (z-addresses)
- * - Transparent to shielded transactions
- * - Shielded to shielded transactions
- * - Zero-knowledge proofs (Groth16)
- * - Value commitment schemes
- */
-
 import { ethers } from 'ethers';
 import ZKProofService from './ZKProofService';
 import * as logger from '../utils/logger';

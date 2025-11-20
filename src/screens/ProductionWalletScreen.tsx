@@ -1,15 +1,3 @@
-/**
- * Production Wallet Screen - REAL Implementation
- * NO MOCK DATA - All data comes from real blockchain
- * 
- * Features:
- * - Real balance fetching from blockchain
- * - Real transaction broadcasting
- * - Real DEX swaps
- * - Real HD wallet with BIP39/32/44
- * - Block explorer verification
- */
-
 import React, { useState, useEffect } from 'react';
 import {
   View,

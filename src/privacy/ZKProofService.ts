@@ -1,28 +1,13 @@
-/**
- * Zero-Knowledge Proof Service
- * Real zk-SNARK proof generation using Circom circuits
- * 
- * Features:
- * - Groth16 proof generation
- * - Range proofs for private amounts
- * - Commitment schemes (Pedersen)
- * - Nullifier generation
- * - Proof verification
- */
-
 import { groth16 } from 'snarkjs';
 import { buildPoseidon } from 'circomlibjs';
 import * as logger from '../utils/logger';
 
 export interface PrivateTransactionInputs {
-  // Sender's secret
   senderSecret: string;
   
-  // Transaction details
   amount: string;
   recipient: string;
   
-  // Nullifier for double-spend prevention
   nullifier: string;
   
   // Commitment randomness
