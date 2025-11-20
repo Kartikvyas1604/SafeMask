@@ -7,7 +7,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { ZetarisWallet } from '../wallet';
-import { CrossChainBridge } from '../bridge/crossChainBridge';
+import { CrossChainBridge } from '../bridge/CrossChainBridge';
 import { TransactionRequest, Balance } from '../types';
 
 export interface SendTransactionParams {

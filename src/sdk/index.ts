@@ -17,7 +17,7 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { CrossChainBridge, Chain } from '../bridge/crossChainBridge';
+import CrossChainBridge from '../bridge/CrossChainBridge';
 import { PrivacyAnalyticsEngine, QueryType } from '../analytics/privacyEngine';
 import { MeshNetwork } from '../mesh/network';
 import { NFCTransactionManager } from '../nfc/handler';

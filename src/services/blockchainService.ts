@@ -206,20 +206,6 @@ export class BlockchainService {
       symbol,
     };
   }
-        balanceUSD: btcBalance * priceUSD,
-        symbol: 'BTC',
-      };
-    } catch (error) {
-      logger.error('Error fetching Bitcoin balance:', error);
-      return {
-        chain: 'Bitcoin',
-        address,
-        balance: '0.00000000',
-        balanceUSD: 0,
-        symbol: 'BTC',
-      };
-    }
-  }
 
   /**
    * Fetch all balances for a wallet

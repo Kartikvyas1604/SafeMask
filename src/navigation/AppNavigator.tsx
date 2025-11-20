@@ -18,7 +18,7 @@ import ImportWalletScreen from '../screens/ImportWalletScreen';
 import ImportPrivateKeyScreen from '../screens/ImportPrivateKeyScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { BridgeScreen } from '../screens/BridgeScreen';
-import { MeshNetworkScreen } from '../screens/MeshNetworkScreen';
+import MeshNetworkScreen from '../screens/MeshNetworkScreen';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -27,6 +27,9 @@ export type RootStackParamList = {
   ImportWallet: undefined;
   ImportPrivateKey: undefined;
   Wallet: undefined;
+  Send: { walletAddress: string; balances: any[] };
+  Receive: { walletAddress: string };
+  Swap: { walletAddress: string; balances: any[] };
   RealSend: { walletAddress: string; balances: any[] };
   RealReceive: { walletAddress: string };
   RealSwap: { walletAddress: string; balances: any[] };

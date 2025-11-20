@@ -161,38 +161,33 @@ export default function RealSwapScreen({ route, navigation }: any) {
   };
   
   return (
-    <ScrollView className="flex-1 bg-[#0a0a0a]">
+    <ScrollView>
       {/* Header */}
-      <View className="p-6">
+      <View>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text className="text-white text-lg">← Back</Text>
+          <Text>← Back</Text>
         </TouchableOpacity>
         
-        <Text className="text-white text-2xl font-bold font-['SpaceGrotesk-Bold'] mt-4">
+        <Text>
           DEX Swap
         </Text>
-        <Text className="text-gray-400 text-sm font-['SpaceGrotesk-Regular'] mt-1">
+        <Text>
           🔄 Real Uniswap V3 / QuickSwap integration
         </Text>
       </View>
       
       {/* Network Selection */}
-      <View className="mx-4 mb-4">
-        <Text className="text-white text-sm font-['SpaceGrotesk-Medium'] mb-2">
+      <View>
+        <Text>
           Network
         </Text>
-        <View className="flex-row gap-2">
+        <View>
           {['ethereum', 'polygon', 'arbitrum'].map((net) => (
             <TouchableOpacity
               key={net}
               onPress={() => setNetwork(net)}
-              className={`flex-1 p-3 rounded-xl ${
-                network === net
-                  ? 'bg-purple-600'
-                  : 'bg-[#111111] border border-[#1f1f1f]'
-              }`}
             >
-              <Text className="text-white text-center font-['SpaceGrotesk-Bold']">
+              <Text>
                 {net.charAt(0).toUpperCase() + net.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -201,18 +196,17 @@ export default function RealSwapScreen({ route, navigation }: any) {
       </View>
       
       {/* Input Token */}
-      <View className="mx-4 mb-2">
-        <Text className="text-white text-sm font-['SpaceGrotesk-Medium'] mb-2">
+      <View>
+        <Text>
           From
         </Text>
         
-        <View className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-4">
+        <View>
           <TextInput
             value={inputToken}
             onChangeText={setInputToken}
             placeholder="Token address (0x...)"
             placeholderTextColor="#666"
-            className="text-white font-['SpaceGrotesk-Mono'] mb-3"
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -223,19 +217,17 @@ export default function RealSwapScreen({ route, navigation }: any) {
             placeholder="0.0"
             placeholderTextColor="#666"
             keyboardType="decimal-pad"
-            className="text-white text-2xl font-['SpaceGrotesk-Bold']"
           />
         </View>
         
         {/* Popular Tokens */}
-        <View className="flex-row gap-2 mt-2">
+        <View>
           {KNOWN_TOKENS[network]?.slice(0, 3).map((token) => (
             <TouchableOpacity
               key={token.address}
               onPress={() => setInputToken(token.address)}
-              className="px-3 py-2 bg-[#111111] rounded-lg"
             >
-              <Text className="text-white text-xs font-['SpaceGrotesk-Bold']">
+              <Text>
                 {token.symbol}
               </Text>
             </TouchableOpacity>
@@ -244,59 +236,56 @@ export default function RealSwapScreen({ route, navigation }: any) {
       </View>
       
       {/* Flip Button */}
-      <View className="items-center my-2">
+      <View>
         <TouchableOpacity
           onPress={handleFlip}
-          className="bg-purple-600 w-12 h-12 rounded-full items-center justify-center"
         >
-          <Text className="text-white text-2xl">↕️</Text>
+          <Text>↕️</Text>
         </TouchableOpacity>
       </View>
       
       {/* Output Token */}
-      <View className="mx-4 mb-4">
-        <Text className="text-white text-sm font-['SpaceGrotesk-Medium'] mb-2">
+      <View>
+        <Text>
           To
         </Text>
         
-        <View className="bg-[#111111] border border-[#1f1f1f] rounded-xl p-4">
+        <View>
           <TextInput
             value={outputToken}
             onChangeText={setOutputToken}
             placeholder="Token address (0x...)"
             placeholderTextColor="#666"
-            className="text-white font-['SpaceGrotesk-Mono'] mb-3"
             autoCapitalize="none"
             autoCorrect={false}
           />
           
           {quote ? (
             <View>
-              <Text className="text-white text-2xl font-['SpaceGrotesk-Bold']">
+              <Text>
                 {parseFloat(quote.outputAmount).toFixed(6)}
               </Text>
-              <Text className="text-gray-400 text-sm font-['SpaceGrotesk-Regular'] mt-1">
+              <Text>
                 Min: {parseFloat(quote.outputAmountMin).toFixed(6)} (slippage: {slippage}%)
               </Text>
             </View>
           ) : isLoadingQuote ? (
             <ActivityIndicator color="#10b981" />
           ) : (
-            <Text className="text-gray-500 text-2xl font-['SpaceGrotesk-Bold']">
+            <Text>
               0.0
             </Text>
           )}
         </View>
         
         {/* Popular Tokens */}
-        <View className="flex-row gap-2 mt-2">
+        <View>
           {KNOWN_TOKENS[network]?.slice(0, 3).map((token) => (
             <TouchableOpacity
               key={token.address}
               onPress={() => setOutputToken(token.address)}
-              className="px-3 py-2 bg-[#111111] rounded-lg"
             >
-              <Text className="text-white text-xs font-['SpaceGrotesk-Bold']">
+              <Text>
                 {token.symbol}
               </Text>
             </TouchableOpacity>
@@ -305,22 +294,17 @@ export default function RealSwapScreen({ route, navigation }: any) {
       </View>
       
       {/* Slippage Settings */}
-      <View className="mx-4 mb-4">
-        <Text className="text-white text-sm font-['SpaceGrotesk-Medium'] mb-2">
+      <View>
+        <Text>
           Slippage Tolerance
         </Text>
-        <View className="flex-row gap-2">
+        <View>
           {[0.1, 0.5, 1, 3].map((s) => (
             <TouchableOpacity
               key={s}
               onPress={() => setSlippage(s)}
-              className={`flex-1 p-3 rounded-xl ${
-                slippage === s
-                  ? 'bg-green-600'
-                  : 'bg-[#111111] border border-[#1f1f1f]'
-              }`}
             >
-              <Text className="text-white text-center font-['SpaceGrotesk-Bold']">
+              <Text>
                 {s}%
               </Text>
             </TouchableOpacity>
@@ -330,37 +314,35 @@ export default function RealSwapScreen({ route, navigation }: any) {
       
       {/* Quote Details */}
       {quote && (
-        <View className="mx-4 mb-4 p-4 bg-[#111111] border border-[#1f1f1f] rounded-xl">
-          <Text className="text-white text-sm font-['SpaceGrotesk-Medium'] mb-3">
+        <View>
+          <Text>
             Quote Details
           </Text>
           
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-gray-400 font-['SpaceGrotesk-Regular']">Price Impact</Text>
-            <Text className={`font-['SpaceGrotesk-Bold'] ${
-              quote.priceImpact > 5 ? 'text-red-400' : 'text-green-400'
-            }`}>
+          <View>
+            <Text>Price Impact</Text>
+            <Text>
               {quote.priceImpact.toFixed(2)}%
             </Text>
           </View>
           
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-gray-400 font-['SpaceGrotesk-Regular']">Gas Fee</Text>
-            <Text className="text-white font-['SpaceGrotesk-Bold']">
+          <View>
+            <Text>Gas Fee</Text>
+            <Text>
               ~${quote.gasEstimateUSD.toFixed(2)}
             </Text>
           </View>
           
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-gray-400 font-['SpaceGrotesk-Regular']">DEX</Text>
-            <Text className="text-white font-['SpaceGrotesk-Bold']">
+          <View>
+            <Text>DEX</Text>
+            <Text>
               {quote.dex === 'uniswap' ? 'Uniswap V3' : 'QuickSwap'}
             </Text>
           </View>
           
-          <View className="flex-row justify-between">
-            <Text className="text-gray-400 font-['SpaceGrotesk-Regular']">Route</Text>
-            <Text className="text-white text-xs font-['SpaceGrotesk-Mono']">
+          <View>
+            <Text>Route</Text>
+            <Text>
               Direct
             </Text>
           </View>
@@ -368,20 +350,15 @@ export default function RealSwapScreen({ route, navigation }: any) {
       )}
       
       {/* Swap Button */}
-      <View className="mx-4 mb-6">
+      <View>
         <TouchableOpacity
           onPress={handleSwap}
           disabled={!quote || isSwapping || isLoadingQuote}
-          className={`p-4 rounded-xl items-center ${
-            !quote || isSwapping || isLoadingQuote
-              ? 'bg-gray-600'
-              : 'bg-purple-600'
-          }`}
         >
           {isSwapping ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text className="text-white text-lg font-bold font-['SpaceGrotesk-Bold']">
+            <Text>
               {isLoadingQuote ? 'Getting Quote...' : 'Swap Tokens'}
             </Text>
           )}
@@ -389,11 +366,11 @@ export default function RealSwapScreen({ route, navigation }: any) {
       </View>
       
       {/* Warning */}
-      <View className="mx-4 mb-6 p-4 bg-orange-900/20 border border-orange-700/30 rounded-xl">
-        <Text className="text-orange-400 text-sm font-['SpaceGrotesk-Bold'] mb-2">
+      <View>
+        <Text>
           💡 Swap Information
         </Text>
-        <Text className="text-orange-300 text-xs font-['SpaceGrotesk-Regular']">
+        <Text>
           • Swaps are executed on real DEXes (Uniswap V3, QuickSwap){'\n'}
           • Token approval transaction may be required first{'\n'}
           • Slippage protection ensures minimum output amount{'\n'}

@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { logger } from '../utils/logger';
+import * as logger from '../utils/logger';
 
 export interface AddressResolution {
   address: string;
@@ -94,28 +94,30 @@ class UnifiedAddressService {
       return resolutions;
     }
 
-    if (identifier.endsWith('.eth')) {
-      const ensResolution = await this.resolveENS(identifier);
+    const strIdentifier = String(identifier);
+
+    if (strIdentifier.endsWith('.eth')) {
+      const ensResolution = await this.resolveENS(strIdentifier);
       if (ensResolution) {
         resolutions.push(ensResolution);
       }
     }
 
-    if (identifier.includes('.')) {
-      const unsResolution = await this.resolveUNS(identifier);
+    if (strIdentifier.includes('.')) {
+      const unsResolution = await this.resolveUNS(strIdentifier);
       if (unsResolution) {
         resolutions.push(unsResolution);
       }
     }
 
-    if (identifier.startsWith('u1') || identifier.startsWith('zs')) {
-      const zcashResolution = await this.resolveZcash(identifier);
+    if (strIdentifier.startsWith('u1') || strIdentifier.startsWith('zs')) {
+      const zcashResolution = await this.resolveZcash(strIdentifier);
       if (zcashResolution) {
         resolutions.push(zcashResolution);
       }
     }
 
-    const customResolution = this.resolveFromAddressBook(identifier);
+    const customResolution = this.resolveFromAddressBook(strIdentifier);
     if (customResolution.length > 0) {
       resolutions.push(...customResolution);
     }
@@ -133,23 +135,11 @@ class UnifiedAddressService {
       const address = await this.ensProvider.resolveName(ensName);
       if (!address) return null;
 
-      const resolver = await this.ensProvider.getResolver(ensName);
-      let avatar: string | undefined;
-      
-      if (resolver) {
-        try {
-          avatar = await resolver.getAvatar();
-        } catch (err) {
-          logger.debug('No avatar found for ENS name');
-        }
-      }
-
       return {
         address,
         chain: 'ethereum',
         type: 'ens',
         displayName: ensName,
-        avatar: avatar?.url,
       };
     } catch (error) {
       logger.error('ENS resolution failed:', error);
@@ -351,20 +341,6 @@ class UnifiedAddressService {
     if (displayName) {
       resolution.displayName = displayName;
       resolution.type = displayName.endsWith('.eth') ? 'ens' : 'uns';
-    }
-
-    if (chain === 'ethereum' && displayName?.endsWith('.eth')) {
-      try {
-        const resolver = await this.ensProvider?.getResolver(displayName);
-        if (resolver) {
-          const avatar = await resolver.getAvatar();
-          if (avatar) {
-            resolution.avatar = avatar.url;
-          }
-        }
-      } catch (err) {
-        logger.debug('Could not fetch avatar');
-      }
     }
 
     return resolution;

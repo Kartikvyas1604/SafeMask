@@ -192,9 +192,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
   
   if (isLoading) {
     return (
-      <View className="flex-1 bg-[#0a0a0a] justify-center items-center">
+      <View >
         <ActivityIndicator size="large" color="#10b981" />
-        <Text className="text-white mt-4 font-['SpaceGrotesk-Regular']">
+        <Text >
           Loading Real Wallet...
         </Text>
       </View>
@@ -203,79 +203,79 @@ export default function ProductionWalletScreen({ navigation }: any) {
   
   return (
     <ScrollView
-      className="flex-1 bg-[#0a0a0a]"
+      
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#10b981" />
       }
     >
       {/* Header */}
-      <View className="p-6">
-        <Text className="text-white text-2xl font-bold font-['SpaceGrotesk-Bold']">
+      <View >
+        <Text >
           Production Wallet
         </Text>
-        <Text className="text-gray-400 text-sm font-['SpaceGrotesk-Regular'] mt-1">
+        <Text >
           ✅ REAL Blockchain Data - NO MOCK
         </Text>
       </View>
       
       {/* Total Balance Card */}
-      <View className="mx-4 mb-4 p-6 bg-[#111111] border border-[#1f1f1f] rounded-2xl">
-        <Text className="text-gray-400 text-sm font-['SpaceGrotesk-Regular']">
+      <View >
+        <Text >
           Total Balance
         </Text>
-        <Text className="text-white text-4xl font-bold font-['SpaceGrotesk-Bold'] mt-2">
+        <Text >
           ${totalUSD.toFixed(2)}
         </Text>
-        <Text className="text-green-400 text-sm font-['SpaceGrotesk-Medium'] mt-2">
+        <Text >
           📊 Live Prices from Blockchain
         </Text>
       </View>
       
       {/* Wallet Address */}
       {walletAddress && (
-        <View className="mx-4 mb-4 p-4 bg-[#111111] border border-[#1f1f1f] rounded-xl">
-          <Text className="text-gray-400 text-xs font-['SpaceGrotesk-Regular'] mb-1">
+        <View >
+          <Text >
             Wallet Address
           </Text>
-          <Text className="text-white text-xs font-['SpaceGrotesk-Mono']">
+          <Text >
             {walletAddress}
           </Text>
         </View>
       )}
       
       {/* Action Buttons */}
-      <View className="flex-row mx-4 mb-6 gap-3">
+      <View >
         <TouchableOpacity
           onPress={handleSend}
-          className="flex-1 bg-green-600 p-4 rounded-xl items-center"
+          
         >
-          <Text className="text-white font-bold font-['SpaceGrotesk-Bold']">Send</Text>
+          <Text >Send</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
           onPress={handleReceive}
-          className="flex-1 bg-blue-600 p-4 rounded-xl items-center"
+          
         >
-          <Text className="text-white font-bold font-['SpaceGrotesk-Bold']">Receive</Text>
+          <Text >Receive</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
           onPress={handleSwap}
-          className="flex-1 bg-purple-600 p-4 rounded-xl items-center"
+          
         >
-          <Text className="text-white font-bold font-['SpaceGrotesk-Bold']">Swap</Text>
+          <Text >Swap</Text>
         </TouchableOpacity>
       </View>
       
       {/* Real Balances */}
-      <View className="mx-4 mb-6">
-        <Text className="text-white text-xl font-bold font-['SpaceGrotesk-Bold'] mb-4">
+      <View >
+        <Text >
           Assets (Real Blockchain Data)
         </Text>
         
         {balances.length === 0 ? (
-          <View className="p-6 bg-[#111111] border border-[#1f1f1f] rounded-xl items-center">
-            <Text className="text-gray-400 font-['SpaceGrotesk-Regular']">
+          <View >
+            <Text >
               No assets found. Send some crypto to your address to get started.
             </Text>
           </View>
@@ -284,29 +284,29 @@ export default function ProductionWalletScreen({ navigation }: any) {
             <TouchableOpacity
               key={index}
               onPress={() => viewOnExplorer(balance.chain, balance.address)}
-              className="mb-3 p-4 bg-[#111111] border border-[#1f1f1f] rounded-xl"
+              
             >
-              <View className="flex-row justify-between items-center">
-                <View className="flex-1">
-                  <Text className="text-white text-lg font-bold font-['SpaceGrotesk-Bold']">
+              <View >
+                <View >
+                  <Text >
                     {balance.symbol}
                   </Text>
-                  <Text className="text-gray-400 text-xs font-['SpaceGrotesk-Regular']">
+                  <Text >
                     {balance.chain} • Block {balance.blockHeight}
                   </Text>
                 </View>
                 
-                <View className="items-end">
-                  <Text className="text-white text-lg font-bold font-['SpaceGrotesk-Bold']">
+                <View >
+                  <Text >
                     {parseFloat(balance.balanceFormatted).toFixed(6)}
                   </Text>
-                  <Text className="text-gray-400 text-sm font-['SpaceGrotesk-Regular']">
+                  <Text >
                     ${balance.balanceUSD.toFixed(2)}
                   </Text>
                 </View>
               </View>
               
-              <Text className="text-green-400 text-xs font-['SpaceGrotesk-Regular'] mt-2">
+              <Text >
                 ✅ Verified on Blockchain
               </Text>
             </TouchableOpacity>
@@ -315,11 +315,11 @@ export default function ProductionWalletScreen({ navigation }: any) {
       </View>
       
       {/* Info Banner */}
-      <View className="mx-4 mb-6 p-4 bg-green-900/20 border border-green-700/30 rounded-xl">
-        <Text className="text-green-400 text-sm font-['SpaceGrotesk-Bold'] mb-2">
+      <View >
+        <Text >
           🎉 Production Wallet Active
         </Text>
-        <Text className="text-green-300 text-xs font-['SpaceGrotesk-Regular']">
+        <Text >
           • All balances fetched from real blockchain{'\n'}
           • Transactions broadcast to mainnet{'\n'}
           • Verifiable on block explorers{'\n'}

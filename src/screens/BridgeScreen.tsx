@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { BridgeService } from '../bridge/BridgeService';
-import { ZkProofService } from '../privacy/zkProofService';
+import ZKProofService from '../privacy/ZKProofService';
 
 interface Network {
   id: string;

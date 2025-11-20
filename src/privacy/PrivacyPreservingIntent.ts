@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { logger } from '../utils/logger';
+import * as logger from '../utils/logger';
 
 export interface PrivateIntent {
   id: string;

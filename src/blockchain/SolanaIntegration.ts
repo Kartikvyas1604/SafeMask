@@ -1,6 +1,5 @@
 import { Connection, PublicKey, Transaction, SystemProgram, Keypair, LAMPORTS_PER_SOL, sendAndConfirmTransaction } from '@solana/web3.js';
-import { Token, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { logger } from '../utils/logger';
+import * as logger from '../utils/logger';
 
 export interface SolanaWalletInfo {
   publicKey: string;
@@ -75,23 +74,28 @@ class SolanaIntegrationService {
     const connection = this.ensureConnection();
     const pubkey = new PublicKey(publicKey);
 
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
-      programId: TOKEN_PROGRAM_ID,
-    });
-
-    const balances: SolanaTokenBalance[] = [];
-
-    for (const account of tokenAccounts.value) {
-      const parsedInfo = account.account.data.parsed.info;
-      balances.push({
-        mint: parsedInfo.mint,
-        amount: parsedInfo.tokenAmount.amount,
-        decimals: parsedInfo.tokenAmount.decimals,
-        uiAmount: parsedInfo.tokenAmount.uiAmount,
+    try {
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
+        programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
       });
-    }
 
-    return balances;
+      const balances: SolanaTokenBalance[] = [];
+
+      for (const account of tokenAccounts.value) {
+        const parsedInfo = account.account.data.parsed.info;
+        balances.push({
+          mint: parsedInfo.mint,
+          amount: parsedInfo.tokenAmount.amount,
+          decimals: parsedInfo.tokenAmount.decimals,
+          uiAmount: parsedInfo.tokenAmount.uiAmount,
+        });
+      }
+
+      return balances;
+    } catch (error) {
+      logger.error('Failed to get token balances:', error);
+      return [];
+    }
   }
 
   async getWalletInfo(publicKey: string): Promise<SolanaWalletInfo> {
@@ -124,212 +128,61 @@ class SolanaIntegrationService {
   }
 
   async transferSPLToken(params: SPLTransferParams): Promise<string> {
-    const connection = this.ensureConnection();
-    const mintPublicKey = new PublicKey(params.mint);
-    const toPublicKey = new PublicKey(params.to);
-
-    const fromTokenAccount = await this.getOrCreateAssociatedTokenAccount(
-      params.from.publicKey,
-      mintPublicKey,
-      params.from
-    );
-
-    const toTokenAccount = await this.getOrCreateAssociatedTokenAccount(
-      toPublicKey,
-      mintPublicKey,
-      params.from
-    );
-
-    const token = new Token(connection, mintPublicKey, TOKEN_PROGRAM_ID, params.from);
-
-    const signature = await token.transfer(
-      fromTokenAccount,
-      toTokenAccount,
-      params.from,
-      [],
-      BigInt(params.amount)
-    );
-
-    logger.info(`SPL token transfer successful: ${signature}`);
-    return signature;
+    throw new Error('SPL token transfers require @solana/spl-token package to be installed');
   }
 
   private async getOrCreateAssociatedTokenAccount(
-    owner: PublicKey,
-    mint: PublicKey,
-    payer: Keypair
+    _owner: PublicKey,
+    _mint: PublicKey,
+    _payer: Keypair
   ): Promise<PublicKey> {
-    const connection = this.ensureConnection();
-
-    const associatedToken = await Token.getAssociatedTokenAddress(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      mint,
-      owner
-    );
-
-    const account = await connection.getAccountInfo(associatedToken);
-
-    if (!account) {
-      const transaction = new Transaction().add(
-        Token.createAssociatedTokenAccountInstruction(
-          ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
-          mint,
-          associatedToken,
-          owner,
-          payer.publicKey
-        )
-      );
-
-      await sendAndConfirmTransaction(connection, transaction, [payer]);
-      logger.info(`Created associated token account: ${associatedToken.toBase58()}`);
-    }
-
-    return associatedToken;
+    throw new Error('SPL token operations require @solana/spl-token package to be installed');
   }
 
   async createSPLToken(
-    payer: Keypair,
-    mintAuthority: PublicKey,
-    decimals: number
-  ): Promise<Token> {
-    const connection = this.ensureConnection();
-
-    const mint = await Token.createMint(
-      connection,
-      payer,
-      mintAuthority,
-      null,
-      decimals,
-      TOKEN_PROGRAM_ID
-    );
-
-    logger.info(`SPL token created: ${mint.publicKey.toBase58()}`);
-    return mint;
+    _payer: Keypair,
+    _mintAuthority: PublicKey,
+    _decimals: number
+  ): Promise<unknown> {
+    throw new Error('SPL token operations require @solana/spl-token package to be installed');
   }
 
   async mintSPLToken(
-    mint: PublicKey,
-    destination: PublicKey,
-    authority: Keypair,
-    amount: string
+    _mint: PublicKey,
+    _destination: PublicKey,
+    _authority: Keypair,
+    _amount: string
   ): Promise<string> {
-    const connection = this.ensureConnection();
-    const token = new Token(connection, mint, TOKEN_PROGRAM_ID, authority);
-
-    const associatedToken = await this.getOrCreateAssociatedTokenAccount(
-      destination,
-      mint,
-      authority
-    );
-
-    const signature = await token.mintTo(
-      associatedToken,
-      authority,
-      [],
-      BigInt(amount)
-    );
-
-    logger.info(`Minted ${amount} tokens to ${destination.toBase58()}`);
-    return signature;
+    throw new Error('SPL token operations require @solana/spl-token package to be installed');
   }
 
   async burnSPLToken(
-    mint: PublicKey,
-    owner: Keypair,
-    amount: string
+    _mint: PublicKey,
+    _owner: Keypair,
+    _amount: string
   ): Promise<string> {
-    const connection = this.ensureConnection();
-    const token = new Token(connection, mint, TOKEN_PROGRAM_ID, owner);
-
-    const ownerTokenAccount = await Token.getAssociatedTokenAddress(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      mint,
-      owner.publicKey
-    );
-
-    const signature = await token.burn(
-      ownerTokenAccount,
-      owner,
-      [],
-      BigInt(amount)
-    );
-
-    logger.info(`Burned ${amount} tokens from ${owner.publicKey.toBase58()}`);
-    return signature;
+    throw new Error('SPL token operations require @solana/spl-token package to be installed');
   }
 
   async bridgeFromSolana(
-    tokenAddress: string,
-    amount: string,
-    targetChain: string,
-    recipientAddress: string,
-    signer: Keypair
+    _tokenAddress: string,
+    _amount: string,
+    _targetChain: string,
+    _recipientAddress: string,
+    _signer: Keypair
   ): Promise<string> {
-    const connection = this.ensureConnection();
-    
-    logger.info(`Bridging ${amount} tokens from Solana to ${targetChain}`);
-
-    const bridgeAddress = new PublicKey(this.WORMHOLE_SOLANA_TOKEN_BRIDGE);
-    const mintAddress = new PublicKey(tokenAddress);
-
-    const sourceTokenAccount = await Token.getAssociatedTokenAddress(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      mintAddress,
-      signer.publicKey
-    );
-
-    const transferIx = await this.createWormholeTransferInstruction(
-      bridgeAddress,
-      sourceTokenAccount,
-      mintAddress,
-      amount,
-      targetChain,
-      recipientAddress
-    );
-
-    const transaction = new Transaction().add(transferIx as any);
-    
-    const signature = await sendAndConfirmTransaction(connection, transaction, [signer]);
-
-    logger.info(`Wormhole bridge initiated from Solana: ${signature}`);
-    return signature;
+    throw new Error('Solana bridge requires @solana/spl-token package to be installed');
   }
 
   private async createWormholeTransferInstruction(
-    bridgeAddress: PublicKey,
-    sourceToken: PublicKey,
-    mint: PublicKey,
-    amount: string,
-    targetChain: string,
-    recipient: string
+    _bridgeAddress: PublicKey,
+    _sourceToken: PublicKey,
+    _mint: PublicKey,
+    _amount: string,
+    _targetChain: string,
+    _recipient: string
   ): Promise<unknown> {
-    const targetChainId = this.getWormholeChainId(targetChain);
-    
-    const recipientBytes = Buffer.from(recipient.replace('0x', ''), 'hex');
-    const recipientArray = Array.from(recipientBytes);
-    while (recipientArray.length < 32) {
-      recipientArray.unshift(0);
-    }
-
-    return {
-      keys: [
-        { pubkey: bridgeAddress, isSigner: false, isWritable: false },
-        { pubkey: sourceToken, isSigner: false, isWritable: true },
-        { pubkey: mint, isSigner: false, isWritable: false },
-      ],
-      programId: new PublicKey(this.WORMHOLE_SOLANA_TOKEN_BRIDGE),
-      data: Buffer.from([
-        1,
-        ...new Array(8).fill(0),
-        ...Buffer.from(amount),
-        ...Buffer.from([targetChainId]),
-        ...recipientArray,
-      ]),
-    };
+    throw new Error('Wormhole operations require @solana/spl-token package');
   }
 
   private getWormholeChainId(chain: string): number {

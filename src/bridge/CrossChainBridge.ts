@@ -172,7 +172,7 @@ export class CrossChainBridge {
 
       logger.info('Building Merkle proof for transaction inclusion...');
 
-      const blockTransactions = block.transactions;
+      const blockTransactions = Array.from(block.transactions);
       const txIndex = blockTransactions.indexOf(lockEvent.transactionHash);
 
       if (txIndex === -1) {

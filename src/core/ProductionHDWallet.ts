@@ -114,7 +114,7 @@ export class ProductionHDWallet {
     this.masterKey = bip32.fromSeed(this.seed);
     
     logger.info(`✅ Master key derived`);
-    logger.info(`   Master Public Key: ${this.masterKey.publicKey.toString('hex').substring(0, 16)}...`);
+    logger.info(`   Master Public Key: ${Buffer.from(this.masterKey.publicKey).toString('hex').substring(0, 16)}...`);
     
     // Initialize default accounts for each chain
     await this.deriveAccounts('ethereum', 0, 1);
@@ -164,9 +164,10 @@ export class ProductionHDWallet {
       // Derive address based on chain
       if (chain === 'ethereum' || chain === 'polygon' || chain === 'arbitrum') {
         // Ethereum-compatible chains
-        const wallet = new ethers.Wallet(child.privateKey);
+        const pkHex = Buffer.from(child.privateKey).toString('hex');
+        privateKey = '0x' + pkHex;
+        const wallet = new ethers.Wallet(privateKey);
         address = wallet.address;
-        privateKey = wallet.privateKey;
       } else if (chain === 'bitcoin') {
         // Bitcoin address (simplified - use bitcoinjs-lib for production)
         const bitcoin = require('bitcoinjs-lib');
@@ -175,7 +176,8 @@ export class ProductionHDWallet {
           network: bitcoin.networks.bitcoin,
         });
         address = btcAddress || '';
-        privateKey = child.privateKey.toString('hex');
+        const pkHex = Buffer.from(child.privateKey).toString('hex');
+        privateKey = pkHex;
       } else {
         throw new Error(`Unsupported chain: ${chain}`);
       }
@@ -184,7 +186,7 @@ export class ProductionHDWallet {
         index: accountIndex,
         address,
         privateKey,
-        publicKey: child.publicKey.toString('hex'),
+        publicKey: Buffer.from(child.publicKey).toString('hex'),
         derivationPath,
         chain,
       };
