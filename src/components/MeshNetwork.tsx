@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Colors } from '../design/colors';
 
 export default function MeshNetwork() {
   const protocols = [
@@ -36,16 +37,16 @@ export default function MeshNetwork() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111111',
+    backgroundColor: Colors.card,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
+    color: Colors.textPrimary,
     marginBottom: 16,
   },
   progressSection: {
@@ -58,12 +59,12 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   count: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#ffffff',
+    color: Colors.textPrimary,
   },
   progressBar: {
     height: 8,
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#A855F7',
+    backgroundColor: Colors.accent,
     borderRadius: 4,
   },
   protocolsList: {
@@ -86,11 +87,11 @@ const styles = StyleSheet.create({
   },
   protocolName: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   protocolCount: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#ffffff',
+    color: Colors.textPrimary,
   },
 });

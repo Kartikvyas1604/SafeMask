@@ -8,15 +8,34 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Modal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import RealDEXSwapService, { SwapQuote } from '../blockchain/RealDEXSwapService';
-import TokenService, { KNOWN_TOKENS } from '../blockchain/TokenService';
-import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
-import { RealBalance } from '../blockchain/RealBlockchainService';
+import { KNOWN_TOKENS } from '../blockchain/TokenService';
+import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import ChainIcon from '../components/ChainIcon';
+import BottomTabBar from '../components/BottomTabBar';
+import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
+import { RootStackParamList } from '../navigation/AppNavigator';
 
-export default function RealSwapScreen({ route, navigation }: any) {
-  const { walletAddress, balances } = route.params;
+type RealSwapScreenRouteProp = RouteProp<RootStackParamList, 'RealSwap'>;
+type RealSwapScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RealSwap'>;
+
+export default function RealSwapScreen() {
+  const navigation = useNavigation<RealSwapScreenNavigationProp>();
+  const route = useRoute<RealSwapScreenRouteProp>();
+  const insets = useSafeAreaInsets();
+  // Handle optional route params - may not be provided when navigating from tab bar
+  const routeParams = route?.params || {};
+  const { walletAddress: paramWalletAddress } = routeParams;
   
   const [inputToken, setInputToken] = useState<string>('');
   const [outputToken, setOutputToken] = useState<string>('');
@@ -26,9 +45,37 @@ export default function RealSwapScreen({ route, navigation }: any) {
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [network, setNetwork] = useState('ethereum');
+  const [walletAddress, setWalletAddress] = useState<string>(paramWalletAddress || '');
+  const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
+  const [showInputTokenPicker, setShowInputTokenPicker] = useState(false);
   
   const dexService = RealDEXSwapService;
   const hdWallet = new ZetarisWalletCore();
+  
+  // Load wallet data if not provided via params
+  useEffect(() => {
+    if (!walletAddress) {
+      loadWalletData();
+    }
+  }, []);
+  
+  const loadWalletData = async () => {
+    try {
+      const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
+                           await AsyncStorage.getItem('Zetaris_wallet');
+      
+      if (walletDataStr) {
+        const walletData = JSON.parse(walletDataStr);
+        await hdWallet.importWallet(walletData.seedPhrase);
+        const ethAccount = hdWallet.getAccount(ChainType.ETHEREUM);
+        if (ethAccount) {
+          setWalletAddress(ethAccount.address);
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to load wallet data:', error);
+    }
+  };
   
   /**
    * Get swap quote when inputs change
@@ -61,9 +108,10 @@ export default function RealSwapScreen({ route, navigation }: any) {
       setQuote(swapQuote);
       
       logger.info(`✅ Quote received: ${swapQuote.outputAmount}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(`Failed to get quote:`, error);
-      Alert.alert('Error', error.message || 'Failed to get swap quote');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get swap quote';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoadingQuote(false);
     }
@@ -111,8 +159,14 @@ export default function RealSwapScreen({ route, navigation }: any) {
     try {
       logger.info(`🔄 Executing REAL swap...`);
       
-      // Get private key
-      const account = hdWallet.getPrimaryAccount(network);
+      // Get private key - map network string to ChainType
+      const chainTypeMap: { [key: string]: ChainType } = {
+        ethereum: ChainType.ETHEREUM,
+        polygon: ChainType.POLYGON,
+        arbitrum: ChainType.ETHEREUM, // Arbitrum uses Ethereum accounts
+      };
+      const chainType = chainTypeMap[network] || ChainType.ETHEREUM;
+      const account = hdWallet.getAccount(chainType);
       if (!account) {
         throw new Error('Account not found');
       }
@@ -143,9 +197,10 @@ export default function RealSwapScreen({ route, navigation }: any) {
           },
         ]
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(`❌ Swap failed:`, error);
-      Alert.alert('Error', error.message || 'Swap failed');
+      const errorMessage = error instanceof Error ? error.message : 'Swap failed';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSwapping(false);
     }
@@ -161,508 +216,694 @@ export default function RealSwapScreen({ route, navigation }: any) {
     setInputAmount('');
   };
   
+  // Get token symbol from address
+  const getTokenSymbol = (address: string) => {
+    if (!address) return '';
+    const token = KNOWN_TOKENS[network]?.find(t => t.address.toLowerCase() === address.toLowerCase());
+    return token?.symbol || '';
+  };
+  
+  const inputTokenSymbol = getTokenSymbol(inputToken);
+  const outputTokenSymbol = getTokenSymbol(outputToken);
+
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header - Matching home page style */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Swap</Text>
-          <Text style={styles.headerSubtitle}>🔄 Real DEX Integration</Text>
-        </View>
-        
-        <View style={{ width: 40 }} />
-      </View>
-      
-      {/* Network Selection */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Network</Text>
-        <View style={styles.networkButtons}>
-          {['ethereum', 'polygon', 'arbitrum'].map((net) => (
-            <TouchableOpacity
-              key={net}
-              style={[
-                styles.networkButton,
-                network === net && styles.networkButtonActive,
-              ]}
-              onPress={() => setNetwork(net)}
-            >
-              <Text style={[
-                styles.networkButtonText,
-                network === net && styles.networkButtonTextActive,
-              ]}>
-                {net.charAt(0).toUpperCase() + net.slice(1)}
-              </Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerRight}>
+            <View style={styles.profileContainer}>
+              <View style={styles.profileIcon}>
+                <Ionicons name="person" size={20} color={Colors.white} />
+              </View>
+            </View>
+            <TouchableOpacity style={styles.notificationIcon}>
+              <Ionicons name="notifications-outline" size={24} color={Colors.white} />
             </TouchableOpacity>
-          ))}
+          </View>
         </View>
       </View>
-      
-      {/* Input Token Card */}
-      <View style={styles.tokenCard}>
-        <View style={styles.tokenHeader}>
-          <Text style={styles.tokenLabel}>From</Text>
-          <Text style={styles.tokenBalance}>Balance: 0.0</Text>
+
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Network Selection - Dropdown */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Network</Text>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={() => setShowNetworkDropdown(true)}
+          >
+            <Text style={styles.dropdownButtonText}>
+              {network.charAt(0).toUpperCase() + network.slice(1)}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
         </View>
         
-        <View style={styles.tokenInputRow}>
-          <TextInput
-            style={styles.tokenAmountInput}
-            value={inputAmount}
-            onChangeText={setInputAmount}
-            placeholder="0.0"
-            placeholderTextColor="#666"
-            keyboardType="decimal-pad"
-          />
+        {/* Amount Input Card */}
+        <View style={styles.inputCard}>
+          <View style={styles.inputRow}>
+            <View style={styles.inputLeft}>
+              <TextInput
+                style={styles.amountInput}
+                value={inputAmount}
+                onChangeText={setInputAmount}
+                placeholder="0"
+                placeholderTextColor={Colors.textTertiary}
+                keyboardType="decimal-pad"
+                selectTextOnFocus
+              />
+              <Text style={styles.tokenSymbol}>{inputTokenSymbol || 'TOKEN'}</Text>
+            </View>
+          </View>
         </View>
         
-        <View style={styles.tokenAddressRow}>
+        {/* Swapping Icon */}
+        <View style={styles.flipContainer}>
+          <TouchableOpacity style={styles.flipButton} onPress={handleFlip}>
+            <Ionicons name="swap-vertical" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Select Token Dropdown */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Select Token</Text>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={() => setShowInputTokenPicker(true)}
+          >
+            <Text style={styles.dropdownButtonText}>
+              {inputTokenSymbol || 'Select token'}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Token Address Input */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Token Address</Text>
           <TextInput
             style={styles.tokenAddressInput}
             value={inputToken}
             onChangeText={setInputToken}
             placeholder="Token address (0x...)"
-            placeholderTextColor="#666"
+            placeholderTextColor={Colors.textTertiary}
             autoCapitalize="none"
             autoCorrect={false}
           />
         </View>
         
-        {/* Popular Tokens */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tokenList}>
-          {KNOWN_TOKENS[network]?.slice(0, 4).map((token) => (
-            <TouchableOpacity
-              key={token.address}
-              style={styles.tokenChip}
-              onPress={() => setInputToken(token.address)}
-            >
-              <Text style={styles.tokenChipText}>{token.symbol}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-      
-      {/* Flip Button */}
-      <View style={styles.flipContainer}>
-        <TouchableOpacity style={styles.flipButton} onPress={handleFlip}>
-          <Text style={styles.flipIcon}>↕️</Text>
-        </TouchableOpacity>
-      </View>
-      
-      {/* Output Token Card */}
-      <View style={styles.tokenCard}>
-        <View style={styles.tokenHeader}>
-          <Text style={styles.tokenLabel}>To</Text>
-          {quote && (
-            <Text style={styles.tokenBalance}>Min: {parseFloat(quote.outputAmountMin).toFixed(4)}</Text>
-          )}
-        </View>
-        
-        <View style={styles.tokenOutputRow}>
-          {isLoadingQuote ? (
-            <ActivityIndicator size="small" color="#a855f7" />
-          ) : quote ? (
-            <Text style={styles.tokenOutputAmount}>
-              {parseFloat(quote.outputAmount).toFixed(6)}
-            </Text>
-          ) : (
-            <Text style={styles.tokenOutputPlaceholder}>0.0</Text>
-          )}
-        </View>
-        
-        <View style={styles.tokenAddressRow}>
+        {/* Output Token Address Input */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Output Token Address</Text>
           <TextInput
             style={styles.tokenAddressInput}
             value={outputToken}
             onChangeText={setOutputToken}
             placeholder="Token address (0x...)"
-            placeholderTextColor="#666"
+            placeholderTextColor={Colors.textTertiary}
             autoCapitalize="none"
             autoCorrect={false}
           />
         </View>
         
-        {/* Popular Tokens */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tokenList}>
-          {KNOWN_TOKENS[network]?.slice(0, 4).map((token) => (
-            <TouchableOpacity
-              key={token.address}
-              style={styles.tokenChip}
-              onPress={() => setOutputToken(token.address)}
-            >
-              <Text style={styles.tokenChipText}>{token.symbol}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-      
-      {/* Slippage Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Slippage Tolerance</Text>
-        <View style={styles.slippageButtons}>
-          {[0.1, 0.5, 1, 3].map((s) => (
-            <TouchableOpacity
-              key={s}
-              style={[
-                styles.slippageButton,
-                slippage === s && styles.slippageButtonActive,
-              ]}
-              onPress={() => setSlippage(s)}
-            >
-              <Text style={[
-                styles.slippageButtonText,
-                slippage === s && styles.slippageButtonTextActive,
-              ]}>
-                {s}%
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-      
-      {/* Quote Details */}
-      {quote && (
-        <View style={styles.quoteCard}>
-          <Text style={styles.quoteTitle}>Quote Details</Text>
-          
-          <View style={styles.quoteRow}>
-            <Text style={styles.quoteLabel}>Price Impact</Text>
-            <Text style={[
-              styles.quoteValue,
-              quote.priceImpact > 5 && styles.quoteValueWarning,
-            ]}>
-              {quote.priceImpact.toFixed(2)}%
-            </Text>
+        {/* Output Amount Display */}
+        {quote && (
+          <View style={styles.section}>
+            <View style={styles.outputCard}>
+              <Text style={styles.outputLabel}>You will receive</Text>
+              {isLoadingQuote ? (
+                <ActivityIndicator size="small" color={Colors.accent} />
+              ) : (
+                <Text style={styles.outputAmount}>
+                  {parseFloat(quote.outputAmount).toFixed(6)} {outputTokenSymbol}
+                </Text>
+              )}
+              {quote && (
+                <Text style={styles.outputMin}>
+                  Min: {parseFloat(quote.outputAmountMin).toFixed(6)} {outputTokenSymbol}
+                </Text>
+              )}
+            </View>
           </View>
-          
-          <View style={styles.quoteRow}>
-            <Text style={styles.quoteLabel}>Gas Fee</Text>
-            <Text style={styles.quoteValue}>
-              ~${quote.gasEstimateUSD.toFixed(2)}
-            </Text>
-          </View>
-          
-          <View style={styles.quoteRow}>
-            <Text style={styles.quoteLabel}>DEX</Text>
-            <Text style={styles.quoteValue}>
-              {quote.dex === 'uniswap' ? 'Uniswap V3' : 'QuickSwap'}
-            </Text>
-          </View>
-          
-          <View style={styles.quoteRow}>
-            <Text style={styles.quoteLabel}>Route</Text>
-            <Text style={styles.quoteValue}>Direct</Text>
-          </View>
-        </View>
-      )}
-      
-      {/* Swap Button */}
-      <TouchableOpacity
-        style={[
-          styles.swapButton,
-          (!quote || isSwapping || isLoadingQuote) && styles.swapButtonDisabled,
-        ]}
-        onPress={handleSwap}
-        disabled={!quote || isSwapping || isLoadingQuote}
-      >
-        {isSwapping ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.swapButtonText}>
-            {isLoadingQuote ? 'Getting Quote...' : 'Swap Tokens'}
-          </Text>
         )}
-      </TouchableOpacity>
+        
+        {/* Slippage Settings */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Slippage Tolerance</Text>
+          <View style={styles.slippageButtons}>
+            {[0.1, 0.5, 1, 3].map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[
+                  styles.slippageButton,
+                  slippage === s && styles.slippageButtonActive,
+                ]}
+                onPress={() => setSlippage(s)}
+              >
+                <Text style={[
+                  styles.slippageButtonText,
+                  slippage === s && styles.slippageButtonTextActive,
+                ]}>
+                  {s}%
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        
+        {/* Quote Details */}
+        {quote && (
+          <View style={styles.quoteCard}>
+            <Text style={styles.quoteTitle}>Quote Details</Text>
+            
+            <View style={styles.quoteRow}>
+              <Text style={styles.quoteLabel}>Price Impact</Text>
+              <Text style={[
+                styles.quoteValue,
+                quote.priceImpact > 5 && styles.quoteValueWarning,
+              ]}>
+                {quote.priceImpact.toFixed(2)}%
+              </Text>
+            </View>
+            
+            <View style={styles.quoteRow}>
+              <Text style={styles.quoteLabel}>Gas Fee</Text>
+              <Text style={styles.quoteValue}>
+                ~${quote.gasEstimateUSD.toFixed(2)}
+              </Text>
+            </View>
+            
+            <View style={styles.quoteRow}>
+              <Text style={styles.quoteLabel}>DEX</Text>
+              <Text style={styles.quoteValue}>
+                {quote.dex === 'uniswap' ? 'Uniswap V3' : 'QuickSwap'}
+              </Text>
+            </View>
+            
+            <View style={styles.quoteRow}>
+              <Text style={styles.quoteLabel}>Route</Text>
+              <Text style={styles.quoteValue}>Direct</Text>
+            </View>
+          </View>
+        )}
+        
+        {/* Swap Button */}
+        <TouchableOpacity
+          style={[
+            styles.swapButton,
+            (!quote || isSwapping || isLoadingQuote) && styles.swapButtonDisabled,
+          ]}
+          onPress={handleSwap}
+          disabled={!quote || isSwapping || isLoadingQuote}
+        >
+          {isSwapping ? (
+            <ActivityIndicator color={Colors.white} />
+          ) : (
+            <Text style={styles.swapButtonText}>
+              {isLoadingQuote ? 'Getting Quote...' : 'Swap Tokens'}
+            </Text>
+          )}
+        </TouchableOpacity>
+        
+        {/* Info Banner */}
+        <View style={styles.infoBanner}>
+          <View style={styles.infoBannerHeader}>
+            <Ionicons name="information-circle" size={20} color={Colors.accent} />
+            <Text style={styles.infoBannerTitle}>Swap Information</Text>
+          </View>
+          <Text style={styles.infoBannerText}>
+            • Swaps executed on real DEXes (Uniswap V3, QuickSwap){'\n'}
+            • Token approval may be required first{'\n'}
+            • Slippage protection ensures minimum output{'\n'}
+            • Gas fees paid from wallet balance
+          </Text>
+        </View>
+        
+        {/* Bottom padding for tab bar */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
       
-      {/* Info Banner */}
-      <View style={styles.infoBanner}>
-        <Text style={styles.infoBannerTitle}>💡 Swap Information</Text>
-        <Text style={styles.infoBannerText}>
-          • Swaps executed on real DEXes (Uniswap V3, QuickSwap){'\n'}
-          • Token approval may be required first{'\n'}
-          • Slippage protection ensures minimum output{'\n'}
-          • Gas fees paid from wallet balance
-        </Text>
-      </View>
-    </ScrollView>
+      {/* Network Dropdown Modal */}
+      <Modal
+        visible={showNetworkDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNetworkDropdown(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowNetworkDropdown(false)}
+        >
+          <View style={styles.modalContent}>
+            {['ethereum', 'polygon', 'arbitrum'].map((net) => (
+              <TouchableOpacity
+                key={net}
+                style={styles.modalOption}
+                onPress={() => {
+                  setNetwork(net);
+                  setShowNetworkDropdown(false);
+                }}
+              >
+                <Text style={styles.modalOptionText}>
+                  {net.charAt(0).toUpperCase() + net.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      
+      {/* Input Token Picker Modal */}
+      <Modal
+        visible={showInputTokenPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowInputTokenPicker(false)}
+      >
+        <View style={styles.tokenPickerOverlay}>
+          <View style={styles.tokenPickerContent}>
+            <View style={styles.tokenPickerHeader}>
+              <Text style={styles.tokenPickerTitle}>Select Token</Text>
+              <TouchableOpacity
+                onPress={() => setShowInputTokenPicker(false)}
+                style={styles.tokenPickerClose}
+              >
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.tokenPickerList}>
+              {KNOWN_TOKENS[network]?.map((token) => (
+                <TouchableOpacity
+                  key={token.address}
+                  style={styles.tokenPickerOption}
+                  onPress={() => {
+                    setInputToken(token.address);
+                    setShowInputTokenPicker(false);
+                  }}
+                >
+                  <ChainIcon chain={network} size={32} />
+                  <View style={styles.tokenPickerOptionText}>
+                    <Text style={styles.tokenPickerOptionName}>{token.symbol}</Text>
+                    <Text style={styles.tokenPickerOptionSymbol}>{token.address.slice(0, 6)}...{token.address.slice(-4)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      
+      <BottomTabBar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1f1f1f',
+  },
+  
+  // Header
+  header: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
     justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
-  backButtonText: {
-    fontSize: 32,
-    color: '#fff',
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
   },
-  headerCenter: {
+  profileContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  profileIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.cardHover,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    fontFamily: 'monospace',
+  notificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
-  headerSubtitle: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginTop: 4,
-    fontFamily: 'monospace',
-  },
+  
+  // Sections
   section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   sectionLabel: {
-    fontSize: 14,
-    color: '#9ca3af',
-    marginBottom: 12,
-    fontFamily: 'monospace',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+    fontWeight: Typography.fontWeight.medium,
+    letterSpacing: 0.5,
   },
-  networkButtons: {
+  
+  // Dropdown Button
+  dropdownButton: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  networkButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#111111',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
-    alignItems: 'center',
+    borderColor: Colors.cardBorder,
   },
-  networkButtonActive: {
-    backgroundColor: '#a855f720',
-    borderColor: '#a855f7',
+  dropdownButtonText: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.medium,
   },
-  networkButtonText: {
-    color: '#9ca3af',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'monospace',
-  },
-  networkButtonTextActive: {
-    color: '#a855f7',
-  },
-  tokenCard: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    padding: 20,
-    backgroundColor: '#111111',
+  
+  // Input Card
+  inputCard: {
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+    padding: Spacing.xl,
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
-  tokenHeader: {
+  inputRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    alignItems: 'flex-start',
   },
-  tokenLabel: {
-    fontSize: 14,
-    color: '#9ca3af',
-    fontFamily: 'monospace',
+  inputLeft: {
+    flex: 1,
   },
-  tokenBalance: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontFamily: 'monospace',
+  amountInput: {
+    fontSize: Typography.fontSize['4xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
   },
-  tokenInputRow: {
-    marginBottom: 16,
+  tokenSymbol: {
+    fontSize: Typography.fontSize.lg,
+    color: Colors.textSecondary,
   },
-  tokenAmountInput: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    fontFamily: 'monospace',
-  },
-  tokenOutputRow: {
-    marginBottom: 16,
-    height: 40,
-    justifyContent: 'center',
-  },
-  tokenOutputAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#10b981',
-    fontFamily: 'monospace',
-  },
-  tokenOutputPlaceholder: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1f1f1f',
-    fontFamily: 'monospace',
-  },
-  tokenAddressRow: {
-    marginBottom: 12,
-  },
-  tokenAddressInput: {
-    fontSize: 12,
-    color: '#9ca3af',
-    backgroundColor: '#0a0a0a',
-    padding: 12,
-    borderRadius: 8,
-    fontFamily: 'monospace',
-  },
-  tokenList: {
-    marginTop: 12,
-  },
-  tokenChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#1f1f1f',
-  },
-  tokenChipText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: 'monospace',
-  },
+  
+  // Flip Button
   flipContainer: {
     alignItems: 'center',
-    marginVertical: -12,
+    marginVertical: Spacing.md,
     zIndex: 10,
   },
   flipButton: {
     width: 48,
     height: 48,
-    backgroundColor: '#111111',
+    backgroundColor: Colors.card,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  flipIcon: {
-    fontSize: 24,
+  
+  // Token Address Input
+  tokenAddressInput: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.cardHover,
+    padding: Spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    fontFamily: Typography.fontFamily.mono,
   },
+  
+  // Output Card
+  outputCard: {
+    padding: Spacing.lg,
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  outputLabel: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+  },
+  outputAmount: {
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.success,
+    marginBottom: Spacing.xs,
+  },
+  outputMin: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textTertiary,
+  },
+  
+  // Slippage
   slippageButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: Spacing.md,
   },
   slippageButton: {
     flex: 1,
-    paddingVertical: 10,
-    backgroundColor: '#111111',
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.card,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
     alignItems: 'center',
   },
   slippageButtonActive: {
-    backgroundColor: '#3b82f620',
-    borderColor: '#3b82f6',
+    backgroundColor: Colors.accentLight,
+    borderColor: Colors.accent,
   },
   slippageButtonText: {
-    color: '#9ca3af',
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: 'monospace',
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semibold,
   },
   slippageButtonTextActive: {
-    color: '#3b82f6',
+    color: Colors.accent,
   },
+  
+  // Quote Card
   quoteCard: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    padding: 20,
-    backgroundColor: '#111111',
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+    padding: Spacing.lg,
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
   quoteTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 16,
-    fontFamily: 'monospace',
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
   },
   quoteRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
   quoteLabel: {
-    fontSize: 14,
-    color: '#9ca3af',
-    fontFamily: 'monospace',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
   },
   quoteValue: {
-    fontSize: 14,
-    color: '#ffffff',
-    fontWeight: '600',
-    fontFamily: 'monospace',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.semibold,
   },
   quoteValueWarning: {
-    color: '#ef4444',
+    color: Colors.error,
   },
+  
+  // Swap Button
   swapButton: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    padding: 18,
-    backgroundColor: '#3b82f6',
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.xl,
+    backgroundColor: Colors.accent,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   swapButtonDisabled: {
     opacity: 0.5,
   },
   swapButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
+    color: Colors.white,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
   },
+  
+  // Info Banner
   infoBanner: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 32,
-    padding: 20,
-    backgroundColor: '#a855f710',
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing['2xl'],
+    padding: Spacing.lg,
+    backgroundColor: Colors.accentLight,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#a855f720',
+    borderColor: Colors.accentLight,
+  },
+  infoBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
   infoBannerTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    fontFamily: 'monospace',
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
   },
   infoBannerText: {
-    color: '#c084fc',
-    fontSize: 13,
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.sm,
     lineHeight: 20,
-    fontFamily: 'monospace',
+  },
+  
+  // Modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: Spacing.lg,
+    minWidth: 200,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalOption: {
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: 8,
+  },
+  modalOptionText: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  
+  // Token Picker Modal
+  tokenPickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  tokenPickerContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+    paddingBottom: Spacing['2xl'],
+  },
+  tokenPickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  tokenPickerTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  tokenPickerClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tokenPickerList: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+  },
+  tokenPickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 12,
+    marginBottom: Spacing.sm,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  tokenPickerOptionText: {
+    flex: 1,
+  },
+  tokenPickerOptionName: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  tokenPickerOptionSymbol: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });

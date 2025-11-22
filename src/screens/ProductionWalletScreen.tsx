@@ -8,13 +8,126 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Clipboard,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RealBlockchainService, { RealBalance } from '../blockchain/RealBlockchainService';
 import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import ChainIcon from '../components/ChainIcon';
+import BottomTabBar from '../components/BottomTabBar';
+import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
 
+// Sparkline graph component with smooth curves
+const SparklineGraph = ({ isPositive }: { isPositive: boolean }) => {
+  // Data points (normalized 0-1 range)
+  const data = isPositive 
+    ? [0.3, 0.25, 0.35, 0.2, 0.4, 0.3, 0.45, 0.35, 0.5, 0.4, 0.55, 0.5, 0.6]
+    : [0.5, 0.45, 0.4, 0.5, 0.35, 0.3, 0.25, 0.3, 0.2, 0.25, 0.15, 0.2, 0.1];
+  
+  const width = 140;
+  const height = 60;
+  const padding = 4;
+  const graphWidth = width - padding * 2;
+  const graphHeight = height - padding * 2;
+  
+  // Convert data points to SVG coordinates
+  const points = data.map((value, index) => {
+    const x = padding + (index / (data.length - 1)) * graphWidth;
+    const y = padding + graphHeight - (value * graphHeight);
+    return { x, y };
+  });
+  
+  // Create smooth path using quadratic curves
+  const createSmoothPath = () => {
+    if (points.length < 2) return '';
+    
+    let path = `M ${points[0].x} ${points[0].y}`;
+    
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const next = points[i + 1];
+      
+      if (next) {
+        // Use quadratic curve for smooth transitions
+        const cpX = (prev.x + curr.x) / 2;
+        const cpY = (prev.y + curr.y) / 2;
+        path += ` Q ${prev.x} ${prev.y} ${cpX} ${cpY}`;
+        path += ` Q ${curr.x} ${curr.y} ${(curr.x + next.x) / 2} ${(curr.y + next.y) / 2}`;
+      } else {
+        // Last point - use line
+        path += ` L ${curr.x} ${curr.y}`;
+      }
+    }
+    
+    return path;
+  };
+  
+  // Alternative: Use cubic bezier for smoother curves
+  const createCubicPath = () => {
+    if (points.length < 2) return '';
+    
+    let path = `M ${points[0].x} ${points[0].y}`;
+    
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const next = points[i + 1];
+      
+      if (i === 1) {
+        // First curve
+        const cp1X = prev.x + (curr.x - prev.x) / 3;
+        const cp1Y = prev.y;
+        const cp2X = prev.x + 2 * (curr.x - prev.x) / 3;
+        const cp2Y = curr.y;
+        path += ` C ${cp1X} ${cp1Y} ${cp2X} ${cp2Y} ${curr.x} ${curr.y}`;
+      } else if (next) {
+        // Middle curves - use previous and next points for smoothness
+        const cp1X = prev.x + (curr.x - prev.x) / 2;
+        const cp1Y = prev.y + (curr.y - prev.y) / 2;
+        const cp2X = curr.x - (next.x - curr.x) / 2;
+        const cp2Y = curr.y - (next.y - curr.y) / 2;
+        path += ` C ${cp1X} ${cp1Y} ${cp2X} ${cp2Y} ${curr.x} ${curr.y}`;
+      } else {
+        // Last curve
+        const cp1X = prev.x + (curr.x - prev.x) / 3;
+        const cp1Y = prev.y + (curr.y - prev.y) / 3;
+        const cp2X = prev.x + 2 * (curr.x - prev.x) / 3;
+        const cp2Y = prev.y + 2 * (curr.y - prev.y) / 3;
+        path += ` C ${cp1X} ${cp1Y} ${cp2X} ${cp2Y} ${curr.x} ${curr.y}`;
+      }
+    }
+    
+    return path;
+  };
+  
+  const lineColor = isPositive ? Colors.accent : Colors.accentSecondary;
+  const pathData = createCubicPath();
+  
+  return (
+    <View style={styles.graphContainer}>
+      <Svg width={width} height={height} style={styles.sparklineSvg}>
+        <Path
+          d={pathData}
+          fill="none"
+          stroke={lineColor}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    </View>
+  );
+};
+
 export default function ProductionWalletScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [walletInitialized, setWalletInitialized] = useState(false);
@@ -24,6 +137,25 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const [hdWallet] = useState(() => new ZetarisWalletCore());
   
   const blockchainService = RealBlockchainService;
+  
+  // Calculate performance metrics (mock for now - can be enhanced with real 24h data)
+  const previousTotal = totalUSD * 0.6; // Mock: assume 40% increase
+  const changeAmount = totalUSD - previousTotal;
+  const changePercent = previousTotal > 0 ? ((changeAmount / previousTotal) * 100) : 0;
+  
+  // Get current date
+  const currentDate = new Date();
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const dateString = `${dayNames[currentDate.getDay()]}, ${currentDate.getDate()} ${monthNames[currentDate.getMonth()]}`;
+  
+  // Get greeting based on time
+  const getGreeting = () => {
+    const hour = currentDate.getHours();
+    if (hour < 12) return 'Good Morning!';
+    if (hour < 18) return 'Good Afternoon!';
+    return 'Good Evening!';
+  };
   
   /**
    * Initialize wallet on component mount
@@ -176,41 +308,18 @@ export default function ProductionWalletScreen({ navigation }: any) {
   };
   
   /**
-   * Navigate to Swap screen
+   * Copy wallet address
    */
-  const handleSwap = () => {
-    if (!walletAddress) {
-      Alert.alert('Error', 'Wallet not initialized');
-      return;
-    }
-    
-    navigation.navigate('RealSwap', { walletAddress, balances });
-  };
-  
-  /**
-   * View transaction on block explorer
-   */
-  const viewOnExplorer = (network: string, address: string) => {
-    const explorerUrls: { [key: string]: string } = {
-      'Ethereum Mainnet': 'https://etherscan.io',
-      'Polygon': 'https://polygonscan.com',
-      'Arbitrum One': 'https://arbiscan.io',
-    };
-    
-    const url = `${explorerUrls[network]}/address/${address}`;
-    logger.info(`🔗 Opening explorer: ${url}`);
-    
-    Alert.alert(
-      'Block Explorer',
-      `View your wallet on ${network} block explorer:\n\n${url}`,
-      [{ text: 'OK' }]
-    );
+  const handleCopyAddress = () => {
+    if (!walletAddress) return;
+    Clipboard.setString(walletAddress);
+    Alert.alert('Address Copied', 'Wallet address has been copied to clipboard');
   };
   
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#a855f7" />
+        <ActivityIndicator size="large" color={Colors.accent} />
         <Text style={styles.loadingText}>
           Loading Wallet...
         </Text>
@@ -219,611 +328,465 @@ export default function ProductionWalletScreen({ navigation }: any) {
   }
   
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#a855f7" />
-      }
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.logo}>
-            <Text style={styles.logoIcon}>🔐</Text>
-          </View>
-          <Text style={styles.headerTitle}>CipherMesh</Text>
-        </View>
-        
-        <View style={styles.headerRight}>
-          <View style={styles.peersBadge}>
-            <View style={styles.statusDot} />
-            <Text style={styles.peersText}>Connected</Text>
-          </View>
-        </View>
-      </View>
-      
-      {/* Balance Card */}
-      <View style={styles.balanceCard}>
-        <View style={styles.balanceHeader}>
-          <View>
-            <Text style={styles.balanceLabel}>Total Balance</Text>
-            <Text style={styles.balanceAmount}>${totalUSD.toFixed(2)}</Text>
-            <Text style={styles.balanceChange}>Live from Blockchain</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logo}>
+                <Ionicons name="wallet" size={24} color={Colors.white} />
+              </View>
+            </View>
+            
+            <View style={styles.headerRight}>
+              <View style={styles.profileContainer}>
+                <View style={styles.profileIcon}>
+                  <Ionicons name="person" size={20} color={Colors.white} />
+                </View>
+              </View>
+              <TouchableOpacity style={styles.notificationIcon}>
+                <Ionicons name="notifications-outline" size={24} color={Colors.white} />
+              </TouchableOpacity>
+            </View>
           </View>
           
-          <View style={styles.privacyBadge}>
-            <Text style={styles.privacyLabel}>Privacy Score</Text>
-            <Text style={styles.privacyScore}>98%</Text>
+          <View style={styles.greetingSection}>
+            <Text style={styles.greetingText}>Hi User,</Text>
+            <Text style={styles.greetingSubtext}>{getGreeting()}</Text>
           </View>
         </View>
-
-        {/* Asset Cards Grid */}
-        <View style={styles.assetGrid}>
-          {balances.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No assets yet</Text>
-              <Text style={styles.emptySubtext}>Send crypto to get started</Text>
+        
+        {/* MY WALLET Section */}
+        <View style={styles.walletSection}>
+          <Text style={styles.sectionLabel}>MY WALLET</Text>
+          <View style={styles.balanceRow}>
+            <View style={styles.balanceContent}>
+              <Text style={styles.balanceAmount}>${totalUSD.toFixed(2)}</Text>
+              <View style={styles.performanceRow}>
+                <Text style={styles.performanceAmount}>+${changeAmount.toFixed(2)}</Text>
+                <Text style={styles.performancePercent}>+{changePercent.toFixed(2)}%</Text>
+              </View>
             </View>
-          ) : (
-            balances.slice(0, 3).map((balance, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.assetCard}
-                onPress={() => viewOnExplorer(balance.chain, balance.address)}
-              >
-                <View style={styles.assetHeader}>
-                  <View style={[
-                    styles.assetIcon,
-                    { backgroundColor: index === 0 ? '#fbbf2420' : index === 1 ? '#3b82f620' : '#a855f720' }
-                  ]}>
-                    <Text style={styles.assetEmoji}>
-                      {index === 0 ? '⚡' : index === 1 ? '◆' : '⬡'}
-                    </Text>
-                  </View>
-                  <View>
-                    <Text style={styles.assetChain}>{balance.chain}</Text>
-                    <Text style={styles.assetSymbol}>{balance.symbol}</Text>
-                  </View>
-                </View>
-                <Text style={styles.assetBalance}>{parseFloat(balance.balanceFormatted).toFixed(4)}</Text>
-                <Text style={styles.assetUSD}>${balance.balanceUSD.toFixed(2)}</Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.actionsGrid}>
-        <TouchableOpacity style={styles.actionButton} onPress={handleSend}>
-          <View style={[styles.actionIcon, { backgroundColor: '#a855f7' }]}>
-            <Text style={styles.actionEmoji}>📤</Text>
           </View>
-          <Text style={styles.actionLabel}>Send</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton} onPress={handleReceive}>
-          <View style={[styles.actionIcon, { backgroundColor: '#10b981' }]}>
-            <Text style={styles.actionEmoji}>📥</Text>
-          </View>
-          <Text style={styles.actionLabel}>Receive</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton} onPress={handleSwap}>
-          <View style={[styles.actionIcon, { backgroundColor: '#3b82f6' }]}>
-            <Text style={styles.actionEmoji}>🔄</Text>
-          </View>
-          <Text style={styles.actionLabel}>Swap</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Recent Activity */}
-      <View style={styles.activityCard}>
-        <View style={styles.activityHeader}>
-          <Text style={styles.activityTitle}>Recent Activity</Text>
-          <View style={styles.filterButtons}>
-            <TouchableOpacity style={styles.filterActive}>
-              <Text style={styles.filterActiveText}>All</Text>
+          
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleSend}>
+              <Ionicons name="arrow-up" size={20} color={Colors.white} />
+              <Text style={styles.actionButtonText}>Withdraw</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={handleReceive}>
+              <Ionicons name="arrow-down" size={20} color={Colors.white} />
+              <Text style={styles.actionButtonText}>Deposit</Text>
             </TouchableOpacity>
           </View>
         </View>
-
-        {balances.length > 0 ? (
-          <View style={styles.activityList}>
-            {balances.map((balance, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.activityItem}
-                onPress={() => viewOnExplorer(balance.chain, balance.address)}
-              >
-                <View style={styles.activityLeft}>
-                  <View style={[styles.activityIcon, { backgroundColor: '#10b98120' }]}>
-                    <Text style={styles.activityEmoji}>✅</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.activityName}>Verified {balance.symbol}</Text>
-                    <Text style={styles.activityAddress}>{balance.chain} • Block {balance.blockHeight}</Text>
-                  </View>
-                </View>
-                <View style={styles.activityRight}>
-                  <Text style={styles.activityAmount}>{parseFloat(balance.balanceFormatted).toFixed(4)} {balance.symbol}</Text>
-                  <Text style={styles.activityTime}>on chain</Text>
+        
+        {/* FUNDS Section */}
+        <View style={styles.fundsSection}>
+          <View style={styles.fundsSectionHeader}>
+            <Text style={styles.sectionLabel}>FUNDS</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fundsScrollView}>
+            <View style={styles.fundsContainer}>
+              {/* Add Funds Card */}
+              <TouchableOpacity style={styles.addFundCard}>
+                <View style={styles.addFundIcon}>
+                  <Ionicons name="add" size={32} color={Colors.textSecondary} />
                 </View>
               </TouchableOpacity>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyActivity}>
-            <Text style={styles.emptyActivityText}>No transactions yet</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Privacy Status */}
-      <View style={styles.privacyCard}>
-        <Text style={styles.sidebarTitle}>Privacy Status</Text>
-        <View style={styles.statusList}>
-          <View style={styles.statusItem}>
-            <Text style={styles.statusLabel}>Balance Hidden</Text>
-            <Text style={styles.statusValue}>Active</Text>
-          </View>
-          <View style={styles.statusItem}>
-            <Text style={styles.statusLabel}>Stealth Addresses</Text>
-            <Text style={styles.statusValue}>On</Text>
-          </View>
-          <View style={styles.statusItem}>
-            <Text style={styles.statusLabel}>Zero-Knowledge</Text>
-            <Text style={styles.statusValue}>Enabled</Text>
-          </View>
-          <View style={styles.statusItem}>
-            <Text style={styles.statusLabel}>Mesh Routing</Text>
-            <Text style={styles.statusValue}>Active</Text>
-          </View>
+              
+              {/* Crypto Fund Cards */}
+              {balances.map((balance, index) => {
+                // Mock performance data for each asset
+                const isPositive = index % 2 === 0;
+                const mockChange = isPositive ? 268.12 : -82.0;
+                const mockChangePercent = isPositive ? 0.92 : -5.62;
+                
+                return (
+                  <TouchableOpacity key={index} style={styles.fundCard}>
+                    <View style={styles.fundCardHeader}>
+                      <ChainIcon chain={balance.chain.toLowerCase()} size={40} />
+                      <View style={styles.fundCardInfo}>
+                        <Text style={styles.fundCardName}>{balance.chain}</Text>
+                        <Text style={styles.fundCardTicker}>{balance.symbol}</Text>
+                      </View>
+                    </View>
+                    
+                    <SparklineGraph isPositive={isPositive} />
+                    
+                    <View style={styles.fundCardValue}>
+                      <Text style={styles.fundCardAmount}>${balance.balanceUSD.toFixed(2)}</Text>
+                      <View style={styles.fundCardPerformance}>
+                        <Text style={[
+                          styles.fundCardChange,
+                          { color: isPositive ? Colors.success : Colors.error }
+                        ]}>
+                          {isPositive ? '+' : ''}{mockChange.toFixed(2)}
+                        </Text>
+                        <Text style={[
+                          styles.fundCardChangePercent,
+                          { color: isPositive ? Colors.success : Colors.error }
+                        ]}>
+                          {isPositive ? '+' : ''}{mockChangePercent.toFixed(2)}%
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
         </View>
-      </View>
-
-      {/* Wallet Address */}
-      {walletAddress && (
-        <View style={styles.addressCard}>
-          <Text style={styles.addressLabel}>Your Address</Text>
-          <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="middle">
-            {walletAddress}
-          </Text>
+        
+        {/* RECENT ACTIONS Section */}
+        <View style={styles.recentActionsSection}>
+          <Text style={styles.sectionLabel}>RECENT ACTIONS</Text>
+          {balances.length > 0 ? (
+            <View style={styles.actionsList}>
+              {balances.slice(0, 3).map((balance, index) => (
+                <TouchableOpacity key={index} style={styles.actionItem}>
+                  <View style={styles.actionItemLeft}>
+                    <View style={styles.actionItemIcon}>
+                      <ChainIcon chain={balance.chain.toLowerCase()} size={32} />
+                    </View>
+                    <View style={styles.actionItemInfo}>
+                      <Text style={styles.actionItemName}>{balance.chain}</Text>
+                      <Text style={styles.actionItemTicker}>{balance.symbol}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.actionItemRight}>
+                    <Text style={styles.actionItemAmount}>+ ${balance.balanceUSD.toFixed(2)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyActions}>
+              <Text style={styles.emptyActionsText}>No recent actions</Text>
+            </View>
+          )}
         </View>
-      )}
-
-      {/* Info Banner */}
-      <View style={styles.infoBanner}>
-        <Text style={styles.infoBannerTitle}>🎉 Production Wallet Active</Text>
-        <Text style={styles.infoBannerText}>
-          • All balances from real blockchain{'\n'}
-          • Transactions broadcast to mainnet{'\n'}
-          • Verifiable on block explorers{'\n'}
-          • Secure BIP39/32/44 HD wallet{'\n'}
-          • NO MOCK DATA
-        </Text>
-      </View>
-    </ScrollView>
+        
+        {/* Bottom padding for tab bar */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
+      
+      {/* Floating Bottom Tab Bar */}
+      <BottomTabBar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.background,
+  },
+  scrollView: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
-    color: '#9ca3af',
-    fontSize: 16,
-    marginTop: 16,
-    fontFamily: 'monospace',
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.md,
+    marginTop: Spacing.lg,
   },
   
   // Header
   header: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1f1f1f',
-    backgroundColor: '#00000080',
+    marginBottom: Spacing.xl,
   },
-  headerLeft: {
+  logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
   logo: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#a855f7',
-    borderRadius: 10,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  logoIcon: {
-    fontSize: 24,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    fontFamily: 'monospace',
   },
   headerRight: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  peersBadge: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#10b98120',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#10b98130',
+    gap: Spacing.md,
   },
-  statusDot: {
-    width: 8,
-    height: 8,
-    backgroundColor: '#10b981',
-    borderRadius: 4,
-  },
-  peersText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontFamily: 'monospace',
-  },
-  
-  // Balance Card
-  balanceCard: {
-    margin: 20,
-    padding: 24,
-    backgroundColor: '#111111',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1f1f1f',
-  },
-  balanceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  balanceLabel: {
-    color: '#9ca3af',
-    fontSize: 14,
-    marginBottom: 8,
-    fontFamily: 'monospace',
-  },
-  balanceAmount: {
-    color: '#ffffff',
-    fontSize: 48,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    fontFamily: 'monospace',
-  },
-  balanceChange: {
-    color: '#6b7280',
-    fontSize: 12,
-    fontFamily: 'monospace',
-  },
-  privacyBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#a855f720',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#a855f730',
+  profileContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  privacyLabel: {
-    color: '#9ca3af',
-    fontSize: 10,
-    marginBottom: 4,
-    fontFamily: 'monospace',
-  },
-  privacyScore: {
-    color: '#c084fc',
-    fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  
-  // Asset Grid
-  assetGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  assetCard: {
-    flex: 1,
-    minWidth: 100,
-    padding: 16,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
-  assetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  assetIcon: {
+  profileIcon: {
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: 16,
+    backgroundColor: Colors.cardHover,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  assetEmoji: {
-    fontSize: 18,
-  },
-  assetChain: {
-    color: '#9ca3af',
-    fontSize: 10,
-    fontFamily: 'monospace',
-  },
-  assetSymbol: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: 'monospace',
-  },
-  assetBalance: {
-    color: '#ffffff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    fontFamily: 'monospace',
-  },
-  assetUSD: {
-    color: '#9ca3af',
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  emptyCard: {
-    flex: 1,
-    padding: 24,
+  notificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
-  emptyText: {
-    color: '#9ca3af',
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'monospace',
+  greetingSection: {
+    marginBottom: Spacing.lg,
   },
-  emptySubtext: {
-    color: '#6b7280',
-    fontSize: 12,
-    marginTop: 4,
-    fontFamily: 'monospace',
+  greetingText: {
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  greetingSubtext: {
+    fontSize: Typography.fontSize.lg,
+    color: Colors.textSecondary,
   },
   
-  // Actions Grid
-  actionsGrid: {
+  // MY WALLET Section
+  walletSection: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing['2xl'],
+  },
+  sectionLabel: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+    fontWeight: Typography.fontWeight.medium,
+    letterSpacing: 0.5,
+  },
+  balanceRow: {
+    marginBottom: Spacing.xl,
+  },
+  balanceContent: {
+    marginBottom: Spacing.md,
+  },
+  balanceAmount: {
+    fontSize: Typography.fontSize['4xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
+  performanceRow: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  performanceAmount: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.accent,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  performancePercent: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.accent,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
   },
   actionButton: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#111111',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
-    alignItems: 'center',
+    borderColor: Colors.cardBorder,
   },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  actionEmoji: {
-    fontSize: 24,
-  },
-  actionLabel: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'monospace',
+  actionButtonText: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.medium,
   },
   
-  // Activity Card
-  activityCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 20,
-    backgroundColor: '#111111',
+  // FUNDS Section
+  fundsSection: {
+    marginBottom: Spacing['2xl'],
+  },
+  fundsSectionHeader: {
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'flex-end',
+    marginBottom: Spacing.md,
+  },
+  fundsScrollView: {
+    paddingLeft: Spacing.xl,
+  },
+  fundsContainer: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    paddingRight: Spacing.xl,
+  },
+  fundCard: {
+    width: 180,
+    padding: Spacing.lg,
+    backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
-  activityHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  addFundCard: {
+    width: 100, // Thinner width for Add Funds card
+    padding: Spacing.lg,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  addFundIcon: {
+    width: '100%',
+    height: 120,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  activityTitle: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterActive: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: '#ffffff20',
-    borderRadius: 8,
-  },
-  filterActiveText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontFamily: 'monospace',
-  },
-  activityList: {
-    gap: 12,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: '#ffffff08',
+    borderWidth: 2,
+    borderColor: Colors.cardBorder,
+    borderStyle: 'dashed',
     borderRadius: 12,
   },
-  activityLeft: {
+  fundCardHeader: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  fundCardInfo: {
     flex: 1,
   },
-  activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  fundCardName: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.textPrimary,
+  },
+  fundCardTicker: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textSecondary,
+  },
+  graphContainer: {
+    height: 60,
+    marginBottom: Spacing.md,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  activityEmoji: {
-    fontSize: 20,
+  sparklineSvg: {
+    width: '100%',
+    height: '100%',
   },
-  activityName: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: 'monospace',
+  fundCardValue: {
+    marginTop: Spacing.sm,
   },
-  activityAddress: {
-    color: '#9ca3af',
-    fontSize: 12,
-    marginTop: 2,
-    fontFamily: 'monospace',
+  fundCardAmount: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
   },
-  activityRight: {
-    alignItems: 'flex-end',
+  fundCardPerformance: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
   },
-  activityAmount: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
+  fundCardChange: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
   },
-  activityTime: {
-    color: '#9ca3af',
-    fontSize: 12,
-    marginTop: 2,
-    fontFamily: 'monospace',
-  },
-  emptyActivity: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  emptyActivityText: {
-    color: '#9ca3af',
-    fontSize: 14,
-    fontFamily: 'monospace',
+  fundCardChangePercent: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
   },
   
-  // Privacy Card
-  privacyCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 20,
-    backgroundColor: '#111111',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1f1f1f',
+  // RECENT ACTIONS Section
+  recentActionsSection: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing['2xl'],
   },
-  sidebarTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    fontFamily: 'monospace',
+  actionsList: {
+    gap: Spacing.md,
   },
-  statusList: {
-    gap: 12,
-  },
-  statusItem: {
+  actionItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  statusLabel: {
-    color: '#9ca3af',
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  statusValue: {
-    color: '#10b981',
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: 'monospace',
-  },
-  
-  // Address Card
-  addressCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 20,
-    backgroundColor: '#111111',
-    borderRadius: 16,
+    padding: Spacing.lg,
+    backgroundColor: Colors.card,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
-  addressLabel: {
-    color: '#9ca3af',
-    fontSize: 14,
-    marginBottom: 8,
-    fontFamily: 'monospace',
+  actionItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    flex: 1,
   },
-  addressText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontFamily: 'monospace',
+  actionItemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.cardHover,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  
-  // Info Banner
-  infoBanner: {
-    marginHorizontal: 20,
-    marginBottom: 32,
-    padding: 20,
-    backgroundColor: '#a855f710',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#a855f720',
+  actionItemInfo: {
+    flex: 1,
   },
-  infoBannerTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    fontFamily: 'monospace',
+  actionItemName: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.textPrimary,
   },
-  infoBannerText: {
-    color: '#c084fc',
-    fontSize: 13,
-    lineHeight: 20,
-    fontFamily: 'monospace',
+  actionItemTicker: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  actionItemRight: {
+    alignItems: 'flex-end',
+  },
+  actionItemAmount: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.accent,
+  },
+  emptyActions: {
+    padding: Spacing['2xl'],
+    alignItems: 'center',
+  },
+  emptyActionsText: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textSecondary,
   },
 });

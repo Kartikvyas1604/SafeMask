@@ -8,9 +8,11 @@ import {
   RefreshControl,
   Switch,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import meshNetwork, { Peer } from '../mesh/MeshNetwork';
 
 export default function MeshNetworkScreen() {
+  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [peers, setPeers] = useState<Peer[]>([]);
@@ -158,7 +160,7 @@ export default function MeshNetworkScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0a0a0f' }}>
+    <View style={{ flex: 1, backgroundColor: '#0a0a0f', paddingTop: insets.top }}>
       <ScrollView
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#00d4ff" />

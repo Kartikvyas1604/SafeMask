@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Colors } from '../design/colors';
 
 export default function PrivacyStatus() {
   const items = [
-    { label: 'Balance Hidden', status: 'Active', color: '#10B981' },
-    { label: 'Stealth Addresses', status: 'On', color: '#10B981' },
-    { label: 'Zero-Knowledge', status: 'Enabled', color: '#10B981' },
-    { label: 'Mesh Routing', status: 'Active', color: '#10B981' },
+    { label: 'Balance Hidden', status: 'Active', color: Colors.success },
+    { label: 'Stealth Addresses', status: 'On', color: Colors.success },
+    { label: 'Zero-Knowledge', status: 'Enabled', color: Colors.success },
+    { label: 'Mesh Routing', status: 'Active', color: Colors.success },
   ];
 
   return (
@@ -26,16 +27,16 @@ export default function PrivacyStatus() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111111',
+    backgroundColor: Colors.card,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
+    color: Colors.textPrimary,
     marginBottom: 16,
   },
   list: {
@@ -48,7 +49,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   status: {
     fontSize: 13,

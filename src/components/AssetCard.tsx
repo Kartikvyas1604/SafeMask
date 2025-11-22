@@ -1,5 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../design/colors';
+import ChainIcon from './ChainIcon';
 
 interface AssetCardProps {
   name: string;
@@ -19,21 +22,26 @@ export default function AssetCard({
   value,
   icon,
   color,
+  chain,
   privacyEnabled = false,
 }: AssetCardProps) {
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.8}>
       <View style={styles.header}>
-        <View style={[styles.iconContainer, { backgroundColor: `${color}1A` }]}>
-          <Text style={styles.icon}>{icon}</Text>
-        </View>
+        {chain ? (
+          <ChainIcon chain={chain} size={32} />
+        ) : (
+          <View style={[styles.iconContainer, { backgroundColor: `${color}1A` }]}>
+            <Text style={styles.icon}>{icon}</Text>
+          </View>
+        )}
         <View>
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.symbol}>{symbol}</Text>
         </View>
         {privacyEnabled && (
           <View style={styles.privacyBadge}>
-            <Text style={styles.privacyText}>🔒</Text>
+            <Ionicons name="lock-closed" size={12} color={Colors.accent} />
           </View>
         )}
       </View>
@@ -46,11 +54,11 @@ export default function AssetCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: Colors.card,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -70,22 +78,22 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   symbol: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#ffffff',
+    color: Colors.textPrimary,
   },
   amount: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#ffffff',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   value: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   privacyBadge: {
     marginLeft: 'auto',

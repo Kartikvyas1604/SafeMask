@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
 
@@ -117,7 +118,7 @@ export default function ImportPrivateKeyScreen({ navigation }: ImportPrivateKeyS
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <StatusBar barStyle="light-content" />
@@ -179,7 +180,8 @@ export default function ImportPrivateKeyScreen({ navigation }: ImportPrivateKeyS
           <View style={styles.labelRow}>
             <Text style={styles.label}>Private Key</Text>
             <TouchableOpacity onPress={() => setShowKey(!showKey)}>
-              <Text style={styles.toggleText}>{showKey ? '🙈 Hide' : '👁️ Show'}</Text>
+              <Ionicons name={showKey ? 'eye-off-outline' : 'eye-outline'} size={16} color={Colors.textSecondary} style={{ marginRight: 4 }} />
+              <Text style={styles.toggleText}>{showKey ? 'Hide' : 'Show'}</Text>
             </TouchableOpacity>
           </View>
           <TextInput
@@ -213,7 +215,7 @@ export default function ImportPrivateKeyScreen({ navigation }: ImportPrivateKeyS
 
         {/* Warning */}
         <View style={styles.warningBox}>
-          <Text style={styles.warningIcon}>⚠️</Text>
+          <Ionicons name="alert-circle" size={20} color={Colors.warning} />
           <View style={styles.warningTextContainer}>
             <Text style={styles.warningTitle}>Important Security Notice</Text>
             <Text style={styles.warningText}>

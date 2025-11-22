@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../navigation/AppNavigator';
+import { Colors } from '../design/colors';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -10,7 +12,7 @@ interface Feature {
   id: string;
   title: string;
   subtitle: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   route: keyof RootStackParamList;
   color: string;
 }
@@ -20,7 +22,7 @@ const FEATURES: Feature[] = [
     id: 'send',
     title: 'Send',
     subtitle: 'Private transfers',
-    icon: '↑',
+    icon: 'send',
     route: 'Send',
     color: '#FF5252',
   },
@@ -28,7 +30,7 @@ const FEATURES: Feature[] = [
     id: 'receive',
     title: 'Receive',
     subtitle: 'Get funds',
-    icon: '↓',
+    icon: 'arrow-down',
     route: 'Receive',
     color: '#4CAF50',
   },
@@ -36,7 +38,7 @@ const FEATURES: Feature[] = [
     id: 'swap',
     title: 'Swap',
     subtitle: 'Exchange tokens',
-    icon: '⇄',
+    icon: 'swap-horizontal',
     route: 'Swap',
     color: '#2196F3',
   },
@@ -44,15 +46,15 @@ const FEATURES: Feature[] = [
     id: 'bridge',
     title: 'Bridge',
     subtitle: 'Cross-chain',
-    icon: '🌉',
+    icon: 'git-network',
     route: 'Bridge',
-    color: '#9C27B0',
+    color: Colors.accent,
   },
   {
     id: 'mesh',
     title: 'Mesh',
     subtitle: 'P2P network',
-    icon: '🌐',
+    icon: 'radio',
     route: 'MeshNetwork',
     color: '#FF9800',
   },
@@ -60,7 +62,7 @@ const FEATURES: Feature[] = [
     id: 'settings',
     title: 'Settings',
     subtitle: 'Configure',
-    icon: '⚙️',
+    icon: 'settings-outline',
     route: 'Settings',
     color: '#607D8B',
   },
@@ -78,7 +80,7 @@ export const DashboardCard: React.FC = () => {
       activeOpacity={0.7}
     >
       <View style={[styles.iconContainer, { backgroundColor: `${feature.color}20` }]}>
-        <Text style={[styles.icon, { color: feature.color }]}>{feature.icon}</Text>
+        <Ionicons name={feature.icon} size={24} color={feature.color} />
       </View>
       <Text style={styles.featureTitle}>{feature.title}</Text>
       <Text style={styles.featureSubtitle}>{feature.subtitle}</Text>
@@ -107,7 +109,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: Colors.textPrimary,
     marginBottom: 16,
   },
   featuresContainer: {
@@ -117,10 +119,10 @@ const styles = StyleSheet.create({
     width: 100,
     marginRight: 12,
     padding: 16,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: Colors.cardHover,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: Colors.cardBorder,
     alignItems: 'center',
   },
   iconContainer: {
@@ -131,18 +133,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  icon: {
-    fontSize: 24,
-  },
   featureTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   featureSubtitle: {
     fontSize: 11,
-    color: '#888',
+    color: Colors.textTertiary,
     textAlign: 'center',
   },
 });

@@ -14,6 +14,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
 
@@ -31,6 +32,7 @@ interface VerifySeedPhraseScreenProps {
 }
 
 export default function VerifySeedPhraseScreen({ route, navigation }: VerifySeedPhraseScreenProps) {
+  const insets = useSafeAreaInsets();
   const { seedPhrase } = route.params;
   const words = seedPhrase.split(' ');
   
@@ -94,7 +96,7 @@ export default function VerifySeedPhraseScreen({ route, navigation }: VerifySeed
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}

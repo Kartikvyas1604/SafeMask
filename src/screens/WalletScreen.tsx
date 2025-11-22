@@ -118,7 +118,7 @@ export default function WalletScreen() {
           symbol: 'ZEC',
           amount: '12.5',
           value: '$3,750.00',
-          icon: '⚡',
+          icon: '',
           color: '#F4B024',
           chain: 'zcash',
           privacyEnabled: true, // Shielded transactions
@@ -128,7 +128,7 @@ export default function WalletScreen() {
           symbol: 'ETH',
           amount: '8.3',
           value: '$16,600.00',
-          icon: '◆',
+          icon: '',
           color: '#627EEA',
           chain: 'ethereum',
           privacyEnabled: false, // Public by default
@@ -138,7 +138,7 @@ export default function WalletScreen() {
           symbol: 'MATIC',
           amount: '5,420',
           value: '$4,232.50',
-          icon: '⬡',
+          icon: '',
           color: '#8247E5',
           chain: 'polygon',
           privacyEnabled: false,

@@ -14,7 +14,10 @@ import {
   Alert,
   Clipboard,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
+import { Colors } from '../design/colors';
 
 interface CreateWalletScreenProps {
   navigation: {
@@ -24,6 +27,7 @@ interface CreateWalletScreenProps {
 }
 
 export default function CreateWalletScreen({ navigation }: CreateWalletScreenProps) {
+  const insets = useSafeAreaInsets();
   const [seedPhrase, setSeedPhrase] = useState<string>('');
   const [words, setWords] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +72,7 @@ export default function CreateWalletScreen({ navigation }: CreateWalletScreenPro
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}
@@ -96,7 +100,7 @@ export default function CreateWalletScreen({ navigation }: CreateWalletScreenPro
 
           {/* Warning Box */}
           <View style={styles.warningBox}>
-            <Text style={styles.warningIcon}>⚠️</Text>
+            <Ionicons name="alert-circle" size={20} color={Colors.warning} />
             <View style={styles.warningTextContainer}>
               <Text style={styles.warningTitle}>Never share your recovery phrase!</Text>
               <Text style={styles.warningText}>
