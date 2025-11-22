@@ -6,6 +6,7 @@
 import { ethers } from 'ethers';
 import * as logger from '../utils/logger';
 import RealBlockchainService from './RealBlockchainService';
+import { priceOracle } from '../services/PriceOracleService';
 
 // Standard ERC-20 ABI
 const ERC20_ABI = [

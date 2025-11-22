@@ -293,6 +293,8 @@ export class ZetarisSDK {
       tokenAddress: params.asset,
       amount: params.amount,
       recipient: targetAddress,
+      senderAddress: await this.wallet.getAddress(params.from.toLowerCase()),
+      privateKey: '', // Private key should be provided by caller
     });
   }
 
