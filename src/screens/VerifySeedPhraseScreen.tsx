@@ -76,7 +76,7 @@ export default function VerifySeedPhraseScreen({ route, navigation }: VerifySeed
       const wallet = await walletCore.importWallet(seedPhrase);
       
       // Save to AsyncStorage
-      await AsyncStorage.setItem('Zetaris_wallet', JSON.stringify(wallet));
+      await AsyncStorage.setItem('Zetaris_wallet_data', JSON.stringify(wallet));
       await AsyncStorage.setItem('Zetaris_has_wallet', 'true');
       
       // Navigate to main wallet

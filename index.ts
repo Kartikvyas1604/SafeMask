@@ -1,13 +1,9 @@
 import 'react-native-gesture-handler';
-import 'react-native-get-random-values'; // MUST be imported before any crypto libraries
-
-// Import crypto polyfill BEFORE any other imports
-import './src/utils/crypto-polyfill';
-
+import 'react-native-get-random-values';
 import { registerRootComponent } from 'expo';
 import { Buffer } from '@craftzdog/react-native-buffer';
 
-// Polyfill Buffer globally for crypto libraries
+// Polyfill Buffer globally
 global.Buffer = Buffer;
 
 import App from './App';

@@ -54,6 +54,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
   const [balance, setBalance] = useState('0');
   const [gasEstimate, setGasEstimate] = useState('0');
   const [privateKey, setPrivateKey] = useState('');
+  const [showNFC, setShowNFC] = useState(false);
 
   useEffect(() => {
     loadWalletData();
@@ -305,6 +306,32 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
     const maxAmount = Math.max(0, parseFloat(balance) - gasBuffer);
     setAmount(maxAmount.toString());
   };
+  
+  const handleNFCSend = () => {
+    setShowNFC(true);
+    Alert.alert(
+      '📱 NFC Send Mode',
+      "Hold your phone near the receiver's device to send payment via NFC.\n\nThis will automatically detect their address and send the specified amount.",
+      [
+        { text: 'Cancel', onPress: () => setShowNFC(false) },
+        { 
+          text: 'Scan', 
+          onPress: () => {
+            logger.info('📱 NFC send mode activated');
+            // In production, implement actual NFC sender
+            setTimeout(() => {
+              setShowNFC(false);
+              Alert.alert(
+                'NFC Demo',
+                "NFC functionality coming soon!\n\nIn production, this will:\n• Scan receiver's NFC tag\n• Auto-fill their address\n• Send transaction via NFC",
+                [{ text: 'OK' }]
+              );
+            }, 2000);
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <KeyboardAvoidingView
@@ -425,6 +452,15 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
           ) : (
             <Text style={styles.sendButtonText}>Send {selectedChain.symbol}</Text>
           )}
+        </TouchableOpacity>
+        
+        {/* NFC Send Button */}
+        <TouchableOpacity
+          style={styles.nfcButton}
+          onPress={handleNFCSend}
+        >
+          <Text style={styles.nfcIcon}>📱</Text>
+          <Text style={styles.nfcText}>Send via NFC</Text>
         </TouchableOpacity>
 
         {/* Info Banner */}
@@ -611,6 +647,25 @@ const styles = StyleSheet.create({
     color: '#ff9800',
     fontSize: 13,
     lineHeight: 20,
+  },
+  nfcButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eab308',
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 18,
+    borderRadius: 12,
+  },
+  nfcIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  nfcText: {
+    color: '#000',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 

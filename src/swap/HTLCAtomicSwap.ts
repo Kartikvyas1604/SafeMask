@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import * as logger from '../utils/logger';
-// Use react-native-quick-crypto polyfill
-const crypto = require('crypto');
+import { sha256 } from '@noble/hashes/sha256';
+import { randomBytes } from '@noble/hashes/utils';
 
 export interface HTLCParams {
   sender: string;
@@ -81,7 +81,8 @@ class HTLCAtomicSwapService {
   }
 
   generateSecret(): { secret: string; hash: string } {
-    const secret = '0x' + crypto.randomBytes(32).toString('hex');
+    const secretBytes = randomBytes(32);
+    const secret = '0x' + Buffer.from(secretBytes).toString('hex');
     const hash = ethers.keccak256(ethers.toUtf8Bytes(secret));
     return { secret, hash };
   }

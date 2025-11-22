@@ -14,15 +14,15 @@ import {
   Alert,
   Clipboard,
 } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import AccountManager from '../services/accountManager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import * as logger from '../utils/logger';
 
 type ReceiveScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Receive'>;
 
 interface Props {
-  navigation: ReceiveScreenNavigationProp;
+  navigation: any;
+  route?: any;
 }
 
 interface ChainAddress {
@@ -33,10 +33,12 @@ interface ChainAddress {
   warning?: string;
 }
 
-const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
+const RealReceiveScreen: React.FC<Props> = ({ navigation, route }) => {
   const [addresses, setAddresses] = useState<ChainAddress[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<ChainAddress | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showNFC, setShowNFC] = useState(false);
+  const [hdWallet] = useState(() => new ZetarisWalletCore());
 
   useEffect(() => {
     loadAddresses();
@@ -44,44 +46,61 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
 
   const loadAddresses = async () => {
     try {
-      const activeAccount = await AccountManager.getActiveAccount();
-      if (!activeAccount) {
-        Alert.alert('Error', 'No active account found');
-        navigation.goBack();
+      logger.info('📥 Loading wallet addresses...');
+      
+      // Load wallet from AsyncStorage
+      let walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data');
+      if (!walletDataStr) {
+        walletDataStr = await AsyncStorage.getItem('Zetaris_wallet');
+      }
+      
+      if (!walletDataStr) {
+        Alert.alert('Error', 'No wallet found. Please create a wallet first.');
+        navigation.navigate('WalletSetup');
         return;
       }
+      
+      const walletData = JSON.parse(walletDataStr);
+      await hdWallet.importWallet(walletData.seedPhrase);
+      
+      // Get addresses from wallet
+      const ethAccount = hdWallet.getAccount(ChainType.ETHEREUM);
+      const polyAccount = hdWallet.getAccount(ChainType.POLYGON);
+      const solAccount = hdWallet.getAccount(ChainType.SOLANA);
+      const btcAccount = hdWallet.getAccount(ChainType.BITCOIN);
+      const zecAccount = hdWallet.getAccount(ChainType.ZCASH);
 
       const addressList: ChainAddress[] = [
         {
           chain: 'Ethereum',
           symbol: 'ETH',
-          address: activeAccount.addresses.ethereum,
-          icon: '⟠',
+          address: ethAccount?.address || '',
+          icon: '◆',
         },
         {
           chain: 'Polygon',
           symbol: 'MATIC',
-          address: activeAccount.addresses.polygon,
+          address: polyAccount?.address || '',
           icon: '⬡',
         },
         {
           chain: 'Solana',
           symbol: 'SOL',
-          address: activeAccount.addresses.solana,
+          address: solAccount?.address || '',
           icon: '◎',
         },
         {
           chain: 'Bitcoin',
           symbol: 'BTC',
-          address: activeAccount.addresses.bitcoin,
+          address: btcAccount?.address || '',
           icon: '₿',
           warning: 'Only send Bitcoin to this address',
         },
         {
           chain: 'Zcash',
           symbol: 'ZEC',
-          address: activeAccount.addresses.zcash,
-          icon: 'ⓩ',
+          address: zecAccount?.address || '',
+          icon: '⚡',
           warning: 'Transparent address (not shielded)',
         },
       ];
@@ -89,6 +108,8 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
       setAddresses(addressList);
       setSelectedAddress(addressList[0]);
       setLoading(false);
+      
+      logger.info('✅ Addresses loaded successfully');
     } catch (error) {
       logger.error('Failed to load addresses:', error);
       Alert.alert('Error', 'Failed to load wallet addresses');
@@ -105,6 +126,25 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
     // In production, use React Native Share API
     logger.info('Sharing address:', address);
     Alert.alert('Share', `Share this address:\n\n${address}`);
+  };
+  
+  const handleNFCReceive = () => {
+    setShowNFC(true);
+    Alert.alert(
+      '📱 NFC Receive Mode',
+      'Hold your phone near another device to receive payment via NFC.\n\nThe sender will scan your address and send crypto directly.',
+      [
+        { text: 'Cancel', onPress: () => setShowNFC(false) },
+        { text: 'Ready', onPress: () => {
+          logger.info('📱 NFC receive mode activated');
+          // In production, implement actual NFC listener
+          setTimeout(() => {
+            setShowNFC(false);
+            Alert.alert('Info', 'NFC receive functionality coming soon!');
+          }, 3000);
+        }}
+      ]
+    );
   };
 
   if (loading) {
@@ -199,6 +239,15 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
                   <Text style={styles.actionText}>Share</Text>
                 </TouchableOpacity>
               </View>
+              
+              {/* NFC Receive Button */}
+              <TouchableOpacity
+                style={styles.nfcButton}
+                onPress={handleNFCReceive}
+              >
+                <Text style={styles.nfcIcon}>📱</Text>
+                <Text style={styles.nfcText}>Receive via NFC</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Warning Banner */}
@@ -518,6 +567,24 @@ const styles = StyleSheet.create({
     color: '#ff9800',
     marginBottom: 8,
     lineHeight: 20,
+  },
+  nfcButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eab308',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  nfcIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  nfcText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

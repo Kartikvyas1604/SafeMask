@@ -18,8 +18,6 @@ import { Platform } from 'react-native';
 import { pbkdf2 } from '@noble/hashes/pbkdf2';
 import { randomBytes as nobleRandomBytes } from '@noble/hashes/utils';
 import { sha256 } from '@noble/hashes/sha256';
-// Use react-native-quick-crypto polyfill
-const crypto = require('crypto');
 import { CryptoUtils } from '../utils/crypto';
 
 // Storage keys
@@ -89,7 +87,7 @@ export class SecureStorage {
     // Get or create salt
     let salt = await this.getSalt();
     if (!salt) {
-      salt = crypto.randomBytes(ENCRYPTION_CONFIG.SALT_SIZE);
+      salt = nobleRandomBytes(ENCRYPTION_CONFIG.SALT_SIZE);
       await this.storeSalt(salt);
     }
 
@@ -300,16 +298,18 @@ export class SecureStorage {
     data: Uint8Array,
     key: Uint8Array
   ): Promise<{ ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array }> {
-    // Generate random IV
-    const iv = crypto.randomBytes(ENCRYPTION_CONFIG.IV_SIZE);
+    // Generate random IV (24 bytes for XChaCha20)
+    const iv = nobleRandomBytes(24);
 
-    // Encrypt using Node's crypto AES-256-GCM
-    const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(key), iv);
-    const encrypted = Buffer.concat([cipher.update(Buffer.from(data)), cipher.final()]);
-    const tag = cipher.getAuthTag();
+    // Encrypt using CryptoUtils (XChaCha20-Poly1305)
+    const encrypted = CryptoUtils.encrypt(data, key, iv);
+    
+    // XChaCha20-Poly1305 includes auth tag in the output (last 16 bytes)
+    const tag = encrypted.slice(-16);
+    const ciphertext = encrypted.slice(0, -16);
 
     return {
-      ciphertext: new Uint8Array(encrypted),
+      ciphertext: new Uint8Array(ciphertext),
       iv: new Uint8Array(iv),
       tag: new Uint8Array(tag),
     };
@@ -322,10 +322,13 @@ export class SecureStorage {
     encrypted: { ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array },
     key: Uint8Array
   ): Promise<Uint8Array> {
-    // Decrypt using Node's crypto AES-256-GCM
-    const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(key), Buffer.from(encrypted.iv));
-    decipher.setAuthTag(Buffer.from(encrypted.tag));
-    const decrypted = Buffer.concat([decipher.update(Buffer.from(encrypted.ciphertext)), decipher.final()]);
+    // Combine ciphertext and tag for decryption
+    const combined = new Uint8Array(encrypted.ciphertext.length + encrypted.tag.length);
+    combined.set(encrypted.ciphertext, 0);
+    combined.set(encrypted.tag, encrypted.ciphertext.length);
+    
+    // Decrypt using CryptoUtils (XChaCha20-Poly1305)
+    const decrypted = CryptoUtils.decrypt(combined, key, encrypted.iv);
     return new Uint8Array(decrypted);
   }
 

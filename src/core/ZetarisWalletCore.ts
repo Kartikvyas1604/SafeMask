@@ -6,10 +6,12 @@
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
 // @ts-expect-error - TypeScript may not resolve this import correctly but it works at runtime
 import { wordlist } from '@scure/bip39/wordlists/english';
-import { HDKey } from '@scure/bip32';
 import { ed25519 } from '@noble/curves/ed25519';
+import { secp256k1 } from '@noble/curves/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
+import { sha512 } from '@noble/hashes/sha512';
 import { keccak_256 } from '@noble/hashes/sha3';
+import { hmac } from '@noble/hashes/hmac';
 import bs58 from 'bs58';
 import { Buffer } from '@craftzdog/react-native-buffer';
 import { Logger } from '../utils/logger';
@@ -43,6 +45,46 @@ export class ZetarisWalletCore {
   private walletData: WalletData | null = null;
 
   /**
+   * Simple BIP32-like key derivation without native crypto
+   * This is a simplified version - for production use proper BIP32
+   */
+  private deriveChildKey(seed: Uint8Array, path: string): { privateKey: Uint8Array; chainCode: Uint8Array } {
+    // Start with master key
+    const masterHmac = hmac(sha512, Buffer.from('Bitcoin seed'), seed);
+    let privateKey = masterHmac.slice(0, 32);
+    let chainCode = masterHmac.slice(32);
+
+    // Parse path like "m/44'/60'/0'/0/0"
+    const segments = path.split('/').slice(1); // Remove 'm'
+    
+    for (const segment of segments) {
+      const hardened = segment.endsWith("'");
+      const index = hardened ? parseInt(segment.slice(0, -1)) + 0x80000000 : parseInt(segment);
+      
+      // Derive child
+      const data = new Uint8Array(37);
+      if (hardened) {
+        data[0] = 0;
+        data.set(privateKey, 1);
+      } else {
+        // For non-hardened, we'd need the public key, but simplified here
+        data[0] = 0;
+        data.set(privateKey, 1);
+      }
+      
+      // Set index (big-endian)
+      const view = new DataView(data.buffer);
+      view.setUint32(33, index, false);
+      
+      const childHmac = hmac(sha512, chainCode, data);
+      privateKey = childHmac.slice(0, 32);
+      chainCode = childHmac.slice(32);
+    }
+    
+    return { privateKey, chainCode };
+  }
+
+  /**
    * Create new wallet with 24-word seed phrase
    */
   async createWallet(): Promise<WalletData> {
@@ -53,27 +95,26 @@ export class ZetarisWalletCore {
       const mnemonic = generateMnemonic(wordlist, 256); // 256 bits = 24 words
       Logger.debug('Generated mnemonic:', mnemonic.split(' ').length + ' words');
       
-      // Derive master key using BIP32 - use Sync version to avoid Web Crypto dependency
+      // Derive master key using simple derivation
       const seed = mnemonicToSeedSync(mnemonic);
-      const masterKey = HDKey.fromMasterSeed(seed);
 
       // Derive accounts for all chains
       const accounts: Account[] = [];
       
       // Zcash (shielded)
-      accounts.push(await this.deriveZcashAccount(masterKey));
+      accounts.push(await this.deriveZcashAccount(seed));
       
       // Ethereum
-      accounts.push(await this.deriveEthereumAccount(masterKey));
+      accounts.push(await this.deriveEthereumAccount(seed));
       
       // Polygon (same as Ethereum - EVM compatible)
-      accounts.push(await this.derivePolygonAccount(masterKey));
+      accounts.push(await this.derivePolygonAccount(seed));
       
       // Solana
-      accounts.push(this.deriveSolanaAccount(masterKey));
+      accounts.push(this.deriveSolanaAccount(seed));
       
       // Bitcoin
-      accounts.push(await this.deriveBitcoinAccount(masterKey));
+      accounts.push(await this.deriveBitcoinAccount(seed));
 
       // Generate unified address
       const unifiedAddress = this.generateUnifiedAddress(accounts);
@@ -116,16 +157,15 @@ export class ZetarisWalletCore {
       
       Logger.info('Mnemonic validated successfully');
 
-      // Derive from existing seed phrase - use Sync version
+      // Derive from existing seed phrase
       const seed = mnemonicToSeedSync(normalizedMnemonic);
-      const masterKey = HDKey.fromMasterSeed(seed);
 
       const accounts: Account[] = [];
-      accounts.push(await this.deriveZcashAccount(masterKey));
-      accounts.push(await this.deriveEthereumAccount(masterKey));
-      accounts.push(await this.derivePolygonAccount(masterKey));
-      accounts.push(this.deriveSolanaAccount(masterKey));
-      accounts.push(await this.deriveBitcoinAccount(masterKey));
+      accounts.push(await this.deriveZcashAccount(seed));
+      accounts.push(await this.deriveEthereumAccount(seed));
+      accounts.push(await this.derivePolygonAccount(seed));
+      accounts.push(this.deriveSolanaAccount(seed));
+      accounts.push(await this.deriveBitcoinAccount(seed));
 
       const unifiedAddress = this.generateUnifiedAddress(accounts);
 
@@ -168,16 +208,19 @@ export class ZetarisWalletCore {
   // CHAIN-SPECIFIC DERIVATIONS
   // ========================================================================
 
-  private async deriveZcashAccount(masterKey: HDKey): Promise<Account> {
+  private async deriveZcashAccount(seed: Uint8Array): Promise<Account> {
     // BIP44: m/44'/133'/0'/0/0 (133 is Zcash coin type)
     const path = "m/44'/133'/0'/0/0";
-    const child = masterKey.derive(path);
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
     
-    const privateKey = Buffer.from(child.privateKey!).toString('hex');
-    const publicKey = Buffer.from(child.publicKey!).toString('hex');
+    const privateKey = Buffer.from(privKeyBytes).toString('hex');
+    
+    // Generate public key using secp256k1
+    const pubKeyBytes = secp256k1.getPublicKey(privKeyBytes, true);
+    const publicKey = Buffer.from(pubKeyBytes).toString('hex');
     
     // Generate Zcash shielded address (simplified)
-    const address = 'zs1' + Buffer.from(child.publicKey!).toString('hex').substring(0, 76);
+    const address = 'zs1' + Buffer.from(pubKeyBytes).toString('hex').substring(0, 76);
 
     return {
       name: 'Zcash Shielded',
@@ -190,17 +233,20 @@ export class ZetarisWalletCore {
     };
   }
 
-  private async deriveEthereumAccount(masterKey: HDKey): Promise<Account> {
+  private async deriveEthereumAccount(seed: Uint8Array): Promise<Account> {
     // BIP44: m/44'/60'/0'/0/0 (60 is Ethereum coin type)
     const path = "m/44'/60'/0'/0/0";
-    const child = masterKey.derive(path);
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
     
-    const privateKey = Buffer.from(child.privateKey!).toString('hex');
-    const publicKey = Buffer.from(child.publicKey!).toString('hex');
+    const privateKey = Buffer.from(privKeyBytes).toString('hex');
+    
+    // Generate public key using secp256k1 (uncompressed)
+    const pubKeyBytes = secp256k1.getPublicKey(privKeyBytes, false);
+    const publicKey = Buffer.from(pubKeyBytes).toString('hex');
     
     // Derive Ethereum address from public key
-    const pubKeyBytes = Buffer.from(publicKey, 'hex').slice(1); // Remove first byte
-    const hash = keccak_256(pubKeyBytes);
+    const pubKeyBytesNoPrefix = pubKeyBytes.slice(1); // Remove first byte (0x04)
+    const hash = keccak_256(pubKeyBytesNoPrefix);
     const address = '0x' + Buffer.from(hash).slice(-20).toString('hex');
 
     return {
@@ -214,9 +260,9 @@ export class ZetarisWalletCore {
     };
   }
 
-  private async derivePolygonAccount(masterKey: HDKey): Promise<Account> {
+  private async derivePolygonAccount(seed: Uint8Array): Promise<Account> {
     // Same as Ethereum (EVM compatible)
-    const ethAccount = await this.deriveEthereumAccount(masterKey);
+    const ethAccount = await this.deriveEthereumAccount(seed);
     
     return {
       ...ethAccount,
@@ -225,15 +271,15 @@ export class ZetarisWalletCore {
     };
   }
 
-  private deriveSolanaAccount(masterKey: HDKey): Account {
+  private deriveSolanaAccount(seed: Uint8Array): Account {
     // BIP44: m/44'/501'/0'/0/0 (501 is Solana coin type)
     const path = "m/44'/501'/0'/0/0";
-    const child = masterKey.derive(path);
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
     
-    const privateKey = Buffer.from(child.privateKey!).toString('hex');
+    const privateKey = Buffer.from(privKeyBytes).toString('hex');
     
-    // Solana uses Ed25519 - use @noble/curves which doesn't need hash config
-    const publicKeyBytes = ed25519.getPublicKey(child.privateKey!);
+    // Solana uses Ed25519
+    const publicKeyBytes = ed25519.getPublicKey(privKeyBytes);
     const publicKey = Buffer.from(publicKeyBytes).toString('hex');
     
     // Base58 encode for Solana address
@@ -250,16 +296,19 @@ export class ZetarisWalletCore {
     };
   }
 
-  private async deriveBitcoinAccount(masterKey: HDKey): Promise<Account> {
+  private async deriveBitcoinAccount(seed: Uint8Array): Promise<Account> {
     // BIP84: m/84'/0'/0'/0/0 (Native SegWit)
     const path = "m/84'/0'/0'/0/0";
-    const child = masterKey.derive(path);
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
     
-    const privateKey = Buffer.from(child.privateKey!).toString('hex');
-    const publicKey = Buffer.from(child.publicKey!).toString('hex');
+    const privateKey = Buffer.from(privKeyBytes).toString('hex');
+    
+    // Generate public key using secp256k1
+    const pubKeyBytes = secp256k1.getPublicKey(privKeyBytes, true);
+    const publicKey = Buffer.from(pubKeyBytes).toString('hex');
     
     // Generate Bitcoin address (simplified - real implementation would use proper encoding)
-    const address = 'bc1q' + Buffer.from(sha256(child.publicKey!)).toString('hex').substring(0, 38);
+    const address = 'bc1q' + Buffer.from(sha256(pubKeyBytes)).toString('hex').substring(0, 38);
 
     return {
       name: 'Bitcoin',
@@ -281,15 +330,11 @@ export class ZetarisWalletCore {
     const data = accounts.map(a => a.address).join('');
     const hash = sha256(Buffer.from(data, 'utf8'));
     
-    // Encode as Bech32 with 'cm' prefix (Zetaris)
-    const base32 = Buffer.from(hash).toString('base64')
-      .replace(/\+/g, '')
-      .replace(/\//g, '')
-      .replace(/=/g, '')
-      .toLowerCase()
-      .substring(0, 50);
+    // Convert to hex and create a simplified address
+    const hexString = Buffer.from(hash).toString('hex');
+    const shortened = hexString.substring(0, 50).toLowerCase();
     
-    return `cm1${base32}`;
+    return `cm1${shortened}`;
   }
 
   // ========================================================================

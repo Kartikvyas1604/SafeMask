@@ -10,12 +10,4 @@ config.resolver.assetExts.push('wasm');
 // Add source extensions
 config.resolver.sourceExts.push('cjs');
 
-// Add extra node modules for crypto polyfills
-config.resolver.extraNodeModules = {
-  ...config.resolver.extraNodeModules,
-  crypto: require.resolve('react-native-quick-crypto'),
-  stream: require.resolve('readable-stream'),
-  buffer: require.resolve('@craftzdog/react-native-buffer'),
-};
-
 module.exports = config;

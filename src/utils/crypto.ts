@@ -1,41 +1,62 @@
-// Use react-native-quick-crypto polyfill
-const crypto = require('crypto');
+// Pure JavaScript crypto implementation for React Native/Expo Go
+import { sha256 } from '@noble/hashes/sha256';
+import { sha512 } from '@noble/hashes/sha512';
+import { pbkdf2 } from '@noble/hashes/pbkdf2';
+import { randomBytes } from '@noble/hashes/utils';
+import { xchacha20poly1305 } from '@noble/ciphers/chacha';
+import { utf8ToBytes, bytesToUtf8 } from '@noble/hashes/utils';
 
 export class CryptoUtils {
   static hash(data: Uint8Array | Buffer, algorithm: string = 'sha256'): Buffer {
-    return crypto.createHash(algorithm).update(data).digest();
+    let hashResult: Uint8Array;
+    if (algorithm === 'sha256') {
+      hashResult = sha256(data);
+    } else if (algorithm === 'sha512') {
+      hashResult = sha512(data);
+    } else {
+      throw new Error(`Unsupported hash algorithm: ${algorithm}`);
+    }
+    return Buffer.from(hashResult);
   }
 
   static randomBytes(length: number): Uint8Array {
-    return new Uint8Array(crypto.randomBytes(length));
+    return randomBytes(length);
   }
 
   static async pbkdf2(password: string, salt: Uint8Array, iterations: number, keyLength: number): Promise<Uint8Array> {
-    return new Promise((resolve, reject) => {
-      crypto.pbkdf2(password, Buffer.from(salt), iterations, keyLength, 'sha512', (err: Error | null, derivedKey: Buffer) => {
-        if (err) reject(err);
-        else resolve(new Uint8Array(derivedKey));
-      });
-    });
+    const passwordBytes = utf8ToBytes(password);
+    return pbkdf2(sha512, passwordBytes, salt, { c: iterations, dkLen: keyLength });
   }
 
   static encrypt(data: Uint8Array, key: Uint8Array, iv: Uint8Array): Uint8Array {
-    const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(key), Buffer.from(iv));
-    const encrypted = Buffer.concat([cipher.update(Buffer.from(data)), cipher.final()]);
-    const authTag = cipher.getAuthTag();
-    return new Uint8Array(Buffer.concat([encrypted, authTag]));
+    // Use XChaCha20-Poly1305 for encryption (works in pure JS)
+    if (key.length !== 32) {
+      throw new Error('Key must be 32 bytes');
+    }
+    if (iv.length !== 24) {
+      // If IV is not 24 bytes, pad or truncate it
+      const newIv = new Uint8Array(24);
+      newIv.set(iv.slice(0, 24));
+      iv = newIv;
+    }
+    
+    const chacha = xchacha20poly1305(key, iv);
+    return chacha.encrypt(data);
   }
 
   static decrypt(encryptedData: Uint8Array, key: Uint8Array, iv: Uint8Array): Uint8Array {
-    const data = Buffer.from(encryptedData);
-    const authTag = data.slice(-16);
-    const encrypted = data.slice(0, -16);
+    // Use XChaCha20-Poly1305 for decryption
+    if (key.length !== 32) {
+      throw new Error('Key must be 32 bytes');
+    }
+    if (iv.length !== 24) {
+      const newIv = new Uint8Array(24);
+      newIv.set(iv.slice(0, 24));
+      iv = newIv;
+    }
     
-    const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(key), Buffer.from(iv));
-    decipher.setAuthTag(authTag);
-    
-    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-    return new Uint8Array(decrypted);
+    const chacha = xchacha20poly1305(key, iv);
+    return chacha.decrypt(encryptedData);
   }
 
   static secureCompare(a: Uint8Array, b: Uint8Array): boolean {

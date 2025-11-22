@@ -1,8 +1,8 @@
 // import { groth16 } from 'snarkjs';
 // import { buildPoseidon } from 'circomlibjs';
 import * as logger from '../utils/logger';
-// Use react-native-quick-crypto polyfill
-const crypto = require('crypto');
+import { sha256 } from '@noble/hashes/sha256';
+import { randomBytes } from '@noble/hashes/utils';
 
 export interface PrivateTransactionInputs {
   senderSecret: string;
@@ -77,9 +77,8 @@ export class ZKProofService {
     const randomnessBigInt = BigInt(randomness);
     
     // Stub: Use SHA256 instead of Poseidon (circomlibjs not installed)
-    const hash = crypto.createHash('sha256')
-      .update(amountBigInt.toString() + randomnessBigInt.toString())
-      .digest('hex');
+    const hashInput = new TextEncoder().encode(amountBigInt.toString() + randomnessBigInt.toString());
+    const hash = Buffer.from(sha256(hashInput)).toString('hex');
     const commitment = BigInt('0x' + hash).toString();
     
     logger.info(`🔐 Generated commitment (SHA256): ${commitment.substring(0, 16)}...`);
@@ -101,9 +100,8 @@ export class ZKProofService {
     const commitmentBigInt = BigInt(commitment);
     
     // Stub: Use SHA256 instead of Poseidon (circomlibjs not installed)
-    const hash = crypto.createHash('sha256')
-      .update(secretBigInt.toString() + commitmentBigInt.toString())
-      .digest('hex');
+    const hashInput = new TextEncoder().encode(secretBigInt.toString() + commitmentBigInt.toString());
+    const hash = Buffer.from(sha256(hashInput)).toString('hex');
     const nullifier = BigInt('0x' + hash).toString();
     
     logger.info(`🔒 Generated nullifier (SHA256): ${nullifier.substring(0, 16)}...`);
@@ -116,8 +114,7 @@ export class ZKProofService {
    */
   public generateRandomness(): string {
     // Generate random 256-bit value
-    const bytes = new Uint8Array(32);
-    crypto.getRandomValues(bytes);
+    const bytes = randomBytes(32);
     
     // Convert to BigInt
     let randomness = 0n;
