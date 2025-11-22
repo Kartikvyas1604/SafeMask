@@ -6,9 +6,7 @@ import { randomBytes } from '@noble/hashes/utils';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { MeshPeer, MeshMessage } from '../types';
 
-/**
- * Onion Layer
- */
+
 export interface OnionLayer {
   hopId: string;
   encryptedPayload: Uint8Array;
