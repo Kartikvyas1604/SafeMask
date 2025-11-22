@@ -14,9 +14,7 @@ export interface OnionLayer {
   layerNumber: number;
 }
 
-/**
- * Onion Route
- */
+
 export interface OnionRoute {
   hops: MeshPeer[];
   totalHops: number;
