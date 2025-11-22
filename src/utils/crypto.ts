@@ -3,7 +3,7 @@ import { sha256 } from '@noble/hashes/sha256';
 import { sha512 } from '@noble/hashes/sha512';
 import { pbkdf2 } from '@noble/hashes/pbkdf2';
 import { randomBytes } from '@noble/hashes/utils';
-import { xchacha20poly1305 } from '@noble/ciphers/chacha';
+import { xchacha20poly1305 } from '@noble/ciphers/chacha.js';
 import { utf8ToBytes, bytesToUtf8 } from '@noble/hashes/utils';
 
 export class CryptoUtils {

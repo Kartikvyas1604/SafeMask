@@ -17,8 +17,10 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import { Colors } from '../utils/theme';
 
 interface ImportPrivateKeyScreenProps {
   navigation: {
@@ -29,6 +31,7 @@ interface ImportPrivateKeyScreenProps {
 }
 
 export default function ImportPrivateKeyScreen({ navigation }: ImportPrivateKeyScreenProps) {
+  const insets = useSafeAreaInsets();
   const [privateKey, setPrivateKey] = useState('');
   const [selectedChain, setSelectedChain] = useState<ChainType>(ChainType.ETHEREUM);
   const [accountName, setAccountName] = useState('');

@@ -4,7 +4,7 @@ import { registerRootComponent } from 'expo';
 import { Buffer } from '@craftzdog/react-native-buffer';
 
 // Polyfill Buffer globally
-global.Buffer = Buffer;
+global.Buffer = Buffer as any;
 
 import App from './App';
 

@@ -16,12 +16,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../design/colors';
+import BottomTabBar from '../components/BottomTabBar';
 
 interface BrowserScreenProps {
   navigation: any;
 }
 
 export default function BrowserScreen({ navigation }: BrowserScreenProps) {
+  const insets = useSafeAreaInsets();
   const [url, setUrl] = useState('');
 
   return (

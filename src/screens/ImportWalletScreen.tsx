@@ -31,6 +31,7 @@ interface ImportWalletScreenProps {
 }
 
 export default function ImportWalletScreen({ navigation }: ImportWalletScreenProps) {
+  const insets = useSafeAreaInsets();
   const [seedPhrase, setSeedPhrase] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
