@@ -1,7 +1,3 @@
-/**
- * Constants used throughout the wallet application
- */
-
 export const NETWORKS = {
   ETHEREUM: {
     name: 'Ethereum',

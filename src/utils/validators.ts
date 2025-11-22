@@ -1,13 +1,8 @@
-/**
- * Validation utilities for wallet inputs
- */
 
 import { ethers } from 'ethers';
 
 export const validators = {
-  /**
-   * Validate Ethereum address
-   */
+
   isValidEthereumAddress: (address: string): boolean => {
     try {
       ethers.getAddress(address);
@@ -17,9 +12,6 @@ export const validators = {
     }
   },
 
-  /**
-   * Validate Solana address
-   */
   isValidSolanaAddress: (address: string): boolean => {
     // Solana addresses are base58 encoded, 32-44 characters
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
@@ -28,9 +20,6 @@ export const validators = {
     return true;
   },
 
-  /**
-   * Validate Bitcoin address
-   */
   isValidBitcoinAddress: (address: string): boolean => {
     // Basic validation for Bitcoin addresses
     if (/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/.test(address)) {
@@ -39,9 +28,6 @@ export const validators = {
     return false;
   },
 
-  /**
-   * Validate amount (positive number)
-   */
   isValidAmount: (amount: string): boolean => {
     if (!amount || amount.trim() === '') return false;
     
@@ -51,18 +37,13 @@ export const validators = {
     return true;
   },
 
-  /**
-   * Validate private key
-   */
+
   isValidPrivateKey: (privateKey: string): boolean => {
     // Ethereum private key validation (64 hex chars, optionally with 0x prefix)
     const cleanKey = privateKey.startsWith('0x') ? privateKey.slice(2) : privateKey;
     return /^[a-fA-F0-9]{64}$/.test(cleanKey);
   },
 
-  /**
-   * Validate mnemonic phrase (BIP39)
-   */
   isValidMnemonic: (mnemonic: string): boolean => {
     const words = mnemonic.trim().split(/\s+/);
     
