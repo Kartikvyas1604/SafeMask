@@ -1,8 +1,3 @@
-/**
- * WalletIntegrationService - Centralized service to integrate all wallet features
- * Connects ProductionTransactionService, PriceOracleService, BiometricAuthService
- */
-
 import { ProductionTransactionService } from './ProductionTransactionService';
 import { priceOracle } from './PriceOracleService';
 import { biometricAuth } from './BiometricAuthService';
@@ -119,7 +114,7 @@ export class WalletIntegrationService {
       }
 
       // Get private key if not provided
-      let privateKey = params.privateKey;
+      const privateKey = params.privateKey;
       
       if (!privateKey) {
         throw new Error('Private key is required for transactions');
@@ -127,13 +122,18 @@ export class WalletIntegrationService {
 
       // Send transaction
       const result = await this.txService.sendTransaction({
+        chain: params.network,
         from: params.from,
         to: params.to,
         amount: params.amount,
         privateKey,
       });
 
-      const txHash = result.hash;
+      if (!result.success) {
+        throw new Error(result.error || 'Transaction failed');
+      }
+
+      const txHash = result.txHash || '';
       logger.info('✅ Transaction sent:', txHash);
       return txHash;
     } catch (error) {

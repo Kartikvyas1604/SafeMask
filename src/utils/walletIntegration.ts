@@ -198,6 +198,7 @@ export class WalletIntegration {
     // Cross-chain swap via privacy bridge
     if (privacyEnabled || fromChain !== toChain) {
       const targetAddress = await this.wallet.getAddress(toChain);
+      const sourceAddress = await this.wallet.getAddress(fromChain);
       
       // Use the bridge's initiateTransfer method
       const bridgeTxId = await this.bridge.initiateTransfer({
@@ -206,6 +207,8 @@ export class WalletIntegration {
         tokenAddress: fromToken,
         amount: fromAmount,
         recipient: targetAddress,
+        senderAddress: sourceAddress,
+        privateKey: '', // Private key should be provided by caller
       });
 
       return bridgeTxId;
