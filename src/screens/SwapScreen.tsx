@@ -26,6 +26,9 @@ import {
   Modal,
   Animated,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import ChainIcon from '../components/ChainIcon';
+import { Colors } from '../design/colors';
 
 interface Token {
   symbol: string;
@@ -73,7 +76,7 @@ export default function SwapScreen({ navigation }: { navigation: any }) {
       symbol: 'ETH',
       name: 'Ethereum',
       balance: '8.3',
-      icon: '◆',
+      icon: '',
       color: '#627EEA',
       chain: 'ethereum',
       price: 2000,
@@ -82,7 +85,7 @@ export default function SwapScreen({ navigation }: { navigation: any }) {
       symbol: 'ZEC',
       name: 'Zcash',
       balance: '12.5',
-      icon: '⚡',
+      icon: '',
       color: '#F4B024',
       chain: 'zcash',
       price: 300,
@@ -91,7 +94,7 @@ export default function SwapScreen({ navigation }: { navigation: any }) {
       symbol: 'MATIC',
       name: 'Polygon',
       balance: '5,420',
-      icon: '⬡',
+      icon: '',
       color: '#8247E5',
       chain: 'polygon',
       price: 0.78,
@@ -240,7 +243,7 @@ export default function SwapScreen({ navigation }: { navigation: any }) {
         `Fee: $${bestRoute.fee}\n` +
         `Price Impact: ${bestRoute.priceImpact.toFixed(2)}%\n` +
         `Route: ${bestRoute.route.join(' → ')}\n` +
-        `${usePrivacyBridge ? '\n🔒 Privacy-preserving swap via bridge' : ''}`,
+        `${usePrivacyBridge ? '\nPrivacy-preserving swap via bridge' : ''}`,
       [
         {
           text: 'Cancel',
@@ -306,7 +309,8 @@ export default function SwapScreen({ navigation }: { navigation: any }) {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Swap</Text>
           <TouchableOpacity onPress={() => setPriceRefreshTimer(30)} style={styles.refreshButton}>
-            <Text style={styles.refreshText}>🔄 {priceRefreshTimer}s</Text>
+            <Ionicons name="refresh" size={16} color={Colors.textSecondary} style={{ marginRight: 4 }} />
+            <Text style={styles.refreshText}>{priceRefreshTimer}s</Text>
           </TouchableOpacity>
         </View>
 
@@ -399,7 +403,8 @@ export default function SwapScreen({ navigation }: { navigation: any }) {
         {isCrossChain && (
           <View style={styles.privacyOption}>
             <View style={styles.privacyInfo}>
-              <Text style={styles.privacyTitle}>🔒 Privacy Bridge</Text>
+              <Ionicons name="lock-closed" size={16} color={Colors.accent} style={{ marginRight: 8 }} />
+              <Text style={styles.privacyTitle}>Privacy Bridge</Text>
               <Text style={styles.privacyDesc}>Use zero-knowledge proofs for cross-chain swap</Text>
             </View>
             <TouchableOpacity
@@ -479,7 +484,14 @@ export default function SwapScreen({ navigation }: { navigation: any }) {
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Type:</Text>
                 <Text style={styles.detailValue}>
-                  {usePrivacyBridge ? '🔒 Private Cross-Chain' : 'Standard Cross-Chain'}
+                  {usePrivacyBridge ? (
+                    <>
+                      <Ionicons name="lock-closed" size={14} color={Colors.accent} style={{ marginRight: 4 }} />
+                      Private Cross-Chain
+                    </>
+                  ) : (
+                    'Standard Cross-Chain'
+                  )}
                 </Text>
               </View>
             )}

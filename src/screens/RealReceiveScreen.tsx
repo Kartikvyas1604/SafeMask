@@ -1,7 +1,6 @@
 /**
  * Real Receive Screen - Show addresses and QR codes for receiving
- * Based on Zetaris specification from prompt.txt
- * Supports: ETH, MATIC, SOL, BTC, ZEC
+ * Redesigned to match home page theme and style
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,16 +12,23 @@ import {
   ScrollView,
   Alert,
   Clipboard,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import ChainIcon from '../components/ChainIcon';
+import BottomTabBar from '../components/BottomTabBar';
+import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
 
-type ReceiveScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Receive'>;
-
 interface Props {
-  navigation: any;
-  route?: any;
+  navigation: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  route?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 interface ChainAddress {
@@ -33,11 +39,12 @@ interface ChainAddress {
   warning?: string;
 }
 
-const RealReceiveScreen: React.FC<Props> = ({ navigation, route }) => {
+const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [addresses, setAddresses] = useState<ChainAddress[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<ChainAddress | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showNFC, setShowNFC] = useState(false);
+  const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
   const [hdWallet] = useState(() => new ZetarisWalletCore());
 
   useEffect(() => {
@@ -75,32 +82,32 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation, route }) => {
           chain: 'Ethereum',
           symbol: 'ETH',
           address: ethAccount?.address || '',
-          icon: '◆',
+          icon: '',
         },
         {
           chain: 'Polygon',
           symbol: 'MATIC',
           address: polyAccount?.address || '',
-          icon: '⬡',
+          icon: '',
         },
         {
           chain: 'Solana',
           symbol: 'SOL',
           address: solAccount?.address || '',
-          icon: '◎',
+          icon: '',
         },
         {
           chain: 'Bitcoin',
           symbol: 'BTC',
           address: btcAccount?.address || '',
-          icon: '₿',
+          icon: '',
           warning: 'Only send Bitcoin to this address',
         },
         {
           chain: 'Zcash',
           symbol: 'ZEC',
           address: zecAccount?.address || '',
-          icon: '⚡',
+          icon: '',
           warning: 'Transparent address (not shielded)',
         },
       ];
@@ -119,207 +126,271 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const copyToClipboard = (address: string) => {
     Clipboard.setString(address);
-    Alert.alert('Copied!', 'Address copied to clipboard');
+    Alert.alert('Address Copied', 'Wallet address has been copied to clipboard');
   };
 
   const shareAddress = (address: string) => {
-    // In production, use React Native Share API
     logger.info('Sharing address:', address);
     Alert.alert('Share', `Share this address:\n\n${address}`);
-  };
-  
-  const handleNFCReceive = () => {
-    setShowNFC(true);
-    Alert.alert(
-      '📱 NFC Receive Mode',
-      'Hold your phone near another device to receive payment via NFC.\n\nThe sender will scan your address and send crypto directly.',
-      [
-        { text: 'Cancel', onPress: () => setShowNFC(false) },
-        { text: 'Ready', onPress: () => {
-          logger.info('📱 NFC receive mode activated');
-          // In production, implement actual NFC listener
-          setTimeout(() => {
-            setShowNFC(false);
-            Alert.alert('Info', 'NFC receive functionality coming soon!');
-          }, 3000);
-        }}
-      ]
-    );
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.accent} />
         <Text style={styles.loadingText}>Loading addresses...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header - Matching home page style */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Receive</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerRight}>
+            <View style={styles.profileContainer}>
+              <View style={styles.profileIcon}>
+                <Ionicons name="person" size={20} color={Colors.white} />
+              </View>
+            </View>
+            <TouchableOpacity style={styles.notificationIcon}>
+              <Ionicons name="notifications-outline" size={24} color={Colors.white} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        
+        <View style={styles.greetingSection}>
+          <Text style={styles.greetingText}>Receive</Text>
+          <Text style={styles.greetingSubtext}>Select a network to receive funds</Text>
+        </View>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        {/* Chain Selector */}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* SELECT NETWORK Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Select Network</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {addresses.map((addr) => (
-              <TouchableOpacity
-                key={addr.chain}
-                style={[
-                  styles.chainButton,
-                  selectedAddress?.chain === addr.chain && styles.chainButtonActive,
-                ]}
-                onPress={() => setSelectedAddress(addr)}
-              >
-                <Text style={styles.chainIcon}>{addr.icon}</Text>
-                <Text
-                  style={[
-                    styles.chainName,
-                    selectedAddress?.chain === addr.chain && styles.chainNameActive,
-                  ]}
-                >
-                  {addr.symbol}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <Text style={styles.sectionLabel}>SELECT NETWORK</Text>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={() => setShowNetworkDropdown(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.dropdownContent}>
+              {selectedAddress && (
+                <>
+                  <ChainIcon chain={selectedAddress.chain.toLowerCase()} size={32} />
+                  <View style={styles.dropdownTextContainer}>
+                    <Text style={styles.dropdownChainName}>{selectedAddress.chain}</Text>
+                    <Text style={styles.dropdownSymbol}>{selectedAddress.symbol}</Text>
+                  </View>
+                </>
+              )}
+            </View>
+            <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         {selectedAddress && (
           <>
-            {/* QR Code Placeholder */}
-            <View style={styles.qrContainer}>
-              <View style={styles.qrPlaceholder}>
-                <Text style={styles.qrText}>QR CODE</Text>
-                <Text style={styles.qrAddressShort}>
-                  {selectedAddress.address.substring(0, 6)}...
-                  {selectedAddress.address.substring(selectedAddress.address.length - 4)}
-                </Text>
-                <Text style={styles.qrHint}>
-                  (QR code generation requires additional package)
-                </Text>
+            {/* QR Code Card */}
+            <View style={styles.qrCard}>
+              <Text style={styles.sectionLabel}>QR CODE</Text>
+              <View style={styles.qrContainer}>
+                <View style={styles.qrPlaceholder}>
+                  <View style={styles.qrIconContainer}>
+                    <Ionicons name="qr-code-outline" size={64} color={Colors.textTertiary} />
+                  </View>
+                  <Text style={styles.qrAddressShort}>
+                    {selectedAddress.address.substring(0, 8)}...
+                    {selectedAddress.address.substring(selectedAddress.address.length - 8)}
+                  </Text>
+                  <Text style={styles.qrHint}>
+                    Scan to receive {selectedAddress.symbol}
+                  </Text>
+                </View>
               </View>
             </View>
 
-            {/* Address Display */}
-            <View style={styles.addressContainer}>
-              <Text style={styles.addressLabel}>
-                {selectedAddress.chain} Address
-              </Text>
-              <View style={styles.addressBox}>
-                <Text style={styles.addressText} numberOfLines={2}>
-                  {selectedAddress.address}
-                </Text>
-              </View>
+            {/* ADDRESS Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>WALLET ADDRESS</Text>
+              <View style={styles.addressCard}>
+                <View style={styles.addressBox}>
+                  <Text style={styles.addressText} numberOfLines={2}>
+                    {selectedAddress.address}
+                  </Text>
+                </View>
 
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => copyToClipboard(selectedAddress.address)}
-                >
-                  <Text style={styles.actionIcon}>📋</Text>
-                  <Text style={styles.actionText}>Copy</Text>
-                </TouchableOpacity>
+                {/* Action Buttons */}
+                <View style={styles.actionButtonsRow}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => copyToClipboard(selectedAddress.address)}
+                  >
+                    <Ionicons name="copy-outline" size={20} color={Colors.white} />
+                    <Text style={styles.actionButtonText}>Copy</Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => shareAddress(selectedAddress.address)}
-                >
-                  <Text style={styles.actionIcon}>↗️</Text>
-                  <Text style={styles.actionText}>Share</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => shareAddress(selectedAddress.address)}
+                  >
+                    <Ionicons name="share-outline" size={20} color={Colors.white} />
+                    <Text style={styles.actionButtonText}>Share</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              
-              {/* NFC Receive Button */}
-              <TouchableOpacity
-                style={styles.nfcButton}
-                onPress={handleNFCReceive}
-              >
-                <Text style={styles.nfcIcon}>📱</Text>
-                <Text style={styles.nfcText}>Receive via NFC</Text>
-              </TouchableOpacity>
             </View>
 
             {/* Warning Banner */}
             {selectedAddress.warning && (
-              <View style={styles.warningBanner}>
-                <Text style={styles.warningIcon}>⚠️</Text>
-                <Text style={styles.warningText}>{selectedAddress.warning}</Text>
+              <View style={styles.section}>
+                <View style={styles.warningCard}>
+                  <View style={styles.warningHeader}>
+                    <Ionicons name="alert-circle" size={20} color={Colors.warning} />
+                    <Text style={styles.warningTitle}>Warning</Text>
+                  </View>
+                  <Text style={styles.warningText}>{selectedAddress.warning}</Text>
+                </View>
               </View>
             )}
 
-            {/* Instructions */}
-            <View style={styles.instructionsContainer}>
-              <Text style={styles.instructionsTitle}>How to Receive</Text>
-              <View style={styles.instructionItem}>
-                <Text style={styles.instructionNumber}>1.</Text>
-                <Text style={styles.instructionText}>
-                  Copy the {selectedAddress.chain} address above
-                </Text>
-              </View>
-              <View style={styles.instructionItem}>
-                <Text style={styles.instructionNumber}>2.</Text>
-                <Text style={styles.instructionText}>
-                  Send {selectedAddress.symbol} from another wallet to this address
-                </Text>
-              </View>
-              <View style={styles.instructionItem}>
-                <Text style={styles.instructionNumber}>3.</Text>
-                <Text style={styles.instructionText}>
-                  Funds will appear after blockchain confirmation
-                </Text>
-              </View>
-            </View>
-
-            {/* Network Info */}
-            <View style={styles.networkInfo}>
-              <View style={styles.networkRow}>
-                <Text style={styles.networkLabel}>Network:</Text>
-                <Text style={styles.networkValue}>{selectedAddress.chain}</Text>
-              </View>
-              <View style={styles.networkRow}>
-                <Text style={styles.networkLabel}>Asset:</Text>
-                <Text style={styles.networkValue}>{selectedAddress.symbol}</Text>
-              </View>
-              <View style={styles.networkRow}>
-                <Text style={styles.networkLabel}>Type:</Text>
-                <Text style={styles.networkValue}>
-                  {selectedAddress.chain === 'Zcash' ? 'Transparent' : 'Standard'}
-                </Text>
+            {/* NETWORK INFO Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>NETWORK INFO</Text>
+              <View style={styles.infoCard}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Network</Text>
+                  <Text style={styles.infoValue}>{selectedAddress.chain}</Text>
+                </View>
+                <View style={styles.infoDivider} />
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Asset</Text>
+                  <Text style={styles.infoValue}>{selectedAddress.symbol}</Text>
+                </View>
+                <View style={styles.infoDivider} />
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Type</Text>
+                  <Text style={styles.infoValue}>
+                    {selectedAddress.chain === 'Zcash' ? 'Transparent' : 'Standard'}
+                  </Text>
+                </View>
               </View>
             </View>
 
-            {/* Safety Notice */}
-            <View style={styles.safetyNotice}>
-              <Text style={styles.safetyTitle}>⚡ Important</Text>
-              <Text style={styles.safetyText}>
-                • Only send {selectedAddress.symbol} to this address
-              </Text>
-              <Text style={styles.safetyText}>
-                • Sending other tokens may result in permanent loss
-              </Text>
-              <Text style={styles.safetyText}>
-                • Always double-check the address before sending
-              </Text>
-              {selectedAddress.chain === 'Ethereum' || selectedAddress.chain === 'Polygon' ? (
-                <Text style={styles.safetyText}>
-                  • This address also supports ERC20 tokens
-                </Text>
-              ) : null}
+            {/* IMPORTANT Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>IMPORTANT</Text>
+              <View style={styles.importantCard}>
+                <View style={styles.importantItem}>
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                  <Text style={styles.importantText}>
+                    Only send {selectedAddress.symbol} to this address
+                  </Text>
+                </View>
+                <View style={styles.importantItem}>
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                  <Text style={styles.importantText}>
+                    Always double-check the address before sending
+                  </Text>
+                </View>
+                <View style={styles.importantItem}>
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                  <Text style={styles.importantText}>
+                    Funds will appear after blockchain confirmation
+                  </Text>
+                </View>
+                {(selectedAddress.chain === 'Ethereum' || selectedAddress.chain === 'Polygon') && (
+                  <View style={styles.importantItem}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                    <Text style={styles.importantText}>
+                      This address also supports ERC20 tokens
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
+
+            {/* Bottom padding for tab bar */}
+            <View style={{ height: 100 }} />
           </>
         )}
       </ScrollView>
+      
+      {/* Network Dropdown Modal */}
+      <Modal
+        visible={showNetworkDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNetworkDropdown(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowNetworkDropdown(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Network</Text>
+              <TouchableOpacity
+                onPress={() => setShowNetworkDropdown(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.dropdownList}>
+              {addresses.map((addr) => (
+                <TouchableOpacity
+                  key={addr.chain}
+                  style={[
+                    styles.dropdownOption,
+                    selectedAddress?.chain === addr.chain && styles.dropdownOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedAddress(addr);
+                    setShowNetworkDropdown(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <ChainIcon chain={addr.chain.toLowerCase()} size={40} />
+                  <View style={styles.dropdownOptionTextContainer}>
+                    <Text
+                      style={[
+                        styles.dropdownOptionChainName,
+                        selectedAddress?.chain === addr.chain && styles.dropdownOptionChainNameActive,
+                      ]}
+                    >
+                      {addr.chain}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.dropdownOptionSymbol,
+                        selectedAddress?.chain === addr.chain && styles.dropdownOptionSymbolActive,
+                      ]}
+                    >
+                      {addr.symbol}
+                    </Text>
+                  </View>
+                  {selectedAddress?.chain === addr.chain && (
+                    <Ionicons name="checkmark-circle" size={24} color={Colors.accent} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      
+      <BottomTabBar />
     </View>
   );
 };
@@ -327,264 +398,367 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
-    color: '#fff',
-    fontSize: 16,
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.md,
+    marginTop: Spacing.lg,
   },
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  
+  // Header - Matching home page
   header: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  profileContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  profileIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.cardHover,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  greetingSection: {
+    marginBottom: Spacing.lg,
+  },
+  greetingText: {
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  greetingSubtext: {
+    fontSize: Typography.fontSize.lg,
+    color: Colors.textSecondary,
+  },
+  
+  // Sections
+  section: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing['2xl'],
+  },
+  sectionLabel: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+    fontWeight: Typography.fontWeight.medium,
+    letterSpacing: 0.5,
+  },
+  
+  // Network Dropdown
+  dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    backgroundColor: Colors.card,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
-  backButton: {
-    fontSize: 32,
-    color: '#fff',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 12,
-  },
-  chainButton: {
+  dropdownContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: Spacing.md,
+    flex: 1,
+  },
+  dropdownTextContainer: {
+    flex: 1,
+  },
+  dropdownChainName: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  dropdownSymbol: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  
+  // Dropdown Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+    paddingBottom: Spacing['2xl'],
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  modalTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownList: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     borderRadius: 12,
-    marginRight: 12,
+    marginBottom: Spacing.sm,
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
-  chainButtonActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
+  dropdownOptionActive: {
+    backgroundColor: Colors.cardHover,
+    borderColor: Colors.accent,
   },
-  chainIcon: {
-    fontSize: 20,
-    marginRight: 8,
+  dropdownOptionTextContainer: {
+    flex: 1,
   },
-  chainName: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: '600',
+  dropdownOptionChainName: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.semibold,
   },
-  chainNameActive: {
-    color: '#fff',
+  dropdownOptionChainNameActive: {
+    color: Colors.accent,
+  },
+  dropdownOptionSymbol: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  dropdownOptionSymbolActive: {
+    color: Colors.textSecondary,
+  },
+  
+  // QR Code Card
+  qrCard: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing['2xl'],
   },
   qrContainer: {
-    marginTop: 32,
-    paddingHorizontal: 20,
     alignItems: 'center',
   },
   qrPlaceholder: {
     width: 240,
     height: 240,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
-  qrText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 8,
+  qrIconContainer: {
+    marginBottom: Spacing.md,
   },
   qrAddressShort: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textTertiary,
+    marginBottom: Spacing.xs,
+    fontFamily: Typography.fontFamily.mono,
   },
   qrHint: {
-    fontSize: 11,
-    color: '#999',
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textTertiary,
     textAlign: 'center',
   },
-  addressContainer: {
-    marginTop: 32,
-    paddingHorizontal: 20,
-  },
-  addressLabel: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 8,
+  
+  // Address Card
+  addressCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    padding: Spacing.lg,
   },
   addressBox: {
-    backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: '#1f1f1f',
+    backgroundColor: Colors.cardHover,
     borderRadius: 12,
-    padding: 16,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   addressText: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: 'monospace',
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.mono,
+    textAlign: 'center',
   },
-  actionButtons: {
+  actionButtonsRow: {
     flexDirection: 'row',
-    marginTop: 16,
-    gap: 12,
+    gap: Spacing.md,
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#111',
-    paddingVertical: 14,
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.cardHover,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
-  actionIcon: {
-    fontSize: 18,
-    marginRight: 8,
+  actionButtonText: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.medium,
   },
-  actionText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  
+  // Warning Card
+  warningCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.warning,
+    padding: Spacing.lg,
   },
-  warningBanner: {
+  warningHeader: {
     flexDirection: 'row',
-    marginHorizontal: 20,
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ff9800',
     alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
-  warningIcon: {
-    fontSize: 24,
-    marginRight: 12,
+  warningTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.warning,
   },
   warningText: {
-    flex: 1,
-    color: '#ff9800',
-    fontSize: 14,
-  },
-  instructionsContainer: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    padding: 20,
-    backgroundColor: '#111',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1f1f1f',
-  },
-  instructionsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 16,
-  },
-  instructionItem: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  instructionNumber: {
-    fontSize: 14,
-    color: '#7C3AED',
-    fontWeight: 'bold',
-    marginRight: 8,
-    width: 20,
-  },
-  instructionText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#ccc',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.warning,
     lineHeight: 20,
   },
-  networkInfo: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#111',
-    borderRadius: 12,
+  
+  // Info Card
+  infoCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
+    padding: Spacing.lg,
   },
-  networkRow: {
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  networkLabel: {
-    fontSize: 14,
-    color: '#999',
-  },
-  networkValue: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  safetyNotice: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 32,
-    padding: 16,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ff5722',
-  },
-  safetyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ff5722',
-    marginBottom: 12,
-  },
-  safetyText: {
-    fontSize: 13,
-    color: '#ff9800',
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  nfcButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#eab308',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 16,
+    paddingVertical: Spacing.sm,
   },
-  nfcIcon: {
-    fontSize: 20,
-    marginRight: 8,
+  infoLabel: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
   },
-  nfcText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: 'bold',
+  infoValue: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  infoDivider: {
+    height: 1,
+    backgroundColor: Colors.cardBorder,
+    marginVertical: Spacing.sm,
+  },
+  
+  // Important Card
+  importantCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    padding: Spacing.lg,
+  },
+  importantItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  importantText: {
+    flex: 1,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
   },
 });
 

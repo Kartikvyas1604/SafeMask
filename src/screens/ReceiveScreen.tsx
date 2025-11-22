@@ -25,6 +25,9 @@ import {
   Animated,
   TextInput,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import ChainIcon from '../components/ChainIcon';
+import { Colors } from '../design/colors';
 
 interface ChainAddress {
   chain: string;
@@ -52,7 +55,7 @@ export default function ReceiveScreen({ navigation }: { navigation: any }) {
       chain: 'ethereum',
       name: 'Ethereum',
       address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
-      icon: '◆',
+      icon: '',
       color: '#627EEA',
       supportsPrivacy: true,
     },
@@ -60,7 +63,7 @@ export default function ReceiveScreen({ navigation }: { navigation: any }) {
       chain: 'zcash',
       name: 'Zcash (Shielded)',
       address: 'zs1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
-      icon: '⚡',
+      icon: '',
       color: '#F4B024',
       supportsPrivacy: true,
     },
@@ -68,7 +71,7 @@ export default function ReceiveScreen({ navigation }: { navigation: any }) {
       chain: 'polygon',
       name: 'Polygon',
       address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
-      icon: '⬡',
+      icon: '',
       color: '#8247E5',
       supportsPrivacy: true,
     },
@@ -76,7 +79,7 @@ export default function ReceiveScreen({ navigation }: { navigation: any }) {
       chain: 'arbitrum',
       name: 'Arbitrum',
       address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
-      icon: '🔷',
+      icon: '',
       color: '#28A0F0',
       supportsPrivacy: false,
     },
@@ -232,9 +235,9 @@ export default function ReceiveScreen({ navigation }: { navigation: any }) {
                   onPress={() => setSelectedChain(chain)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.chainIcon, { color: chain.color }]}>{chain.icon}</Text>
+                  <ChainIcon chain={chain.chain} size={32} />
                   <Text style={styles.chainName}>{chain.name}</Text>
-                  {chain.supportsPrivacy && <Text style={styles.privacyBadge}>🔒</Text>}
+                  {chain.supportsPrivacy && <Ionicons name="lock-closed" size={12} color={Colors.accent} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -283,7 +286,7 @@ export default function ReceiveScreen({ navigation }: { navigation: any }) {
           <View style={styles.section}>
             <Text style={styles.label}>Request Specific Amount (Optional)</Text>
             <View style={styles.amountContainer}>
-              <Text style={styles.currencySymbol}>{selectedChain.icon}</Text>
+              <ChainIcon chain={selectedChain.chain} size={24} />
               <TextInput
                 style={styles.amountInput as any}
                 placeholder="0.00"
@@ -318,7 +321,8 @@ export default function ReceiveScreen({ navigation }: { navigation: any }) {
               onPress={handleShare}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionButtonText}>📤 Share</Text>
+              <Ionicons name="share-outline" size={18} color={Colors.textPrimary} style={{ marginRight: 8 }} />
+              <Text style={styles.actionButtonText}>Share</Text>
             </TouchableOpacity>
           </View>
 
@@ -345,7 +349,7 @@ export default function ReceiveScreen({ navigation }: { navigation: any }) {
             </View>
 
             <View style={styles.infoCard}>
-              <Text style={styles.infoIcon}>⚠️</Text>
+              <Ionicons name="alert-circle" size={20} color={Colors.warning} style={{ marginRight: 8 }} />
               <Text style={styles.infoTitle}>Important</Text>
               <Text style={styles.infoText}>
                 • Always verify the network before sharing{'\n'}
@@ -355,7 +359,7 @@ export default function ReceiveScreen({ navigation }: { navigation: any }) {
             </View>
 
             <View style={styles.infoCard}>
-              <Text style={styles.infoIcon}>⚡</Text>
+              <Ionicons name="flash" size={20} color={Colors.warning} style={{ marginRight: 8 }} />
               <Text style={styles.infoTitle}>Fast Receive</Text>
               <Text style={styles.infoText}>
                 • Funds appear instantly on-chain{'\n'}

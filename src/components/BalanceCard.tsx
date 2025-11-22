@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Colors } from '../design/colors';
 
 interface BalanceCardProps {
   totalBalance: string;
@@ -43,11 +44,11 @@ export default function BalanceCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111111',
+    backgroundColor: Colors.card,
     borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
   },
   content: {
     flexDirection: 'row',
@@ -58,18 +59,18 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
     marginBottom: 8,
   },
   balance: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#ffffff',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   change: {
     fontSize: 13,
-    color: '#6b7280',
+    color: Colors.textTertiary,
   },
   rightSection: {
     alignItems: 'flex-end',
@@ -83,25 +84,25 @@ const styles = StyleSheet.create({
   },
   hideButtonText: {
     fontSize: 13,
-    color: '#ffffff',
+    color: Colors.textPrimary,
   },
   privacyBadge: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    backgroundColor: Colors.accentLight,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.2)',
+    borderColor: Colors.accentLight,
     alignItems: 'center',
   },
   privacyLabel: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   privacyScore: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#C084FC',
+    color: Colors.accentSecondary,
   },
 });

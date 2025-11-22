@@ -16,8 +16,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
+import { Colors } from '../design/colors';
 
 interface ImportWalletScreenProps {
   navigation: {
@@ -73,7 +76,7 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <StatusBar barStyle="light-content" />
@@ -117,7 +120,7 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
 
           {/* Info Box */}
           <View style={styles.infoBox}>
-            <Text style={styles.infoIcon}>ℹ️</Text>
+            <Ionicons name="information-circle" size={20} color={Colors.info} />
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoText}>
                 Enter words separated by spaces. Make sure there are no extra spaces or typos.

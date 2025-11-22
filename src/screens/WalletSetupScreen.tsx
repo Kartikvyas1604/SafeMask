@@ -11,6 +11,7 @@ import {
   StyleSheet,
   StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface WalletSetupScreenProps {
   navigation: {
@@ -19,8 +20,9 @@ interface WalletSetupScreenProps {
 }
 
 export default function WalletSetupScreen({ navigation }: WalletSetupScreenProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
       <View style={styles.content}>
         {/* Logo/Title */}

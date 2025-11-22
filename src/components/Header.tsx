@@ -1,13 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../design/colors';
 
 export default function Header() {
   return (
     <View style={styles.header}>
       <View style={styles.left}>
         <View style={styles.logo}>
-          <Ionicons name="lock-closed" size={24} color="#ffffff" />
+          <Ionicons name="lock-closed" size={24} color={Colors.white} />
         </View>
         <Text style={styles.title}>Zetaris</Text>
       </View>
@@ -18,7 +19,7 @@ export default function Header() {
           <Text style={styles.peersText}>12 Peers</Text>
         </View>
         <TouchableOpacity style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={20} color="#ffffff" />
+          <Ionicons name="settings-outline" size={20} color={Colors.textPrimary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -33,7 +34,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#1f1f1f',
+    borderBottomColor: Colors.cardBorderSecondary,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   left: {
@@ -44,7 +45,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 40,
     height: 40,
-    backgroundColor: '#A855F7',
+    backgroundColor: Colors.accent,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -52,7 +53,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#ffffff',
+    color: Colors.textPrimary,
   },
   right: {
     flexDirection: 'row',
@@ -73,12 +74,12 @@ const styles = StyleSheet.create({
   greenDot: {
     width: 8,
     height: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
     borderRadius: 4,
   },
   peersText: {
     fontSize: 13,
-    color: '#ffffff',
+    color: Colors.textPrimary,
   },
   settingsButton: {
     padding: 8,

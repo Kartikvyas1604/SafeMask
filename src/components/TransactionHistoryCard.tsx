@@ -5,6 +5,8 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../design/colors';
 
 interface Transaction {
   id: string;
@@ -28,18 +30,18 @@ export const TransactionHistoryCard: React.FC<Props> = ({
   transactions,
   onTransactionPress,
 }) => {
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: string): keyof typeof Ionicons.glyphMap => {
     switch (type) {
       case 'send':
-        return '↑';
+        return 'send';
       case 'receive':
-        return '↓';
+        return 'arrow-down';
       case 'swap':
-        return '⇄';
+        return 'swap-horizontal';
       case 'bridge':
-        return '🌉';
+        return 'git-network';
       default:
-        return '•';
+        return 'ellipse';
     }
   };
 
@@ -98,9 +100,7 @@ export const TransactionHistoryCard: React.FC<Props> = ({
           { backgroundColor: `${getTypeColor(tx.type)}20` },
         ]}
       >
-        <Text style={[styles.typeIconText, { color: getTypeColor(tx.type) }]}>
-          {getTypeIcon(tx.type)}
-        </Text>
+        <Ionicons name={getTypeIcon(tx.type)} size={20} color={getTypeColor(tx.type)} />
       </View>
 
       <View style={styles.transactionInfo}>
@@ -110,7 +110,7 @@ export const TransactionHistoryCard: React.FC<Props> = ({
           </Text>
           {tx.isPrivate && (
             <View style={styles.privacyBadge}>
-              <Text style={styles.privacyBadgeText}>🔒</Text>
+              <Ionicons name="lock-closed" size={10} color={Colors.accent} />
             </View>
           )}
         </View>
@@ -160,7 +160,7 @@ export const TransactionHistoryCard: React.FC<Props> = ({
 
       {transactions.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>📋</Text>
+          <Ionicons name="document-text-outline" size={48} color={Colors.textTertiary} />
           <Text style={styles.emptyText}>No transactions yet</Text>
           <Text style={styles.emptySubtext}>
             Your transaction history will appear here
@@ -177,13 +177,13 @@ export const TransactionHistoryCard: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: Colors.cardHover,
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: Colors.cardBorder,
   },
   header: {
     flexDirection: 'row',
@@ -194,12 +194,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: Colors.textPrimary,
   },
   count: {
     fontSize: 14,
-    color: '#888',
-    backgroundColor: '#2a2a2a',
+    color: Colors.textTertiary,
+    backgroundColor: Colors.card,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -222,9 +222,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  typeIconText: {
-    fontSize: 20,
-  },
   transactionInfo: {
     flex: 1,
   },
@@ -236,27 +233,26 @@ const styles = StyleSheet.create({
   transactionType: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: Colors.textPrimary,
     marginRight: 8,
   },
   privacyBadge: {
-    backgroundColor: '#1a3a1a',
+    backgroundColor: Colors.accentLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
-  },
-  privacyBadgeText: {
-    fontSize: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   transactionAddress: {
     fontSize: 12,
-    color: '#888',
+    color: Colors.textTertiary,
     fontFamily: 'monospace',
     marginBottom: 2,
   },
   transactionTime: {
     fontSize: 11,
-    color: '#666',
+    color: Colors.textMuted,
   },
   transactionAmount: {
     alignItems: 'flex-end',
@@ -268,7 +264,7 @@ const styles = StyleSheet.create({
   },
   token: {
     fontSize: 12,
-    color: '#888',
+    color: Colors.textTertiary,
     marginBottom: 4,
   },
   statusDot: {
@@ -287,12 +283,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#888',
+    color: Colors.textTertiary,
     textAlign: 'center',
   },
 });

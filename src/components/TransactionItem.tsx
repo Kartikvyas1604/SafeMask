@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../design/colors';
 
 interface TransactionItemProps {
   type: string;
@@ -66,7 +67,12 @@ export default function TransactionItem({
         <View>
           <View style={styles.titleRow}>
             <Text style={styles.title}>{getTitle(type, token)}</Text>
-            {isPrivate && <Text style={styles.privacyBadge}>🔒 Private</Text>}
+            {isPrivate && (
+              <View style={styles.privacyBadge}>
+                <Ionicons name="lock-closed" size={12} color={Colors.accent} />
+                <Text style={styles.privacyBadgeText}>Private</Text>
+              </View>
+            )}
           </View>
           <Text style={styles.subtitle}>
             {description || (address ? `${type === 'send' ? 'To' : 'From'}: ${address}` : '')}
@@ -117,15 +123,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#ffffff',
+    color: Colors.textPrimary,
   },
   privacyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  privacyBadgeText: {
     fontSize: 11,
-    color: '#A855F7',
+    color: Colors.accent,
   },
   subtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   right: {
     alignItems: 'flex-end',
@@ -136,18 +147,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   positive: {
-    color: '#10B981',
+    color: Colors.success,
   },
   negative: {
-    color: '#EF4444',
+    color: Colors.error,
   },
   time: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   confirmations: {
     fontSize: 11,
-    color: '#10B981',
+    color: Colors.success,
     marginTop: 2,
   },
 });

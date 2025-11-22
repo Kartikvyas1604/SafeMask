@@ -19,6 +19,7 @@ import ImportPrivateKeyScreen from '../screens/ImportPrivateKeyScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { BridgeScreen } from '../screens/BridgeScreen';
 import MeshNetworkScreen from '../screens/MeshNetworkScreen';
+import BrowserScreen from '../screens/BrowserScreen';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -30,12 +31,13 @@ export type RootStackParamList = {
   Send: { walletAddress: string; balances: any[] };
   Receive: { walletAddress: string };
   Swap: { walletAddress: string; balances: any[] };
-  RealSend: { walletAddress: string; balances: any[] };
-  RealReceive: { walletAddress: string };
-  RealSwap: { walletAddress: string; balances: any[] };
+  RealSend: { walletAddress?: string; balances?: any[] };
+  RealReceive: { walletAddress?: string };
+  RealSwap: { walletAddress?: string; balances?: any[] };
   Bridge: undefined;
   MeshNetwork: undefined;
   Settings: undefined;
+  Browser: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -83,6 +85,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Bridge" component={BridgeScreen} />
       <Stack.Screen name="MeshNetwork" component={MeshNetworkScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Browser" component={BrowserScreen} />
     </Stack.Navigator>
   );
 }

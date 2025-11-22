@@ -25,6 +25,9 @@ import {
   Animated,
   StatusBar,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import ChainIcon from '../components/ChainIcon';
+import { Colors } from '../design/colors';
 
 interface Asset {
   symbol: string;
@@ -68,7 +71,7 @@ export default function SendScreen({ navigation }: SendScreenProps) {
       symbol: 'ZEC',
       name: 'Zcash',
       balance: '12.5',
-      icon: '⚡',
+      icon: '',
       color: '#F4B024',
       chain: 'zcash',
       supportsPrivacy: true,
@@ -77,7 +80,7 @@ export default function SendScreen({ navigation }: SendScreenProps) {
       symbol: 'ETH',
       name: 'Ethereum',
       balance: '8.3',
-      icon: '◆',
+      icon: '',
       color: '#627EEA',
       chain: 'ethereum',
       supportsPrivacy: true,
@@ -86,7 +89,7 @@ export default function SendScreen({ navigation }: SendScreenProps) {
       symbol: 'MATIC',
       name: 'Polygon',
       balance: '5,420',
-      icon: '⬡',
+      icon: '',
       color: '#8247E5',
       chain: 'polygon',
       supportsPrivacy: true,
@@ -286,9 +289,7 @@ export default function SendScreen({ navigation }: SendScreenProps) {
               activeOpacity={0.8}
             >
               <View style={styles.assetInfo}>
-                <Text style={[styles.assetIcon, { color: selectedAsset.color }]}>
-                  {selectedAsset.icon}
-                </Text>
+                <ChainIcon chain={selectedAsset.chain} size={32} />
                 <View>
                   <Text style={styles.assetName}>{selectedAsset.name}</Text>
                   <Text style={styles.assetBalance}>
@@ -365,7 +366,7 @@ export default function SendScreen({ navigation }: SendScreenProps) {
                       {mode.charAt(0).toUpperCase() + mode.slice(1)}
                     </Text>
                     {mode === 'shielded' && selectedAsset.chain === 'zcash' && (
-                      <Text style={styles.privacyBadge}>🔒</Text>
+                      <Ionicons name="lock-closed" size={12} color={Colors.accent} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -451,10 +452,18 @@ export default function SendScreen({ navigation }: SendScreenProps) {
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Privacy:</Text>
-              <Text style={[styles.summaryValue, styles.privacyIndicator]}>
-                {privacyMode === 'shielded' ? '🔒 ' : privacyMode === 'confidential' ? '🔐 ' : '👁️ '}
-                {privacyMode.charAt(0).toUpperCase() + privacyMode.slice(1)}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {privacyMode === 'shielded' ? (
+                  <Ionicons name="lock-closed" size={16} color={Colors.accent} style={{ marginRight: 4 }} />
+                ) : privacyMode === 'confidential' ? (
+                  <Ionicons name="lock-closed-outline" size={16} color={Colors.accent} style={{ marginRight: 4 }} />
+                ) : (
+                  <Ionicons name="eye-outline" size={16} color={Colors.textSecondary} style={{ marginRight: 4 }} />
+                )}
+                <Text style={[styles.summaryValue, styles.privacyIndicator]}>
+                  {privacyMode.charAt(0).toUpperCase() + privacyMode.slice(1)}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -499,7 +508,7 @@ export default function SendScreen({ navigation }: SendScreenProps) {
                 activeOpacity={0.7}
               >
                 <View style={styles.assetOptionInfo}>
-                  <Text style={[styles.assetIcon, { color: asset.color }]}>{asset.icon}</Text>
+                  <ChainIcon chain={asset.chain} size={32} />
                   <View>
                     <Text style={styles.assetOptionName}>{asset.name}</Text>
                     <Text style={styles.assetOptionBalance}>

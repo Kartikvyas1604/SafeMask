@@ -9,6 +9,10 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import ChainIcon from '../components/ChainIcon';
+import { Colors } from '../design/colors';
 import { BridgeService } from '../bridge/BridgeService';
 import ZKProofService from '../privacy/ZKProofService';
 
@@ -20,11 +24,11 @@ interface Network {
 }
 
 const NETWORKS: Network[] = [
-  { id: 'ethereum', name: 'Ethereum', chainId: 1, icon: '⟠' },
-  { id: 'polygon', name: 'Polygon', chainId: 137, icon: '⬡' },
-  { id: 'arbitrum', name: 'Arbitrum', chainId: 42161, icon: '◆' },
-  { id: 'optimism', name: 'Optimism', chainId: 10, icon: '🔴' },
-  { id: 'base', name: 'Base', chainId: 8453, icon: '🔵' },
+  { id: 'ethereum', name: 'Ethereum', chainId: 1, icon: '' },
+  { id: 'polygon', name: 'Polygon', chainId: 137, icon: '' },
+  { id: 'arbitrum', name: 'Arbitrum', chainId: 42161, icon: '' },
+  { id: 'optimism', name: 'Optimism', chainId: 10, icon: '' },
+  { id: 'base', name: 'Base', chainId: 8453, icon: '' },
 ];
 
 export const BridgeScreen: React.FC = () => {
@@ -138,7 +142,7 @@ export const BridgeScreen: React.FC = () => {
             ]}
             onPress={() => onSelect(net)}
           >
-            <Text style={styles.networkIcon}>{net.icon}</Text>
+            <ChainIcon chain={net.id} size={24} />
             <Text style={styles.networkName}>{net.name}</Text>
           </TouchableOpacity>
         ))}
@@ -171,8 +175,9 @@ export const BridgeScreen: React.FC = () => {
     </View>
   );
 
+  const insets = useSafeAreaInsets();
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Cross-Chain Bridge</Text>
         <Text style={styles.subtitle}>
@@ -184,7 +189,7 @@ export const BridgeScreen: React.FC = () => {
         {renderNetworkSelector(fromNetwork, setFromNetwork, 'From')}
 
         <TouchableOpacity style={styles.swapButton} onPress={swapNetworks}>
-          <Text style={styles.swapIcon}>⇅</Text>
+          <Ionicons name="swap-vertical" size={24} color={Colors.textSecondary} />
         </TouchableOpacity>
 
         {renderNetworkSelector(toNetwork, setToNetwork, 'To')}
@@ -226,7 +231,7 @@ export const BridgeScreen: React.FC = () => {
         </TouchableOpacity>
 
         <View style={styles.privacyNote}>
-          <Text style={styles.privacyIcon}>🔒</Text>
+          <Ionicons name="lock-closed" size={16} color={Colors.accent} style={{ marginRight: 8 }} />
           <Text style={styles.privacyText}>
             Your transfer is protected with zero-knowledge proofs
           </Text>

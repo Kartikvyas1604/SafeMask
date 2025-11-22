@@ -17,11 +17,16 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BlockchainService from '../services/blockchainService';
 import AccountManager from '../services/accountManager';
+import ChainIcon from '../components/ChainIcon';
+import BottomTabBar from '../components/BottomTabBar';
+import { Colors } from '../design/colors';
 import * as logger from '../utils/logger';
 
 type SendScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Send'>;
@@ -34,18 +39,18 @@ interface ChainOption {
   id: string;
   name: string;
   symbol: string;
-  icon: string;
 }
 
 const SUPPORTED_CHAINS: ChainOption[] = [
-  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', icon: '⟠' },
-  { id: 'polygon', name: 'Polygon', symbol: 'MATIC', icon: '⬡' },
-  { id: 'solana', name: 'Solana', symbol: 'SOL', icon: '◎' },
-  { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', icon: '₿' },
-  { id: 'zcash', name: 'Zcash', symbol: 'ZEC', icon: 'ⓩ' },
+  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH' },
+  { id: 'polygon', name: 'Polygon', symbol: 'MATIC' },
+  { id: 'solana', name: 'Solana', symbol: 'SOL' },
+  { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' },
+  { id: 'zcash', name: 'Zcash', symbol: 'ZEC' },
 ];
 
 const RealSendScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [selectedChain, setSelectedChain] = useState<ChainOption>(SUPPORTED_CHAINS[0]);
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -336,7 +341,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
     >
       <ScrollView style={styles.scrollView}>
         {/* Header */}
@@ -361,7 +366,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
                 ]}
                 onPress={() => setSelectedChain(chain)}
               >
-                <Text style={styles.chainIcon}>{chain.icon}</Text>
+                <ChainIcon chain={chain.id} size={24} />
                 <Text
                   style={[
                     styles.chainName,
@@ -459,17 +464,19 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
           style={styles.nfcButton}
           onPress={handleNFCSend}
         >
-          <Text style={styles.nfcIcon}>📱</Text>
+          <Ionicons name="phone-portrait-outline" size={20} color={Colors.textPrimary} />
           <Text style={styles.nfcText}>Send via NFC</Text>
         </TouchableOpacity>
 
         {/* Info Banner */}
         <View style={styles.infoBanner}>
+          <Ionicons name="alert-circle" size={16} color={Colors.warning} style={{ marginRight: 8 }} />
           <Text style={styles.infoText}>
-            ⚠️ Double-check the recipient address. Transactions are irreversible.
+            Double-check the recipient address. Transactions are irreversible.
           </Text>
         </View>
       </ScrollView>
+      <BottomTabBar />
     </KeyboardAvoidingView>
   );
 };
@@ -477,7 +484,8 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.background,
+    paddingBottom: 100, // Space for floating tab bar
   },
   scrollView: {
     flex: 1,
@@ -492,12 +500,12 @@ const styles = StyleSheet.create({
   },
   backButton: {
     fontSize: 32,
-    color: '#fff',
+    color: Colors.textPrimary,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: Colors.textPrimary,
   },
   section: {
     marginTop: 24,
@@ -505,7 +513,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 14,
-    color: '#999',
+    color: Colors.textTertiary,
     marginBottom: 8,
   },
   chainSelector: {
@@ -514,56 +522,53 @@ const styles = StyleSheet.create({
   chainButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111',
+    backgroundColor: Colors.card,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
+    gap: 8,
   },
   chainButtonActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
-  },
-  chainIcon: {
-    fontSize: 20,
-    marginRight: 8,
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
   },
   chainName: {
     fontSize: 14,
-    color: '#fff',
+    color: Colors.textPrimary,
     fontWeight: '600',
   },
   chainNameActive: {
-    color: '#fff',
+    color: Colors.white,
   },
   balanceContainer: {
-    backgroundColor: '#111',
+    backgroundColor: Colors.card,
     marginHorizontal: 20,
     marginTop: 24,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
   },
   balanceLabel: {
     fontSize: 14,
-    color: '#999',
+    color: Colors.textTertiary,
   },
   balanceValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: Colors.textPrimary,
     marginTop: 4,
   },
   input: {
-    backgroundColor: '#111',
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
     borderRadius: 12,
     padding: 16,
-    color: '#fff',
+    color: Colors.textPrimary,
     fontSize: 16,
   },
   amountHeader: {
@@ -573,14 +578,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   maxButton: {
-    color: '#7C3AED',
+    color: Colors.accent,
     fontSize: 14,
     fontWeight: 'bold',
   },
   amountInputContainer: {
-    backgroundColor: '#111',
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -588,12 +593,12 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     flex: 1,
-    color: '#fff',
+    color: Colors.textPrimary,
     fontSize: 24,
     fontWeight: 'bold',
   },
   amountSymbol: {
-    color: '#999',
+    color: Colors.textTertiary,
     fontSize: 16,
     marginLeft: 8,
   },
@@ -603,22 +608,22 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 16,
     padding: 16,
-    backgroundColor: '#111',
+    backgroundColor: Colors.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
   },
   gasLabel: {
     fontSize: 14,
-    color: '#999',
+    color: Colors.textTertiary,
   },
   gasValue: {
     fontSize: 14,
-    color: '#fff',
+    color: Colors.textPrimary,
     fontWeight: '600',
   },
   sendButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: Colors.accent,
     marginHorizontal: 20,
     marginTop: 32,
     padding: 18,
@@ -629,22 +634,25 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendButtonText: {
-    color: '#fff',
+    color: Colors.white,
     fontSize: 18,
     fontWeight: 'bold',
   },
   infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 20,
     marginTop: 16,
     marginBottom: 32,
     padding: 16,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: Colors.cardHover,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ff9800',
+    borderColor: Colors.warning,
   },
   infoText: {
-    color: '#ff9800',
+    flex: 1,
+    color: Colors.warning,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -657,10 +665,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 18,
     borderRadius: 12,
-  },
-  nfcIcon: {
-    fontSize: 20,
-    marginRight: 8,
+    gap: 8,
   },
   nfcText: {
     color: '#000',

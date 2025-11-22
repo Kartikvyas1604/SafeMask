@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Colors } from '../design/colors';
 
 export default function Statistics() {
   const stats = [
     { label: 'Total Transactions', value: '247' },
     { label: 'Avg Proof Time', value: '2.3s' },
-    { label: 'Gas Saved', value: '$342', color: '#10B981' },
+    { label: 'Gas Saved', value: '$342', color: Colors.success },
   ];
 
   return (
@@ -27,16 +28,16 @@ export default function Statistics() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111111',
+    backgroundColor: Colors.card,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorderSecondary,
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
+    color: Colors.textPrimary,
     marginBottom: 16,
   },
   list: {
@@ -49,11 +50,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   value: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#ffffff',
+    color: Colors.textPrimary,
   },
 });
