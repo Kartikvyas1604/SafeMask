@@ -1,6 +1,3 @@
-/**
- * Unit Tests for Halo2 Proof System
- */
 
 import { Halo2ProofSystem, Halo2Circuit } from '../../../src/crypto/Halo2ProofSystem';
 import { randomBytes } from '@noble/hashes/utils';
