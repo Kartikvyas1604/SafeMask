@@ -17,6 +17,7 @@ import VerifySeedPhraseScreen from '../screens/VerifySeedPhraseScreen';
 import ImportWalletScreen from '../screens/ImportWalletScreen';
 import ImportPrivateKeyScreen from '../screens/ImportPrivateKeyScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import BackupWalletScreen from '../screens/BackupWalletScreen';
 import { BridgeScreen } from '../screens/BridgeScreen';
 import MeshNetworkScreen from '../screens/MeshNetworkScreen';
 import BrowserScreen from '../screens/BrowserScreen';
@@ -37,6 +38,7 @@ export type RootStackParamList = {
   Bridge: undefined;
   MeshNetwork: undefined;
   Settings: undefined;
+  BackupWallet: undefined;
   Browser: undefined;
 };
 
@@ -85,6 +87,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Bridge" component={BridgeScreen} />
       <Stack.Screen name="MeshNetwork" component={MeshNetworkScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="BackupWallet" component={BackupWalletScreen} />
       <Stack.Screen name="Browser" component={BrowserScreen} />
     </Stack.Navigator>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   Clipboard,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -134,9 +135,19 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const [balances, setBalances] = useState<RealBalance[]>([]);
   const [totalUSD, setTotalUSD] = useState(0);
   const [walletAddress, setWalletAddress] = useState<string>('');
+  const [balanceHidden, setBalanceHidden] = useState(false);
   const [hdWallet] = useState(() => new ZetarisWalletCore());
   
   const blockchainService = RealBlockchainService;
+  
+  // Animation values for scroll-based animations
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const fadeAnims = useRef(
+    Array.from({ length: 10 }, () => new Animated.Value(0))
+  ).current;
+  const slideAnims = useRef(
+    Array.from({ length: 10 }, () => new Animated.Value(30))
+  ).current;
   
   // Calculate performance metrics (mock for now - can be enhanced with real 24h data)
   const previousTotal = totalUSD * 0.6; // Mock: assume 40% increase
@@ -162,7 +173,36 @@ export default function ProductionWalletScreen({ navigation }: any) {
    */
   useEffect(() => {
     initializeWallet();
+    // Animate items in on mount
+    Animated.stagger(100, 
+      fadeAnims.map((anim, index) => 
+        Animated.parallel([
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnims[index], {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      )
+    ).start();
   }, []);
+  
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: false }
+  );
+  
+  const getAnimatedStyle = (index: number) => {
+    return {
+      opacity: fadeAnims[index],
+      transform: [{ translateY: slideAnims[index] }],
+    };
+  };
   
   /**
    * Initialize HD wallet (load from storage)
@@ -334,6 +374,8 @@ export default function ProductionWalletScreen({ navigation }: any) {
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />
         }
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -363,15 +405,31 @@ export default function ProductionWalletScreen({ navigation }: any) {
         </View>
         
         {/* MY WALLET Section */}
-        <View style={styles.walletSection}>
-          <Text style={styles.sectionLabel}>MY WALLET</Text>
+        <Animated.View style={[styles.walletSection, getAnimatedStyle(0)]}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionLabel}>MY WALLET</Text>
+            <TouchableOpacity 
+              onPress={() => setBalanceHidden(!balanceHidden)}
+              style={styles.eyeButton}
+            >
+              <Ionicons 
+                name={balanceHidden ? "eye-off-outline" : "eye-outline"} 
+                size={20} 
+                color={Colors.textSecondary} 
+              />
+            </TouchableOpacity>
+          </View>
           <View style={styles.balanceRow}>
             <View style={styles.balanceContent}>
-              <Text style={styles.balanceAmount}>${totalUSD.toFixed(2)}</Text>
-              <View style={styles.performanceRow}>
-                <Text style={styles.performanceAmount}>+${changeAmount.toFixed(2)}</Text>
-                <Text style={styles.performancePercent}>+{changePercent.toFixed(2)}%</Text>
-              </View>
+              <Text style={styles.balanceAmount}>
+                {balanceHidden ? '••••••' : `$${totalUSD.toFixed(2)}`}
+              </Text>
+              {!balanceHidden && (
+                <View style={styles.performanceRow}>
+                  <Text style={styles.performanceAmount}>+${changeAmount.toFixed(2)}</Text>
+                  <Text style={styles.performancePercent}>+{changePercent.toFixed(2)}%</Text>
+                </View>
+              )}
             </View>
           </View>
           
@@ -385,10 +443,10 @@ export default function ProductionWalletScreen({ navigation }: any) {
               <Text style={styles.actionButtonText}>Deposit</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
         
         {/* FUNDS Section */}
-        <View style={styles.fundsSection}>
+        <Animated.View style={[styles.fundsSection, getAnimatedStyle(1)]}>
           <View style={styles.fundsSectionHeader}>
             <Text style={styles.sectionLabel}>FUNDS</Text>
           </View>
@@ -442,10 +500,10 @@ export default function ProductionWalletScreen({ navigation }: any) {
               })}
             </View>
           </ScrollView>
-        </View>
+        </Animated.View>
         
         {/* RECENT ACTIONS Section */}
-        <View style={styles.recentActionsSection}>
+        <Animated.View style={[styles.recentActionsSection, getAnimatedStyle(2)]}>
           <Text style={styles.sectionLabel}>RECENT ACTIONS</Text>
           {balances.length > 0 ? (
             <View style={styles.actionsList}>
@@ -471,7 +529,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
               <Text style={styles.emptyActionsText}>No recent actions</Text>
             </View>
           )}
-        </View>
+        </Animated.View>
         
         {/* Bottom padding for tab bar */}
         <View style={{ height: 100 }} />
@@ -579,10 +637,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     marginBottom: Spacing['2xl'],
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  eyeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
   sectionLabel: {
     fontSize: Typography.fontSize.sm,
     color: Colors.textSecondary,
-    marginBottom: Spacing.md,
     fontWeight: Typography.fontWeight.medium,
     letterSpacing: 0.5,
   },
@@ -641,7 +714,7 @@ const styles = StyleSheet.create({
   },
   fundsSectionHeader: {
     paddingHorizontal: Spacing.xl,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     marginBottom: Spacing.md,
   },
   fundsScrollView: {
