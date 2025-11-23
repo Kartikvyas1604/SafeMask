@@ -232,7 +232,7 @@ export default function RealSwapScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={Colors.white} />
+            <Ionicons name="chevron-back" size={20} color={Colors.white} />
           </TouchableOpacity>
           
           <View style={styles.headerRight}>
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 12,
     backgroundColor: Colors.card,
     justifyContent: 'center',
     alignItems: 'center',

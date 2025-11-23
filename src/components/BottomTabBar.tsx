@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   activeIconContainer: {
     width: 48, // Bigger blue circle
     height: 48, // Bigger blue circle
-    borderRadius: 24, // Perfect circle
+    borderRadius: 50, // Perfect circle
     backgroundColor: Colors.accent, // Blue circle
     justifyContent: 'center',
     alignItems: 'center',

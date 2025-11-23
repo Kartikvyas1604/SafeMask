@@ -1,6 +1,6 @@
 /**
  * Real Send Screen - Actual blockchain transaction sending
- * Based on Zetaris specification from prompt.txt
+ * Redesigned to match current theme and style
  * Supports: ETH, MATIC, SOL, BTC, ZEC
  */
 
@@ -16,6 +16,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,12 +28,15 @@ import AccountManager from '../services/accountManager';
 import ChainIcon from '../components/ChainIcon';
 import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
 
-type SendScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Send'>;
+type SendScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RealSend'>;
 
 interface Props {
   navigation: SendScreenNavigationProp;
+  route?: any;
 }
 
 interface ChainOption {
@@ -60,6 +64,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
   const [gasEstimate, setGasEstimate] = useState('0');
   const [privateKey, setPrivateKey] = useState('');
   const [showNFC, setShowNFC] = useState(false);
+  const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
 
   useEffect(() => {
     loadWalletData();
@@ -343,45 +348,57 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { paddingTop: insets.top }]}
     >
-      <ScrollView style={styles.scrollView}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backButton}>←</Text>
+      {/* Header - Matching home page style */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={20} color={Colors.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Send</Text>
-          <View style={{ width: 40 }} />
+          
+          <View style={styles.headerRight}>
+            <View style={styles.profileContainer}>
+              <View style={styles.profileIcon}>
+                <Ionicons name="person" size={20} color={Colors.white} />
+              </View>
+            </View>
+            <TouchableOpacity style={styles.notificationIcon}>
+              <Ionicons name="notifications-outline" size={24} color={Colors.white} />
+            </TouchableOpacity>
+          </View>
         </View>
+        
+        <View style={styles.greetingSection}>
+          <Text style={styles.greetingText}>Send</Text>
+          <Text style={styles.greetingSubtext}>Transfer funds to another wallet</Text>
+        </View>
+      </View>
 
-        {/* Chain Selector */}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* SELECT NETWORK Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Select Network</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chainSelector}>
-            {SUPPORTED_CHAINS.map((chain) => (
-              <TouchableOpacity
-                key={chain.id}
-                style={[
-                  styles.chainButton,
-                  selectedChain.id === chain.id && styles.chainButtonActive,
-                ]}
-                onPress={() => setSelectedChain(chain)}
-              >
-                <ChainIcon chain={chain.id} size={24} />
-                <Text
-                  style={[
-                    styles.chainName,
-                    selectedChain.id === chain.id && styles.chainNameActive,
-                  ]}
-                >
-                  {chain.symbol}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <Text style={styles.sectionLabel}>SELECT NETWORK</Text>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={() => setShowNetworkDropdown(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.dropdownContent}>
+              <ChainIcon chain={selectedChain.id} size={32} />
+              <View style={styles.dropdownTextContainer}>
+                <Text style={styles.dropdownChainName}>{selectedChain.name}</Text>
+                <Text style={styles.dropdownSymbol}>{selectedChain.symbol}</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         {/* Balance Display */}
-        <View style={styles.balanceContainer}>
+        <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Available Balance</Text>
           <Text style={styles.balanceValue}>
             {parseFloat(balance).toFixed(6)} {selectedChain.symbol}
@@ -390,11 +407,11 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Recipient Address */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Recipient Address</Text>
+          <Text style={styles.sectionLabel}>RECIPIENT ADDRESS</Text>
           <TextInput
             style={styles.input}
             placeholder={`Enter ${selectedChain.name} address`}
-            placeholderTextColor="#666"
+            placeholderTextColor={Colors.textTertiary}
             value={recipientAddress}
             onChangeText={setRecipientAddress}
             autoCapitalize="none"
@@ -405,16 +422,16 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
         {/* Amount */}
         <View style={styles.section}>
           <View style={styles.amountHeader}>
-            <Text style={styles.sectionLabel}>Amount</Text>
+            <Text style={styles.sectionLabel}>AMOUNT</Text>
             <TouchableOpacity onPress={setMaxAmount}>
               <Text style={styles.maxButton}>MAX</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.amountInputContainer}>
+          <View style={styles.amountCard}>
             <TextInput
               style={styles.amountInput}
               placeholder="0.00"
-              placeholderTextColor="#666"
+              placeholderTextColor={Colors.textTertiary}
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
@@ -425,11 +442,11 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Memo (Optional) */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Memo (Optional)</Text>
+          <Text style={styles.sectionLabel}>MEMO (OPTIONAL)</Text>
           <TextInput
             style={styles.input}
             placeholder="Add a note"
-            placeholderTextColor="#666"
+            placeholderTextColor={Colors.textTertiary}
             value={memo}
             onChangeText={setMemo}
             maxLength={100}
@@ -438,7 +455,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Gas Estimate */}
         {parseFloat(gasEstimate) > 0 && (
-          <View style={styles.gasContainer}>
+          <View style={styles.gasCard}>
             <Text style={styles.gasLabel}>Estimated Gas Fee</Text>
             <Text style={styles.gasValue}>
               {parseFloat(gasEstimate).toFixed(6)} {selectedChain.symbol}
@@ -453,7 +470,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
           disabled={isSending}
         >
           {isSending ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
             <Text style={styles.sendButtonText}>Send {selectedChain.symbol}</Text>
           )}
@@ -470,12 +487,52 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Info Banner */}
         <View style={styles.infoBanner}>
-          <Ionicons name="alert-circle" size={16} color={Colors.warning} style={{ marginRight: 8 }} />
+          <View style={styles.infoBannerHeader}>
+            <Ionicons name="information-circle" size={20} color={Colors.accent} />
+            <Text style={styles.infoBannerTitle}>Transaction Information</Text>
+          </View>
           <Text style={styles.infoText}>
             Double-check the recipient address. Transactions are irreversible.
           </Text>
         </View>
+
+        {/* Bottom padding for tab bar */}
+        <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Network Dropdown Modal */}
+      <Modal
+        visible={showNetworkDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNetworkDropdown(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowNetworkDropdown(false)}
+        >
+          <View style={styles.modalContent}>
+            {SUPPORTED_CHAINS.map((chain) => (
+              <TouchableOpacity
+                key={chain.id}
+                style={styles.modalOption}
+                onPress={() => {
+                  setSelectedChain(chain);
+                  setShowNetworkDropdown(false);
+                }}
+              >
+                <ChainIcon chain={chain.id} size={32} />
+                <View style={styles.modalOptionText}>
+                  <Text style={styles.modalOptionName}>{chain.name}</Text>
+                  <Text style={styles.modalOptionSymbol}>{chain.symbol}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <BottomTabBar />
     </KeyboardAvoidingView>
   );
@@ -485,192 +542,320 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    paddingBottom: 100, // Space for floating tab bar
   },
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  
+  // Header
   header: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  profileContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  profileIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.cardHover,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  greetingSection: {
+    marginTop: Spacing.lg,
+  },
+  greetingText: {
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  greetingSubtext: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+  },
+  
+  // Sections
+  section: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  sectionLabel: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+    fontWeight: Typography.fontWeight.medium,
+    letterSpacing: 0.5,
+  },
+  
+  // Dropdown
+  dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
-  backButton: {
-    fontSize: 32,
-    color: Colors.textPrimary,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-  },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    color: Colors.textTertiary,
-    marginBottom: 8,
-  },
-  chainSelector: {
-    flexDirection: 'row',
-  },
-  chainButton: {
+  dropdownContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: Colors.cardBorderSecondary,
-    gap: 8,
+    gap: Spacing.md,
+    flex: 1,
   },
-  chainButtonActive: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
+  dropdownTextContainer: {
+    flex: 1,
   },
-  chainName: {
-    fontSize: 14,
+  dropdownChainName: {
+    fontSize: Typography.fontSize.md,
     color: Colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: Typography.fontWeight.semibold,
   },
-  chainNameActive: {
-    color: Colors.white,
+  dropdownSymbol: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
-  balanceContainer: {
+  
+  // Balance Card
+  balanceCard: {
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+    padding: Spacing.lg,
     backgroundColor: Colors.card,
-    marginHorizontal: 20,
-    marginTop: 24,
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorderSecondary,
+    borderColor: Colors.cardBorder,
   },
   balanceLabel: {
-    fontSize: 14,
-    color: Colors.textTertiary,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
   },
   balanceValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
     color: Colors.textPrimary,
-    marginTop: 4,
   },
+  
+  // Input
   input: {
     backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: Colors.cardBorderSecondary,
+    borderColor: Colors.cardBorder,
     borderRadius: 12,
-    padding: 16,
+    padding: Spacing.lg,
     color: Colors.textPrimary,
-    fontSize: 16,
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.mono,
   },
+  
+  // Amount
   amountHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.md,
   },
   maxButton: {
     color: Colors.accent,
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
   },
-  amountInputContainer: {
+  amountCard: {
     backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: Colors.cardBorderSecondary,
+    borderColor: Colors.cardBorder,
     borderRadius: 12,
-    padding: 16,
+    padding: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
   },
   amountInput: {
     flex: 1,
     color: Colors.textPrimary,
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    fontFamily: Typography.fontFamily.mono,
   },
   amountSymbol: {
-    color: Colors.textTertiary,
-    fontSize: 16,
-    marginLeft: 8,
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.lg,
+    marginLeft: Spacing.md,
+    fontWeight: Typography.fontWeight.semibold,
   },
-  gasContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
+  
+  // Gas
+  gasCard: {
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+    padding: Spacing.lg,
     backgroundColor: Colors.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.cardBorderSecondary,
+    borderColor: Colors.cardBorder,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   gasLabel: {
-    fontSize: 14,
-    color: Colors.textTertiary,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
   },
   gasValue: {
-    fontSize: 14,
+    fontSize: Typography.fontSize.sm,
     color: Colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: Typography.fontWeight.semibold,
+    fontFamily: Typography.fontFamily.mono,
   },
+  
+  // Buttons
   sendButton: {
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.xl,
     backgroundColor: Colors.accent,
-    marginHorizontal: 20,
-    marginTop: 32,
-    padding: 18,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   sendButtonDisabled: {
     opacity: 0.5,
   },
   sendButtonText: {
     color: Colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 32,
-    padding: 16,
-    backgroundColor: Colors.cardHover,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.warning,
-  },
-  infoText: {
-    flex: 1,
-    color: Colors.warning,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
   },
   nfcButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#eab308',
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 18,
+    backgroundColor: Colors.card,
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.md,
+    padding: Spacing.lg,
     borderRadius: 12,
-    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    gap: Spacing.sm,
   },
   nfcText: {
-    color: '#000',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  
+  // Info Banner
+  infoBanner: {
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing['2xl'],
+    padding: Spacing.lg,
+    backgroundColor: Colors.accentLight,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.accentLight,
+  },
+  infoBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  infoBannerTitle: {
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  infoText: {
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.sm,
+    lineHeight: 20,
+  },
+  
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: Spacing.lg,
+    minWidth: 280,
+    maxWidth: '80%',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 8,
+  },
+  modalOptionText: {
+    flex: 1,
+  },
+  modalOptionName: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  modalOptionSymbol: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });
 
