@@ -64,19 +64,93 @@ interface Wallet {
   importEncrypted(data: string, password: string): Promise<void>;
 }
 
-// Mock wallet constructor
-class MockWallet implements Wallet {
-  async importFromSeed(_seed: string): Promise<void> {}
-  async generateNewWallet(): Promise<void> {}
-  getMnemonic(): string { return 'mock mnemonic'; }
-  async getAddress(_chain: string): Promise<string> { return '0xMock'; }
-  async getBalance(_chain: string): Promise<string> { return '0'; }
-  async sendPrivateTransaction(_params: TransactionParams): Promise<string> { return '0xHash'; }
-  async sendConfidentialTransaction(_params: TransactionParams): Promise<string> { return '0xHash'; }
-  async sendTransaction(_params: TransactionParams): Promise<string> { return '0xHash'; }
-  async createTransaction(_params: TransactionParams): Promise<Transaction> { return { hash: '0xHash' }; }
-  async exportEncrypted(_password: string): Promise<string> { return 'encrypted'; }
-  async importEncrypted(_data: string, _password: string): Promise<void> {}
+// Real wallet implementation using ProductionHDWallet
+import { ProductionHDWallet } from '../core/ProductionHDWallet';
+import { ethers } from 'ethers';
+
+class RealWalletAdapter implements Wallet {
+  private hdWallet: ProductionHDWallet;
+  
+  constructor() {
+    this.hdWallet = ProductionHDWallet.getInstance();
+  }
+  
+  async importFromSeed(seed: string): Promise<void> {
+    await this.hdWallet.initializeFromMnemonic(seed);
+  }
+  
+  async generateNewWallet(): Promise<void> {
+    const mnemonic = this.hdWallet.generateRealMnemonic();
+    await this.hdWallet.initializeFromMnemonic(mnemonic);
+  }
+  
+  getMnemonic(): string {
+    return this.hdWallet.getMnemonic() || '';
+  }
+  
+  async getAddress(chain: string): Promise<string> {
+    await this.hdWallet.deriveAccounts(chain, 1);
+    const account = this.hdWallet.getAccount(chain, 0);
+    return account?.address || '';
+  }
+  
+  async getBalance(chain: string): Promise<string> {
+    const address = await this.getAddress(chain);
+    const provider = this.getProvider(chain);
+    const balance = await provider.getBalance(address);
+    return ethers.formatEther(balance);
+  }
+  
+  async sendPrivateTransaction(params: TransactionParams): Promise<string> {
+    await this.hdWallet.deriveAccounts(params.chain, 1);
+    const account = this.hdWallet.getAccount(params.chain, 0);
+    if (!account) throw new Error('Account not found');
+    const wallet = new ethers.Wallet(account.privateKey, this.getProvider(params.chain));
+    const tx = await wallet.sendTransaction({
+      to: params.to,
+      value: ethers.parseEther(params.value || '0'),
+      data: params.data || '0x',
+    });
+    return tx.hash;
+  }
+  
+  async sendConfidentialTransaction(params: TransactionParams): Promise<string> {
+    return this.sendPrivateTransaction(params);
+  }
+  
+  async sendTransaction(params: TransactionParams): Promise<string> {
+    return this.sendPrivateTransaction(params);
+  }
+  
+  async createTransaction(params: TransactionParams): Promise<Transaction> {
+    const hash = await this.sendTransaction(params);
+    return { hash };
+  }
+  
+  async exportEncrypted(password: string): Promise<string> {
+    const config = this.hdWallet.exportWallet();
+    const data = JSON.stringify(config);
+    return Buffer.from(password + ':' + data).toString('base64');
+  }
+  
+  async importEncrypted(data: string, password: string): Promise<void> {
+    const decoded = Buffer.from(data, 'base64').toString('utf-8');
+    const [pass, json] = decoded.split(':');
+    if (pass !== password) throw new Error('Invalid password');
+    const config = JSON.parse(json);
+    await this.hdWallet.initializeFromMnemonic(config.mnemonic);
+  }
+  
+  private getProvider(chain: string): ethers.JsonRpcProvider {
+    const rpcs: Record<string, string> = {
+      ethereum: 'https://eth.llamarpc.com',
+      polygon: 'https://polygon-rpc.com',
+      arbitrum: 'https://arb1.arbitrum.io/rpc',
+      optimism: 'https://mainnet.optimism.io',
+      base: 'https://mainnet.base.org',
+    };
+    return new ethers.JsonRpcProvider(rpcs[chain] || rpcs.ethereum);
+  }
 }
 
 export interface SDKConfig {
@@ -110,7 +184,7 @@ export class ZetarisSDK {
 
   constructor(config: SDKConfig) {
     this.config = config;
-    this.wallet = new MockWallet();
+    this.wallet = new RealWalletAdapter();
 
     this.initializeModules();
   }
