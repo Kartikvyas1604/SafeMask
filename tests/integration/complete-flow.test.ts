@@ -9,6 +9,7 @@ jest.mock('react-native-nfc-manager', () => ({
   default: {
     start: jest.fn().mockResolvedValue(undefined),
     isSupported: jest.fn().mockResolvedValue(true),
+    isEnabled: jest.fn().mockResolvedValue(true),
     registerTagEvent: jest.fn(),
     unregisterTagEvent: jest.fn(),
   },
@@ -16,7 +17,17 @@ jest.mock('react-native-nfc-manager', () => ({
   Ndef: {
     encodeMessage: jest.fn((records) => Buffer.from(JSON.stringify(records))),
   },
-}));
+}), { virtual: true });
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn().mockResolvedValue(null),
+    setItem: jest.fn().mockResolvedValue(undefined),
+    removeItem: jest.fn().mockResolvedValue(undefined),
+    clear: jest.fn().mockResolvedValue(undefined),
+  },
+}), { virtual: true });
 
 import { describe, it, expect, beforeAll } from '@jest/globals';
 
@@ -191,7 +202,7 @@ describe('Ring Signatures', () => {
 
   it('should sign and verify ring signature', async () => {
     // Create test ring
-    const set = setManager.createAnonymitySet(7, 'Test ring');
+    const set = setManager.createAnonymitySet(11, 'Test ring');  // Changed from 7 to 11 (minimum size)
     
     // Generate test key
     const secretKey = Buffer.from('0'.repeat(64), 'hex');
@@ -200,8 +211,8 @@ describe('Ring Signatures', () => {
     // Sign
     const signature = await ringScheme.sign(message, secretKey, 3, set.members);
     expect(signature).toBeDefined();
-    expect(signature.ringSize).toBe(7);
-    expect(signature.responses.length).toBe(7);
+    expect(signature.ringSize).toBe(11);
+    expect(signature.responses.length).toBe(11);
 
     // Verify
     const isValid = await ringScheme.verify(message, signature, set.members);

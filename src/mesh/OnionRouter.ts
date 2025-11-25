@@ -10,6 +10,7 @@ import { MeshPeer, MeshMessage } from '../types';
 export interface OnionLayer {
   hopId: string;
   encryptedPayload: Uint8Array;
+  encryptedData?: Uint8Array;  // Alias for encryptedPayload
   nextHop: string;
   layerNumber: number;
 }
@@ -19,6 +20,8 @@ export interface OnionRoute {
   hops: MeshPeer[];
   totalHops: number;
   createdAt: number;
+  estimatedLatency?: number;  // Total estimated latency across all hops
+  avgReputation?: number;     // Average reputation of all hops
 }
 
 /**
@@ -28,6 +31,7 @@ export interface OnionMessage extends MeshMessage {
   layers: OnionLayer[];
   currentLayer: number;
   routeId: string;
+  destination?: string;  // Final destination peer ID
 }
 
 /**
@@ -78,6 +82,13 @@ export class OnionRouter extends EventEmitter {
    */
   registerPeer(peerId: string, publicKey: Uint8Array): void {
     this.peerPublicKeys.set(peerId, publicKey);
+  }
+
+  /**
+   * Unregister peer public key
+   */
+  unregisterPeer(peerId: string): void {
+    this.peerPublicKeys.delete(peerId);
   }
 
   /**

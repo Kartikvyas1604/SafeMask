@@ -4,6 +4,7 @@ import OnionRouter from '../../src/mesh/OnionRouter';
 import TrafficObfuscation from '../../src/mesh/TrafficObfuscation';
 import { MeshPeer } from '../../src/types';
 import { randomBytes } from '@noble/hashes/utils';
+import { secp256k1 } from '@noble/curves/secp256k1';
 
 describe('Privacy Features Integration Tests', () => {
   describe('Halo2 Recursive Proofs', () => {
@@ -225,8 +226,15 @@ describe('Privacy Features Integration Tests', () => {
     let onionRouter: OnionRouter;
     let mockPeers: MeshPeer[];
 
-    beforeAll(() => {
+    beforeAll(async () => {
       onionRouter = new OnionRouter();
+
+      // Helper to generate valid secp256k1 public key
+      const generateValidPublicKey = () => {
+        const privKey = randomBytes(32);
+        const pubKey = secp256k1.getPublicKey(privKey, true); // compressed format
+        return pubKey;
+      };
 
       // Create mock peers
       mockPeers = Array.from({ length: 10 }, (_, i) => ({
@@ -236,7 +244,7 @@ describe('Privacy Features Integration Tests', () => {
         reputation: 50 + Math.random() * 50,
         latency: 10 + Math.random() * 100,
         bandwidth: 1000 + i * 100,
-        publicKey: randomBytes(33),
+        publicKey: generateValidPublicKey(),
       }));
 
       // Register peers
