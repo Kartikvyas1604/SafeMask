@@ -10,6 +10,7 @@ import { MeshPeer, MeshMessage } from '../types';
 export interface OnionLayer {
   hopId: string;
   encryptedPayload: Uint8Array;
+  encryptedData?: Uint8Array;  // Alias for encryptedPayload
   nextHop: string;
   layerNumber: number;
 }
@@ -19,6 +20,8 @@ export interface OnionRoute {
   hops: MeshPeer[];
   totalHops: number;
   createdAt: number;
+  estimatedLatency?: number;  // Total estimated latency across all hops
+  avgReputation?: number;     // Average reputation of all hops
 }
 
 /**
@@ -28,6 +31,7 @@ export interface OnionMessage extends MeshMessage {
   layers: OnionLayer[];
   currentLayer: number;
   routeId: string;
+  destination?: string;  // Final destination peer ID
 }
 
 /**
@@ -81,6 +85,13 @@ export class OnionRouter extends EventEmitter {
   }
 
   /**
+   * Unregister peer public key
+   */
+  unregisterPeer(peerId: string): void {
+    this.peerPublicKeys.delete(peerId);
+  }
+
+  /**
    * Select random route through mesh network
    */
   selectRoute(availablePeers: MeshPeer[], excludePeerId?: string): OnionRoute {
@@ -124,6 +135,8 @@ export class OnionRouter extends EventEmitter {
         hops,
         totalHops: hops.length,
         createdAt: Date.now(),
+        estimatedLatency: hops.reduce((sum, h) => sum + h.latency, 0),
+        avgReputation: hops.reduce((sum, h) => sum + h.reputation, 0) / hops.length,
       };
 
       logger.info('🛤️ Selected onion route:', {
@@ -183,6 +196,7 @@ export class OnionRouter extends EventEmitter {
         layers.push({
           hopId: hop.id,
           encryptedPayload: encrypted,
+          encryptedData: encrypted,  // Alias for tests
           nextHop,
           layerNumber: i,
         });
@@ -202,6 +216,7 @@ export class OnionRouter extends EventEmitter {
         layers,
         currentLayer: 0,
         routeId,
+        destination: destinationId,  // Add destination
       };
 
       // Store route

@@ -61,11 +61,15 @@ export class BulletproofsService {
       // Generate random blinding factor if not provided
       const r = blindingFactor || randomBytes(32);
       const rBigInt = BigInt('0x' + Buffer.from(r).toString('hex'));
+      
+      // Mod by curve order to ensure blinding factor is within valid range
+      // Keep value as-is since small values (0-700) are valid
+      const rModded = rBigInt % secp256k1.CURVE.n;
 
       // C = v*G + r*H
       const vG = secp256k1.ProjectivePoint.BASE.multiply(value);
       const hPoint = secp256k1.ProjectivePoint.fromHex(this.H);
-      const rH = hPoint.multiply(rBigInt);
+      const rH = hPoint.multiply(rModded);
       
       const commitment = vG.add(rH);
 

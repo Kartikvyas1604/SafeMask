@@ -167,10 +167,11 @@ export class RingSignatureScheme {
       // c[i+1] = H(m, L[i], R[i])
       const computedChallenge = this.computeChallenge(message, Li, Ri, i);
 
-      if (nextIndex < n) {
+      if (i < n - 1) {
+        // Continue building the ring
         challenges[nextIndex] = computedChallenge;
       } else {
-        // Verify ring closes
+        // Last iteration: verify ring closes (computed c[0] should equal signature c0)
         return this.buffersEqual(computedChallenge, signature.c0);
       }
     }

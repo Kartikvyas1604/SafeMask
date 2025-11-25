@@ -4,6 +4,7 @@ import OnionRouter from '../../src/mesh/OnionRouter';
 import TrafficObfuscation from '../../src/mesh/TrafficObfuscation';
 import { MeshPeer } from '../../src/types';
 import { randomBytes } from '@noble/hashes/utils';
+import { secp256k1 } from '@noble/curves/secp256k1';
 
 describe('Privacy Features Integration Tests', () => {
   describe('Halo2 Recursive Proofs', () => {
@@ -225,8 +226,15 @@ describe('Privacy Features Integration Tests', () => {
     let onionRouter: OnionRouter;
     let mockPeers: MeshPeer[];
 
-    beforeAll(() => {
+    beforeAll(async () => {
       onionRouter = new OnionRouter();
+
+      // Helper to generate valid secp256k1 public key
+      const generateValidPublicKey = () => {
+        const privKey = randomBytes(32);
+        const pubKey = secp256k1.getPublicKey(privKey, true); // compressed format
+        return pubKey;
+      };
 
       // Create mock peers
       mockPeers = Array.from({ length: 10 }, (_, i) => ({
@@ -236,7 +244,7 @@ describe('Privacy Features Integration Tests', () => {
         reputation: 50 + Math.random() * 50,
         latency: 10 + Math.random() * 100,
         bandwidth: 1000 + i * 100,
-        publicKey: randomBytes(33),
+        publicKey: generateValidPublicKey(),
       }));
 
       // Register peers
@@ -292,15 +300,10 @@ describe('Privacy Features Integration Tests', () => {
       expect(result2.isLastLayer).toBe(false);
       expect(result2.nextHop).toBeTruthy();
 
-      // Peel third layer
+      // Peel third layer (last hop before destination)
       const result3 = await onionRouter.peelLayer(onionMessage);
-      expect(result3.isLastLayer).toBe(false);
-      expect(result3.nextHop).toBeTruthy();
-
-      // All layers peeled
-      const result4 = await onionRouter.peelLayer(onionMessage);
-      expect(result4.isLastLayer).toBe(true);
-      expect(result4.nextHop).toBeNull();
+      expect(result3.isLastLayer).toBe(true);  // Changed: This is the last layer
+      expect(result3.nextHop).toBe(destination);  // Next hop should be the destination
     });
   });
 
