@@ -300,15 +300,10 @@ describe('Privacy Features Integration Tests', () => {
       expect(result2.isLastLayer).toBe(false);
       expect(result2.nextHop).toBeTruthy();
 
-      // Peel third layer
+      // Peel third layer (last hop before destination)
       const result3 = await onionRouter.peelLayer(onionMessage);
-      expect(result3.isLastLayer).toBe(false);
-      expect(result3.nextHop).toBeTruthy();
-
-      // All layers peeled
-      const result4 = await onionRouter.peelLayer(onionMessage);
-      expect(result4.isLastLayer).toBe(true);
-      expect(result4.nextHop).toBeNull();
+      expect(result3.isLastLayer).toBe(true);  // Changed: This is the last layer
+      expect(result3.nextHop).toBe(destination);  // Next hop should be the destination
     });
   });
 

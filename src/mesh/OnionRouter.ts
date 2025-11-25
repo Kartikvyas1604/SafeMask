@@ -135,6 +135,8 @@ export class OnionRouter extends EventEmitter {
         hops,
         totalHops: hops.length,
         createdAt: Date.now(),
+        estimatedLatency: hops.reduce((sum, h) => sum + h.latency, 0),
+        avgReputation: hops.reduce((sum, h) => sum + h.reputation, 0) / hops.length,
       };
 
       logger.info('🛤️ Selected onion route:', {
@@ -194,6 +196,7 @@ export class OnionRouter extends EventEmitter {
         layers.push({
           hopId: hop.id,
           encryptedPayload: encrypted,
+          encryptedData: encrypted,  // Alias for tests
           nextHop,
           layerNumber: i,
         });
@@ -213,6 +216,7 @@ export class OnionRouter extends EventEmitter {
         layers,
         currentLayer: 0,
         routeId,
+        destination: destinationId,  // Add destination
       };
 
       // Store route

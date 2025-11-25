@@ -5,6 +5,7 @@
 import OnionRouter from '../../../src/mesh/OnionRouter';
 import { MeshPeer } from '../../../src/types';
 import { randomBytes } from '@noble/hashes/utils';
+import { secp256k1 } from '@noble/curves/secp256k1';
 
 describe('OnionRouter', () => {
   let onionRouter: OnionRouter;
@@ -13,14 +14,21 @@ describe('OnionRouter', () => {
   beforeEach(() => {
     onionRouter = new OnionRouter();
 
+    // Helper to generate valid secp256k1 public key
+    const generateValidPublicKey = () => {
+      const privKey = randomBytes(32);
+      return secp256k1.getPublicKey(privKey, true); // compressed format
+    };
+
     mockPeers = Array.from({ length: 10 }, (_, i) => ({
       id: `peer_${i}`,
+      peerId: `peer_${i}`,  // Alias for id
       protocol: 'wifi' as const,
       address: `192.168.1.${i + 10}`,
       reputation: 50 + Math.random() * 50,
       latency: 10 + Math.random() * 100,
       bandwidth: 1000 + i * 100,
-      publicKey: randomBytes(33),
+      publicKey: generateValidPublicKey(),
     }));
 
     mockPeers.forEach(peer => {
