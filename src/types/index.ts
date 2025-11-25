@@ -67,6 +67,7 @@ export interface ZKProof {
 
 export interface MeshPeer {
   id: string;
+  peerId?: string;  // Alias for id, used in tests
   protocol: 'bluetooth' | 'wifi' | 'lora';
   address: string;
   reputation: number;

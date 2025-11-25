@@ -102,8 +102,8 @@ describe('OnionRouter', () => {
 
       // Each layer should be encrypted (non-zero)
       onionMessage.layers.forEach(layer => {
-        expect(layer.encryptedData.length).toBeGreaterThan(0);
-        const isEncrypted = Array.from(layer.encryptedData).some(b => b !== 0);
+        expect(layer.encryptedPayload.length).toBeGreaterThan(0);
+        const isEncrypted = Array.from(layer.encryptedPayload).some(b => b !== 0);
         expect(isEncrypted).toBe(true);
       });
     });
