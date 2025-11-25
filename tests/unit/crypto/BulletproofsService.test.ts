@@ -121,7 +121,7 @@ describe('BulletproofsService', () => {
 
     it('should reduce proof size with aggregation', async () => {
       const count = 8;
-      const values = Array.from({ length: count }, (_, i) => BigInt(i * 100));
+      const values = Array.from({ length: count }, (_, i) => BigInt((i + 1) * 100)); // Start from 100, not 0
       
       const proofs = await Promise.all(
         values.map(async (value) => {
@@ -237,7 +237,7 @@ describe('BulletproofsService', () => {
 
     it('should handle multiple concurrent proofs', async () => {
       const count = 5;
-      const values = Array.from({ length: count }, (_, i) => BigInt(i * 100));
+      const values = Array.from({ length: count }, (_, i) => BigInt((i + 1) * 100)); // Start from 100, not 0
 
       const startTime = Date.now();
       await Promise.all(

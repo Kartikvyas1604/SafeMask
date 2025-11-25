@@ -193,7 +193,7 @@ export class OnionRouter extends EventEmitter {
         const layerData = Buffer.concat([header, Buffer.from(encryptedPayload)]);
         const encrypted = this.encrypt(layerData, sharedKey);
 
-        layers.push({
+        layers.unshift({  // Add to front so layer 0 is outermost (first hop)
           hopId: hop.id,
           encryptedPayload: encrypted,
           encryptedData: encrypted,  // Alias for tests
@@ -268,7 +268,6 @@ export class OnionRouter extends EventEmitter {
 
       // Extract header (nextHop + layer number)
       const headerSize = 65; // Approximate
-      const nextHop = Buffer.from(decrypted.slice(0, 64)).toString('utf8').trim();
       const payload = decrypted.slice(headerSize);
 
       // Update message
@@ -279,12 +278,12 @@ export class OnionRouter extends EventEmitter {
       const isLastLayer = message.currentLayer >= message.layers.length;
 
       logger.info('✅ Layer peeled:', {
-        nextHop: isLastLayer ? 'destination' : nextHop.slice(0, 8),
+        nextHop: isLastLayer ? 'destination' : layer.nextHop.slice(0, 8),
         remainingLayers: message.layers.length - message.currentLayer,
       });
 
       return {
-        nextHop: isLastLayer ? null : nextHop,
+        nextHop: layer.nextHop,  // Use the nextHop from layer metadata
         payload,
         isLastLayer,
       };

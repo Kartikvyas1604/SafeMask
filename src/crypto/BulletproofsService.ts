@@ -58,12 +58,23 @@ export class BulletproofsService {
    */
   createCommitment(value: bigint, blindingFactor?: Uint8Array): Uint8Array {
     try {
+      // Validate value
+      if (typeof value !== 'bigint') {
+        throw new Error(`Value must be bigint, got ${typeof value}`);
+      }
+      if (value < 0n) {
+        throw new Error('Value must be non-negative');
+      }
+      if (value >= secp256k1.CURVE.n) {
+        throw new Error(`Value ${value} exceeds curve order`);
+      }
+      
       // Generate random blinding factor if not provided
       const r = blindingFactor || randomBytes(32);
       const rBigInt = BigInt('0x' + Buffer.from(r).toString('hex'));
       
       // Mod by curve order to ensure blinding factor is within valid range
-      // Keep value as-is since small values (0-700) are valid
+      // Small values like 0-1000 are valid, but large blinding factors need modding
       const rModded = rBigInt % secp256k1.CURVE.n;
 
       // C = v*G + r*H

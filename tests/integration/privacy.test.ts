@@ -430,6 +430,12 @@ describe('Privacy Features Integration Tests', () => {
       const onionRouter = new OnionRouter();
       const trafficObfuscation = new TrafficObfuscation();
 
+      // Helper to generate valid secp256k1 public key
+      const generateValidPublicKey = () => {
+        const privKey = randomBytes(32);
+        return secp256k1.getPublicKey(privKey, true);
+      };
+
       const mockPeers: MeshPeer[] = Array.from({ length: 5 }, (_, i) => ({
         id: `peer_${i}`,
         protocol: 'wifi' as const,
@@ -437,7 +443,7 @@ describe('Privacy Features Integration Tests', () => {
         reputation: 80,
         latency: 50,
         bandwidth: 1500,
-        publicKey: randomBytes(33),
+        publicKey: generateValidPublicKey(),
       }));
 
       mockPeers.forEach(peer => {
