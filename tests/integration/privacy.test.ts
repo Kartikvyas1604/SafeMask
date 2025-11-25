@@ -235,12 +235,13 @@ describe('Privacy Features Integration Tests', () => {
         address: `192.168.1.${i + 10}`,
         reputation: 50 + Math.random() * 50,
         latency: 10 + Math.random() * 100,
+        bandwidth: 1000 + i * 100,
         publicKey: randomBytes(33),
       }));
 
       // Register peers
       mockPeers.forEach(peer => {
-        onionRouter.registerPeer(peer.id, peer.publicKey);
+        onionRouter.registerPeer(peer.id, peer.publicKey!);
       });
     });
 
@@ -432,11 +433,12 @@ describe('Privacy Features Integration Tests', () => {
         address: `192.168.1.${i + 10}`,
         reputation: 80,
         latency: 50,
+        bandwidth: 1500,
         publicKey: randomBytes(33),
       }));
 
       mockPeers.forEach(peer => {
-        onionRouter.registerPeer(peer.id, peer.publicKey);
+        if (peer.publicKey) onionRouter.registerPeer(peer.id, peer.publicKey);
       });
 
       // Create message

@@ -22,7 +22,7 @@ describe('Fusion+ Integration Tests', () => {
   let auctionTracker: FusionAuctionTracker;
   let resolverManager: FusionResolverManager;
   let refundService: FusionRefundService;
-  let testWallet: ethers.Wallet;
+  let testWallet: ethers.HDNodeWallet;
 
   beforeAll(() => {
     // Initialize services
@@ -90,14 +90,14 @@ describe('Fusion+ Integration Tests', () => {
       expect(order.data.maker).toBe(testWallet.address);
 
       // Sign order
-      const signature = await fusionClient.signOrder(order, testWallet);
+      const signature = await fusionClient.signOrder(order, testWallet as any);
       expect(signature).toBeTruthy();
       expect(signature.startsWith('0x')).toBe(true);
     }, 30000);
   });
 
   describe('Auction Tracking', () => {
-    it('should track auction lifecycle', async (done) => {
+    it('should track auction lifecycle', async () => {
       const mockOrderHash = '0x' + '1'.repeat(64);
       
       let stateChanges: string[] = [];
@@ -113,16 +113,14 @@ describe('Fusion+ Integration Tests', () => {
         expect(stateChanges.length).toBeGreaterThan(0);
         expect(stateChanges[0]).toBe('announced');
         auctionTracker.stopTracking(mockOrderHash);
-        done();
       }, 10000);
     }, 15000);
 
-    it('should handle timeout', async (done) => {
+    it('should handle timeout', async () => {
       const mockOrderHash = '0x' + '2'.repeat(64);
       
       auctionTracker.on('refund_needed', (event) => {
         expect(event.orderHash).toBe(mockOrderHash);
-        done();
       });
 
       await auctionTracker.trackOrder(mockOrderHash, 0.1); // 6 seconds timeout

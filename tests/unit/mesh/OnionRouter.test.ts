@@ -19,11 +19,12 @@ describe('OnionRouter', () => {
       address: `192.168.1.${i + 10}`,
       reputation: 50 + Math.random() * 50,
       latency: 10 + Math.random() * 100,
+      bandwidth: 1000 + i * 100,
       publicKey: randomBytes(33),
     }));
 
     mockPeers.forEach(peer => {
-      onionRouter.registerPeer(peer.id, peer.publicKey);
+      onionRouter.registerPeer(peer.id, peer.publicKey!);
     });
   });
 
@@ -169,9 +170,10 @@ describe('OnionRouter', () => {
       const newPeer: MeshPeer = {
         id: peerId,
         protocol: 'wifi',
-        address: '192.168.1.100',
-        reputation: 80,
-        latency: 50,
+        address: '192.168.1.200',
+        reputation: 90,
+        latency: 15,
+        bandwidth: 2000,
         publicKey,
       };
 

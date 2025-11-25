@@ -96,7 +96,7 @@ describe('BulletproofsService', () => {
 
       expect(aggregate.commitments.length).toBe(4);
       expect(aggregate.proof).toBeTruthy();
-      expect(aggregate.range).toBe(32);
+      expect(aggregate.ranges).toContain(32);
     });
 
     it('should verify aggregate proof', async () => {
@@ -196,7 +196,9 @@ describe('BulletproofsService', () => {
       );
 
       // Same inputs should produce same commitment
-      expect(proof1.commitment).toBe(proof2.commitment);
+      expect(Buffer.from(proof1.commitment).toString('hex')).toBe(
+        Buffer.from(proof2.commitment).toString('hex')
+      );
     });
 
     it('should produce different commitments for different blinding factors', async () => {

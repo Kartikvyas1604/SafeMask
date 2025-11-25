@@ -72,6 +72,7 @@ export interface MeshPeer {
   reputation: number;
   latency: number;
   bandwidth: number;
+  publicKey?: Uint8Array;
 }
 
 export interface MeshMessage {
