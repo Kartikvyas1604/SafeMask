@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   Modal,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,18 +19,64 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import RealDEXSwapService, { SwapQuote } from '../blockchain/RealDEXSwapService';
 import { KNOWN_TOKENS } from '../blockchain/TokenService';
 import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
-import ChainIcon from '../components/ChainIcon';
 import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { tokenIcons, TokenIconKey } from '../assets/tokens';
+
+const TOKEN_ICON_ALIASES: Partial<Record<string, TokenIconKey>> = {
+  weth: 'eth',
+  wbtc: 'btc',
+  wmatic: 'matic',
+  wavax: 'avax',
+  wftm: 'ftm',
+  usdc: 'usdc',
+  usdt: 'usdt',
+  dai: 'dai',
+  arb: 'arb',
+};
+
+const getTokenIconSource = (symbol: string) => {
+  if (!symbol) return undefined;
+  const normalized = symbol.toLowerCase();
+  const aliasKey = TOKEN_ICON_ALIASES[normalized];
+  if (aliasKey) {
+    return tokenIcons[aliasKey];
+  }
+  if (normalized in tokenIcons) {
+    return tokenIcons[normalized as TokenIconKey];
+  }
+  return undefined;
+};
 
 type RealSwapScreenRouteProp = RouteProp<RootStackParamList, 'RealSwap'>;
 type RealSwapScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RealSwap'>;
 
 export default function RealSwapScreen() {
+  const renderTokenIcon = (symbol: string) => {
+    const iconSource = getTokenIconSource(symbol);
+
+    if (iconSource) {
+      return (
+        <Image
+          source={iconSource}
+          style={styles.tokenPickerOptionIcon}
+          resizeMode="contain"
+        />
+      );
+    }
+
+    return (
+      <View style={styles.tokenPickerIconFallback}>
+        <Text style={styles.tokenPickerIconFallbackText}>
+          {symbol.slice(0, 3).toUpperCase()}
+        </Text>
+      </View>
+    );
+  };
   const navigation = useNavigation<RealSwapScreenNavigationProp>();
   const route = useRoute<RealSwapScreenRouteProp>();
   const insets = useSafeAreaInsets();
@@ -58,7 +105,7 @@ export default function RealSwapScreen() {
       loadWalletData();
     }
   }, []);
-  
+
   const loadWalletData = async () => {
     try {
       const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
@@ -76,7 +123,7 @@ export default function RealSwapScreen() {
       logger.error('Failed to load wallet data:', error);
     }
   };
-  
+
   /**
    * Get swap quote when inputs change
    */
@@ -378,7 +425,7 @@ export default function RealSwapScreen() {
             ))}
           </View>
         </View>
-        
+
         {/* Quote Details */}
         {quote && (
           <View style={styles.quoteCard}>
@@ -510,7 +557,7 @@ export default function RealSwapScreen() {
                     setShowInputTokenPicker(false);
                   }}
                 >
-                  <ChainIcon chain={network} size={32} />
+                  {renderTokenIcon(token.symbol)}
                   <View style={styles.tokenPickerOptionText}>
                     <Text style={styles.tokenPickerOptionName}>{token.symbol}</Text>
                     <Text style={styles.tokenPickerOptionSymbol}>{token.address.slice(0, 6)}...{token.address.slice(-4)}</Text>
@@ -733,7 +780,7 @@ const styles = StyleSheet.create({
   slippageButtonTextActive: {
     color: Colors.accent,
   },
-  
+
   // Quote Card
   quoteCard: {
     marginHorizontal: Spacing.xl,
@@ -892,6 +939,26 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+  },
+  tokenPickerOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  tokenPickerIconFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.cardHover,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  tokenPickerIconFallbackText: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
   },
   tokenPickerOptionText: {
     flex: 1,

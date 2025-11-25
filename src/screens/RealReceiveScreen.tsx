@@ -160,7 +160,7 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <TouchableOpacity style={styles.notificationIcon}>
               <Ionicons name="notifications-outline" size={24} color={Colors.white} />
-            </TouchableOpacity>
+        </TouchableOpacity>
           </View>
         </View>
         
@@ -177,7 +177,7 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
         {/* SELECT NETWORK Section */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>SELECT NETWORK</Text>
-          <TouchableOpacity
+              <TouchableOpacity
             style={styles.dropdownButton}
             onPress={() => setShowNetworkDropdown(true)}
             activeOpacity={0.7}
@@ -194,7 +194,7 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
               )}
             </View>
             <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
-          </TouchableOpacity>
+              </TouchableOpacity>
         </View>
 
         {selectedAddress && (
@@ -202,18 +202,18 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
             {/* QR Code Card */}
             <View style={styles.qrCard}>
               <Text style={styles.sectionLabel}>QR CODE</Text>
-              <View style={styles.qrContainer}>
-                <View style={styles.qrPlaceholder}>
+            <View style={styles.qrContainer}>
+              <View style={styles.qrPlaceholder}>
                   <View style={styles.qrIconContainer}>
                     <Ionicons name="qr-code-outline" size={64} color={Colors.textTertiary} />
                   </View>
-                  <Text style={styles.qrAddressShort}>
+                <Text style={styles.qrAddressShort}>
                     {selectedAddress.address.substring(0, 8)}...
                     {selectedAddress.address.substring(selectedAddress.address.length - 8)}
-                  </Text>
-                  <Text style={styles.qrHint}>
+                </Text>
+                <Text style={styles.qrHint}>
                     Scan to receive {selectedAddress.symbol}
-                  </Text>
+                </Text>
                 </View>
               </View>
             </View>
@@ -222,30 +222,30 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>WALLET ADDRESS</Text>
               <View style={styles.addressCard}>
-                <View style={styles.addressBox}>
-                  <Text style={styles.addressText} numberOfLines={2}>
-                    {selectedAddress.address}
-                  </Text>
-                </View>
+              <View style={styles.addressBox}>
+                <Text style={styles.addressText} numberOfLines={2}>
+                  {selectedAddress.address}
+                </Text>
+              </View>
 
-                {/* Action Buttons */}
+              {/* Action Buttons */}
                 <View style={styles.actionButtonsRow}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => copyToClipboard(selectedAddress.address)}
-                  >
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => copyToClipboard(selectedAddress.address)}
+                >
                     <Ionicons name="copy-outline" size={20} color={Colors.white} />
                     <Text style={styles.actionButtonText}>Copy</Text>
-                  </TouchableOpacity>
+                </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => shareAddress(selectedAddress.address)}
-                  >
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => shareAddress(selectedAddress.address)}
+                >
                     <Ionicons name="share-outline" size={20} color={Colors.white} />
                     <Text style={styles.actionButtonText}>Share</Text>
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
+              </View>
               </View>
             </View>
 
@@ -257,7 +257,7 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
                     <Ionicons name="alert-circle" size={20} color={Colors.warning} />
                     <Text style={styles.warningTitle}>Warning</Text>
                   </View>
-                  <Text style={styles.warningText}>{selectedAddress.warning}</Text>
+                <Text style={styles.warningText}>{selectedAddress.warning}</Text>
                 </View>
               </View>
             )}
@@ -293,26 +293,26 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
                   <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
                   <Text style={styles.importantText}>
                     Only send {selectedAddress.symbol} to this address
-                  </Text>
-                </View>
+                </Text>
+              </View>
                 <View style={styles.importantItem}>
                   <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
                   <Text style={styles.importantText}>
                     Always double-check the address before sending
-                  </Text>
-                </View>
+                </Text>
+              </View>
                 <View style={styles.importantItem}>
                   <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
                   <Text style={styles.importantText}>
-                    Funds will appear after blockchain confirmation
-                  </Text>
-                </View>
+                  Funds will appear after blockchain confirmation
+                </Text>
+              </View>
                 {(selectedAddress.chain === 'Ethereum' || selectedAddress.chain === 'Polygon') && (
                   <View style={styles.importantItem}>
                     <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
                     <Text style={styles.importantText}>
                       This address also supports ERC20 tokens
-                    </Text>
+                </Text>
                   </View>
                 )}
               </View>

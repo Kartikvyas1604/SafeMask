@@ -8,13 +8,13 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  Clipboard,
   Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StackNavigationProp } from '@react-navigation/stack';
 import RealBlockchainService, { RealBalance } from '../blockchain/RealBlockchainService';
 import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import ChainIcon from '../components/ChainIcon';
@@ -22,6 +22,7 @@ import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import * as logger from '../utils/logger';
 
 // Sparkline graph component with smooth curves
@@ -43,32 +44,6 @@ const SparklineGraph = ({ isPositive }: { isPositive: boolean }) => {
     const y = padding + graphHeight - (value * graphHeight);
     return { x, y };
   });
-  
-  // Create smooth path using quadratic curves
-  const createSmoothPath = () => {
-    if (points.length < 2) return '';
-    
-    let path = `M ${points[0].x} ${points[0].y}`;
-    
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
-      const next = points[i + 1];
-      
-      if (next) {
-        // Use quadratic curve for smooth transitions
-        const cpX = (prev.x + curr.x) / 2;
-        const cpY = (prev.y + curr.y) / 2;
-        path += ` Q ${prev.x} ${prev.y} ${cpX} ${cpY}`;
-        path += ` Q ${curr.x} ${curr.y} ${(curr.x + next.x) / 2} ${(curr.y + next.y) / 2}`;
-      } else {
-        // Last point - use line
-        path += ` L ${curr.x} ${curr.y}`;
-      }
-    }
-    
-    return path;
-  };
   
   // Alternative: Use cubic bezier for smoother curves
   const createCubicPath = () => {
@@ -127,11 +102,16 @@ const SparklineGraph = ({ isPositive }: { isPositive: boolean }) => {
   );
 };
 
-export default function ProductionWalletScreen({ navigation }: any) {
+type WalletNavigationProp = StackNavigationProp<RootStackParamList, 'Wallet'>;
+
+interface Props {
+  navigation: WalletNavigationProp;
+}
+
+export default function ProductionWalletScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [walletInitialized, setWalletInitialized] = useState(false);
   const [balances, setBalances] = useState<RealBalance[]>([]);
   const [totalUSD, setTotalUSD] = useState(0);
   const [walletAddress, setWalletAddress] = useState<string>('');
@@ -154,14 +134,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const changeAmount = totalUSD - previousTotal;
   const changePercent = previousTotal > 0 ? ((changeAmount / previousTotal) * 100) : 0;
   
-  // Get current date
-  const currentDate = new Date();
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const dateString = `${dayNames[currentDate.getDay()]}, ${currentDate.getDate()} ${monthNames[currentDate.getMonth()]}`;
-  
   // Get greeting based on time
   const getGreeting = () => {
+    const currentDate = new Date();
     const hour = currentDate.getHours();
     if (hour < 12) return 'Good Morning!';
     if (hour < 18) return 'Good Afternoon!';
@@ -276,8 +251,6 @@ export default function ProductionWalletScreen({ navigation }: any) {
       }
       
       setWalletAddress(ethAccount.address);
-      setWalletInitialized(true);
-      
       logger.info(`📊 Loading real balances for ${ethAccount.address}`);
       
       // Fetch REAL balances from blockchain
@@ -348,12 +321,13 @@ export default function ProductionWalletScreen({ navigation }: any) {
   };
   
   /**
-   * Copy wallet address
+   * Open detailed chart screen for a specific asset
    */
-  const handleCopyAddress = () => {
-    if (!walletAddress) return;
-    Clipboard.setString(walletAddress);
-    Alert.alert('Address Copied', 'Wallet address has been copied to clipboard');
+  const handleOpenChart = (balance: RealBalance) => {
+    navigation.navigate('TokenChart', {
+      symbol: balance.symbol,
+      chain: balance.chain,
+    });
   };
   
   if (isLoading) {
@@ -369,33 +343,33 @@ export default function ProductionWalletScreen({ navigation }: any) {
   
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView
+    <ScrollView
         style={styles.scrollView}
-        refreshControl={
+      refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />
-        }
+      }
         onScroll={handleScroll}
         scrollEventThrottle={16}
-      >
-        {/* Header */}
-        <View style={styles.header}>
+    >
+      {/* Header */}
+      <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.logoContainer}>
-              <View style={styles.logo}>
+          <View style={styles.logo}>
                 <Ionicons name="wallet" size={24} color={Colors.white} />
-              </View>
-            </View>
-            
-            <View style={styles.headerRight}>
+          </View>
+        </View>
+        
+        <View style={styles.headerRight}>
               <View style={styles.profileContainer}>
                 <View style={styles.profileIcon}>
                   <Ionicons name="person" size={20} color={Colors.white} />
-                </View>
-              </View>
+          </View>
+        </View>
               <TouchableOpacity style={styles.notificationIcon}>
                 <Ionicons name="notifications-outline" size={24} color={Colors.white} />
               </TouchableOpacity>
-            </View>
+      </View>
           </View>
           
           <View style={styles.greetingSection}>
@@ -403,12 +377,12 @@ export default function ProductionWalletScreen({ navigation }: any) {
             <Text style={styles.greetingSubtext}>{getGreeting()}</Text>
           </View>
         </View>
-        
+
         {/* MY WALLET Section */}
         <Animated.View style={[styles.walletSection, getAnimatedStyle(0)]}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionLabel}>MY WALLET</Text>
-            <TouchableOpacity 
+              <TouchableOpacity
               onPress={() => setBalanceHidden(!balanceHidden)}
               style={styles.eyeButton}
             >
@@ -423,18 +397,18 @@ export default function ProductionWalletScreen({ navigation }: any) {
             <View style={styles.balanceContent}>
               <Text style={styles.balanceAmount}>
                 {balanceHidden ? '••••••' : `$${totalUSD.toFixed(2)}`}
-              </Text>
+                    </Text>
               {!balanceHidden && (
                 <View style={styles.performanceRow}>
                   <Text style={styles.performanceAmount}>+${changeAmount.toFixed(2)}</Text>
                   <Text style={styles.performancePercent}>+{changePercent.toFixed(2)}%</Text>
                 </View>
-              )}
-            </View>
-          </View>
-          
+          )}
+        </View>
+      </View>
+
           <View style={styles.actionButtonsRow}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleSend}>
+        <TouchableOpacity style={styles.actionButton} onPress={handleSend}>
               <Ionicons name="arrow-up" size={20} color={Colors.white} />
               <Text style={styles.actionButtonText}>Withdraw</Text>
             </TouchableOpacity>
@@ -456,9 +430,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
               <TouchableOpacity style={styles.addFundCard}>
                 <View style={styles.addFundIcon}>
                   <Ionicons name="add" size={32} color={Colors.textSecondary} />
-                </View>
-              </TouchableOpacity>
-              
+          </View>
+        </TouchableOpacity>
+
               {/* Crypto Fund Cards */}
               {balances.map((balance, index) => {
                 // Mock performance data for each asset
@@ -467,15 +441,20 @@ export default function ProductionWalletScreen({ navigation }: any) {
                 const mockChangePercent = isPositive ? 0.92 : -5.62;
                 
                 return (
-                  <TouchableOpacity key={index} style={styles.fundCard}>
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.fundCard}
+                    onPress={() => handleOpenChart(balance)}
+                    activeOpacity={0.85}
+                  >
                     <View style={styles.fundCardHeader}>
                       <ChainIcon chain={balance.chain.toLowerCase()} size={40} />
                       <View style={styles.fundCardInfo}>
                         <Text style={styles.fundCardName}>{balance.chain}</Text>
                         <Text style={styles.fundCardTicker}>{balance.symbol}</Text>
-                      </View>
-                    </View>
-                    
+          </View>
+      </View>
+
                     <SparklineGraph isPositive={isPositive} />
                     
                     <View style={styles.fundCardValue}>
@@ -493,8 +472,8 @@ export default function ProductionWalletScreen({ navigation }: any) {
                         ]}>
                           {isPositive ? '+' : ''}{mockChangePercent.toFixed(2)}%
                         </Text>
-                      </View>
-                    </View>
+          </View>
+        </View>
                   </TouchableOpacity>
                 );
               })}
@@ -505,39 +484,39 @@ export default function ProductionWalletScreen({ navigation }: any) {
         {/* RECENT ACTIONS Section */}
         <Animated.View style={[styles.recentActionsSection, getAnimatedStyle(2)]}>
           <Text style={styles.sectionLabel}>RECENT ACTIONS</Text>
-          {balances.length > 0 ? (
+        {balances.length > 0 ? (
             <View style={styles.actionsList}>
               {balances.slice(0, 3).map((balance, index) => (
                 <TouchableOpacity key={index} style={styles.actionItem}>
                   <View style={styles.actionItemLeft}>
                     <View style={styles.actionItemIcon}>
                       <ChainIcon chain={balance.chain.toLowerCase()} size={32} />
-                    </View>
+                  </View>
                     <View style={styles.actionItemInfo}>
                       <Text style={styles.actionItemName}>{balance.chain}</Text>
                       <Text style={styles.actionItemTicker}>{balance.symbol}</Text>
-                    </View>
                   </View>
+                </View>
                   <View style={styles.actionItemRight}>
                     <Text style={styles.actionItemAmount}>+ ${balance.balanceUSD.toFixed(2)}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : (
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
             <View style={styles.emptyActions}>
               <Text style={styles.emptyActionsText}>No recent actions</Text>
-            </View>
-          )}
+          </View>
+        )}
         </Animated.View>
         
         {/* Bottom padding for tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
-      
+
       {/* Floating Bottom Tab Bar */}
       <BottomTabBar />
-    </View>
+      </View>
   );
 }
 

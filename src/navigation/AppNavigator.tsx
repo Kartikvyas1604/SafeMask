@@ -18,6 +18,7 @@ import ImportWalletScreen from '../screens/ImportWalletScreen';
 import ImportPrivateKeyScreen from '../screens/ImportPrivateKeyScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import BackupWalletScreen from '../screens/BackupWalletScreen';
+import TokenChartScreen from '../screens/TokenChartScreen';
 import { BridgeScreen } from '../screens/BridgeScreen';
 import MeshNetworkScreen from '../screens/MeshNetworkScreen';
 import BrowserScreen from '../screens/BrowserScreen';
@@ -39,6 +40,7 @@ export type RootStackParamList = {
   MeshNetwork: undefined;
   Settings: undefined;
   BackupWallet: undefined;
+  TokenChart: { symbol: string; chain: string };
   Browser: undefined;
 };
 
@@ -88,6 +90,7 @@ export default function AppNavigator() {
       <Stack.Screen name="MeshNetwork" component={MeshNetworkScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="BackupWallet" component={BackupWalletScreen} />
+      <Stack.Screen name="TokenChart" component={TokenChartScreen} />
       <Stack.Screen name="Browser" component={BrowserScreen} />
     </Stack.Navigator>
   );
