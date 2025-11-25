@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Modal,
   Image,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +27,7 @@ import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { tokenIcons, TokenIconKey } from '../assets/tokens';
+import { biometricAuth } from '../services/BiometricAuthService';
 
 const TOKEN_ICON_ALIASES: Partial<Record<string, TokenIconKey>> = {
   weth: 'eth',
@@ -95,6 +97,9 @@ export default function RealSwapScreen() {
   const [walletAddress, setWalletAddress] = useState<string>(paramWalletAddress || '');
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
   const [showInputTokenPicker, setShowInputTokenPicker] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [isCheckingBiometric, setIsCheckingBiometric] = useState(false);
   
   const dexService = RealDEXSwapService;
   const hdWallet = new ZetarisWalletCore();
@@ -106,6 +111,14 @@ export default function RealSwapScreen() {
     }
   }, []);
 
+  useEffect(() => {
+    if (walletAddress) {
+      refreshBiometricStatus(walletAddress);
+    } else {
+      setBiometricEnabled(false);
+    }
+  }, [walletAddress]);
+  
   const loadWalletData = async () => {
     try {
       const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
@@ -124,6 +137,73 @@ export default function RealSwapScreen() {
     }
   };
 
+  const refreshBiometricStatus = async (address?: string) => {
+    const targetAddress = address || walletAddress;
+    setIsCheckingBiometric(true);
+
+    try {
+      const available = await biometricAuth.isAvailable();
+      setBiometricAvailable(available);
+
+      if (!available || !targetAddress) {
+        setBiometricEnabled(false);
+        return;
+      }
+
+      const walletId = targetAddress.slice(0, 10);
+      const enabled = await biometricAuth.isBiometricEnabled(walletId);
+      setBiometricEnabled(enabled);
+    } catch (error) {
+      logger.error('Failed to load biometric status:', error);
+      setBiometricEnabled(false);
+    } finally {
+      setIsCheckingBiometric(false);
+    }
+  };
+
+  const handleToggleBiometric = async () => {
+    if (!walletAddress) {
+      Alert.alert('Wallet not ready', 'Connect or load a wallet before enabling biometrics.');
+      return;
+    }
+
+    if (!biometricAvailable) {
+      Alert.alert(
+        'Biometric unavailable',
+        'This device does not support biometric authentication or no biometrics are enrolled.'
+      );
+      return;
+    }
+
+    const walletId = walletAddress.slice(0, 10);
+    setIsCheckingBiometric(true);
+
+    try {
+      if (biometricEnabled) {
+        const disabled = await biometricAuth.disableBiometricAuth(walletId);
+        if (disabled) {
+          setBiometricEnabled(false);
+          logger.info('✅ Biometric authentication disabled for wallet');
+        } else {
+          Alert.alert('Error', 'Unable to disable biometric authentication.');
+        }
+      } else {
+        const enabled = await biometricAuth.enableBiometricAuth(walletId);
+        if (enabled) {
+          setBiometricEnabled(true);
+          logger.info('✅ Biometric authentication enabled for wallet');
+        } else {
+          Alert.alert('Biometric setup failed', 'Please try again.');
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to toggle biometric auth:', error);
+      Alert.alert('Error', 'Unable to update biometric settings. Please try again.');
+    } finally {
+      setIsCheckingBiometric(false);
+    }
+  };
+  
   /**
    * Get swap quote when inputs change
    */
@@ -200,6 +280,24 @@ export default function RealSwapScreen() {
    */
   const executeSwap = async () => {
     if (!quote) return;
+
+    if (biometricEnabled) {
+      try {
+        const auth = await biometricAuth.authenticateForTransaction(
+          `${quote.inputAmount} ${inputTokenSymbol || ''}`.trim(),
+          outputTokenSymbol || outputToken || 'token'
+        );
+
+        if (!auth.success) {
+          Alert.alert('Authentication failed', auth.error || 'Biometric authentication was cancelled.');
+          return;
+        }
+      } catch (error) {
+        logger.error('❌ Biometric authentication error:', error);
+        Alert.alert('Authentication error', 'Unable to verify your biometrics. Swap cancelled.');
+        return;
+      }
+    }
     
     setIsSwapping(true);
     
@@ -426,6 +524,39 @@ export default function RealSwapScreen() {
           </View>
         </View>
 
+        {/* Biometric Toggle */}
+        {walletAddress ? (
+          <View style={styles.section}>
+            <View style={styles.biometricCard}>
+              <View style={styles.biometricInfo}>
+                <View style={styles.biometricIcon}>
+                  <Ionicons name="finger-print-outline" size={20} color={Colors.accent} />
+                </View>
+                <View style={styles.biometricText}>
+                  <Text style={styles.biometricTitle}>Biometric Confirmation</Text>
+                  <Text
+                    style={[
+                      styles.biometricSubtitle,
+                      !biometricAvailable && styles.biometricSubtitleDisabled,
+                    ]}
+                  >
+                    {biometricAvailable
+                      ? 'Require Face ID / fingerprint before executing swaps.'
+                      : 'Biometric authentication unavailable on this device.'}
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={biometricEnabled}
+                onValueChange={handleToggleBiometric}
+                disabled={!biometricAvailable || isCheckingBiometric}
+                trackColor={{ false: Colors.cardBorder, true: Colors.accent }}
+                thumbColor={biometricEnabled ? Colors.white : Colors.textTertiary}
+              />
+            </View>
+          </View>
+        ) : null}
+        
         {/* Quote Details */}
         {quote && (
           <View style={styles.quoteCard}>
@@ -781,6 +912,49 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
 
+  // Biometric Card
+  biometricCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.lg,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    gap: Spacing.md,
+  },
+  biometricInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: Spacing.md,
+  },
+  biometricIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.accentLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  biometricText: {
+    flex: 1,
+  },
+  biometricTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.textPrimary,
+  },
+  biometricSubtitle: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  biometricSubtitleDisabled: {
+    color: Colors.textTertiary,
+  },
+  
   // Quote Card
   quoteCard: {
     marginHorizontal: Spacing.xl,

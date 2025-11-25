@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -102,6 +102,8 @@ const SparklineGraph = ({ isPositive }: { isPositive: boolean }) => {
   );
 };
 
+type ShortcutRoute = 'RealSwap' | 'Bridge' | 'Browser';
+
 type WalletNavigationProp = StackNavigationProp<RootStackParamList, 'Wallet'>;
 
 interface Props {
@@ -117,8 +119,34 @@ export default function ProductionWalletScreen({ navigation }: Props) {
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [balanceHidden, setBalanceHidden] = useState(false);
   const [hdWallet] = useState(() => new ZetarisWalletCore());
-  
   const blockchainService = RealBlockchainService;
+  const discoveryShortcuts = useMemo(
+    () => [
+      {
+        key: 'swap',
+        title: 'Uniswap',
+        subtitle: 'Swap tokens on Ethereum',
+        icon: 'flame-outline' as const,
+        route: 'RealSwap',
+      },
+      {
+        key: 'bridge',
+        title: 'Bridge',
+        subtitle: 'Move assets cross-chain',
+        icon: 'link-outline' as const,
+        route: 'Bridge',
+      },
+      {
+        key: 'browser',
+        title: 'Browser',
+        subtitle: 'Explore dApps',
+        icon: 'planet-outline' as const,
+        route: 'Browser',
+      },
+    ],
+    []
+  );
+  useMemo(() => balances, [balances]);
   
   // Animation values for scroll-based animations
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -320,6 +348,22 @@ export default function ProductionWalletScreen({ navigation }: Props) {
     navigation.navigate('RealReceive', { walletAddress });
   };
   
+  const handleShortcutPress = (route: ShortcutRoute) => {
+    switch (route) {
+      case 'RealSwap':
+        navigation.navigate('RealSwap', { walletAddress, balances });
+        break;
+      case 'Bridge':
+        navigation.navigate('Bridge');
+        break;
+      case 'Browser':
+        navigation.navigate('Browser');
+        break;
+      default:
+        break;
+    }
+  };
+
   /**
    * Open detailed chart screen for a specific asset
    */
@@ -442,7 +486,7 @@ export default function ProductionWalletScreen({ navigation }: Props) {
                 
                 return (
                   <TouchableOpacity 
-                    key={index} 
+                    key={balance.chain + balance.symbol}
                     style={styles.fundCard}
                     onPress={() => handleOpenChart(balance)}
                     activeOpacity={0.85}
@@ -477,6 +521,51 @@ export default function ProductionWalletScreen({ navigation }: Props) {
                   </TouchableOpacity>
                 );
               })}
+
+              {/* Template tokens */}
+              {[
+                { chain: 'Bitcoin', symbol: 'BTC', change: -180.3, changePercent: -1.92 },
+                { chain: 'Base', symbol: 'BASE', change: 42.16, changePercent: 0.88 },
+                { chain: 'Solana', symbol: 'SOL', change: 312.41, changePercent: 6.2 },
+              ].map((template, index) => (
+                <TouchableOpacity
+                  key={`template-${template.symbol}-${index}`}
+                  style={styles.fundCard}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.fundCardHeader}>
+                    <ChainIcon chain={template.chain.toLowerCase()} size={40} />
+                    <View style={styles.fundCardInfo}>
+                      <Text style={styles.fundCardName}>{template.chain}</Text>
+                      <Text style={styles.fundCardTicker}>{template.symbol}</Text>
+                    </View>
+                  </View>
+                  <SparklineGraph isPositive={template.change > 0} />
+                  <View style={styles.fundCardValue}>
+                    <Text style={styles.fundCardAmount}>$0.00</Text>
+                    <View style={styles.fundCardPerformance}>
+                      <Text
+                        style={[
+                          styles.fundCardChange,
+                          { color: template.change > 0 ? Colors.success : Colors.error },
+                        ]}
+                      >
+                        {template.change > 0 ? '+' : ''}
+                        {template.change.toFixed(2)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.fundCardChangePercent,
+                          { color: template.change > 0 ? Colors.success : Colors.error },
+                        ]}
+                      >
+                        {template.change > 0 ? '+' : ''}
+                        {template.changePercent.toFixed(2)}%
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
           </ScrollView>
         </Animated.View>
@@ -510,6 +599,36 @@ export default function ProductionWalletScreen({ navigation }: Props) {
         )}
         </Animated.View>
         
+        {/* Discover */}
+        <Animated.View style={[styles.discoverySection, getAnimatedStyle(3)]}>
+          <View style={styles.discoveryHeader}>
+            <Text style={styles.sectionLabel}>DISCOVER</Text>
+            <Text style={styles.discoveryHint}>Jump into dApps</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.discoveryScroll}
+          >
+            {discoveryShortcuts.map((shortcut) => (
+              <TouchableOpacity
+                key={shortcut.key}
+                style={styles.discoveryCard}
+                onPress={() =>
+                  handleShortcutPress(shortcut.route as ShortcutRoute)
+                }
+                activeOpacity={0.9}
+              >
+                <View style={styles.discoveryIcon}>
+                  <Ionicons name={shortcut.icon} size={22} color={Colors.white} />
+                </View>
+                <Text style={styles.discoveryTitle}>{shortcut.title}</Text>
+                <Text style={styles.discoverySubtitle}>{shortcut.subtitle}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
         {/* Bottom padding for tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -685,6 +804,54 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.md,
     color: Colors.textPrimary,
     fontWeight: Typography.fontWeight.medium,
+  },
+
+  // Quick Actions
+  // Discovery Section
+  discoverySection: {
+    marginBottom: Spacing['2xl'],
+  },
+  discoveryHeader: {
+    paddingHorizontal: Spacing.xl,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  discoveryHint: {
+    color: Colors.textTertiary,
+    fontSize: Typography.fontSize.xs,
+  },
+  discoveryScroll: {
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.md,
+  },
+  discoveryCard: {
+    width: 200,
+    padding: Spacing.lg,
+    backgroundColor: Colors.card,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    marginRight: Spacing.md,
+    gap: Spacing.sm,
+  },
+  discoveryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.cardHover,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  discoveryTitle: {
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  discoverySubtitle: {
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.sm,
   },
   
   // FUNDS Section

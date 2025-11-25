@@ -20,7 +20,11 @@ import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
 import ChainIcon from '../components/ChainIcon';
-import { fetchMarketChartData, MarketRangeKey, MarketPoint } from '../services/MarketDataService';
+import {
+  fetchMarketChartData,
+  MarketRangeKey,
+  MarketPoint,
+} from '../services/MarketDataService';
 import * as logger from '../utils/logger';
 
 type TokenChartNavigationProp = StackNavigationProp<RootStackParamList, 'TokenChart'>;
@@ -40,60 +44,9 @@ const RANGE_OPTIONS: { key: MarketRangeKey; label: string }[] = [
   { key: 'ALL', label: 'All' },
 ];
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CHART_WIDTH = SCREEN_WIDTH - Spacing.lg * 2;
-const CHART_HEIGHT = Math.min(SCREEN_HEIGHT * 0.45, 420);
-const DEMO_CHART_VALUES = [
-  1425, 1430, 1422, 1428, 1435, 1442, 1438, 1445, 1452, 1448,
-  1456, 1462, 1458, 1468, 1475, 1470, 1478, 1486, 1482, 1490,
-  1498, 1504, 1496, 1508,
-];
-const HOUR_MS = 60 * 60 * 1000;
-const DEMO_CHART_POINTS: MarketPoint[] = DEMO_CHART_VALUES.map((price, index) => ({
-  timestamp: Date.now() - (DEMO_CHART_VALUES.length - index) * HOUR_MS,
-  price,
-}));
-
-const SMOOTHING = 0.22;
-
-const controlPoint = (
-  current: { x: number; y: number },
-  previous: { x: number; y: number } | undefined,
-  next: { x: number; y: number } | undefined,
-  reverse = false
-) => {
-  const p = previous || current;
-  const n = next || current;
-  const angle = Math.atan2(n.y - p.y, n.x - p.x) + (reverse ? Math.PI : 0);
-  const distance = Math.sqrt((n.x - p.x) ** 2 + (n.y - p.y) ** 2) * SMOOTHING;
-
-  return {
-    x: current.x + Math.cos(angle) * distance,
-    y: current.y + Math.sin(angle) * distance,
-  };
-};
-
-const buildSmoothPath = (points: Array<{ x: number; y: number }>) => {
-  if (!points.length) {
-    return { linePath: '', areaPath: '' };
-  }
-
-  const firstPoint = points[0];
-  const lastPoint = points[points.length - 1];
-
-  const linePath = points.reduce((acc, point, index, arr) => {
-    if (index === 0) {
-      return `M ${point.x} ${point.y}`;
-    }
-
-    const cps = controlPoint(arr[index - 1], arr[index - 2], point);
-    const cpe = controlPoint(point, arr[index - 1], arr[index + 1], true);
-    return `${acc} C ${cps.x} ${cps.y} ${cpe.x} ${cpe.y} ${point.x} ${point.y}`;
-  }, '');
-
-  const areaPath = `${linePath} L ${lastPoint.x} ${CHART_HEIGHT} L ${firstPoint.x} ${CHART_HEIGHT} Z`;
-  return { linePath, areaPath };
-};
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CHART_WIDTH = SCREEN_WIDTH - (Spacing.xl * 2 + Spacing.lg * 2);
+const CHART_HEIGHT = 260;
 
 const TokenChartScreen: React.FC<Props> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -106,14 +59,12 @@ const TokenChartScreen: React.FC<Props> = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [usingDemoData, setUsingDemoData] = useState(false);
 
   const latestPrice = data.length ? data[data.length - 1].price : null;
   const firstPrice = data.length ? data[0].price : null;
   const changeAmount = latestPrice && firstPrice ? latestPrice - firstPrice : 0;
   const changePercent = latestPrice && firstPrice ? (changeAmount / firstPrice) * 100 : 0;
   const isPositive = changeAmount >= 0;
-  const shouldShowError = !!error && !usingDemoData;
 
   const loadData = useCallback(
     async (selectedRange: MarketRangeKey, skipLoadingState = false) => {
@@ -121,17 +72,16 @@ const TokenChartScreen: React.FC<Props> = ({ navigation, route }) => {
         setLoading(true);
         setError(null);
       }
-      setUsingDemoData(false);
 
       try {
-        const points = await fetchMarketChartData(symbol || chain, selectedRange);
+        const points = await fetchMarketChartData(
+          { symbol, chain },
+          selectedRange
+        );
         setData(points);
-        setUsingDemoData(false);
       } catch (err) {
         logger.error('Failed to load chart data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load market data');
-        setData(DEMO_CHART_POINTS);
-        setUsingDemoData(true);
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -168,7 +118,21 @@ const TokenChartScreen: React.FC<Props> = ({ navigation, route }) => {
       return { x, y };
     });
 
-    return buildSmoothPath(points);
+    let path = `M ${points[0].x} ${points[0].y}`;
+
+    for (let i = 1; i < points.length; i++) {
+      const current = points[i];
+      const previous = points[i - 1];
+      const cpX = (previous.x + current.x) / 2;
+      path += ` Q ${previous.x} ${previous.y} ${cpX} ${(previous.y + current.y) / 2}`;
+      path += ` T ${current.x} ${current.y}`;
+    }
+
+    const lastPoint = points[points.length - 1];
+    const firstPoint = points[0];
+    const area = `${path} L ${lastPoint.x} ${CHART_HEIGHT} L ${firstPoint.x} ${CHART_HEIGHT} Z`;
+
+    return { linePath: path, areaPath: area };
   }, [data]);
 
   const handleRefresh = () => {
@@ -219,16 +183,9 @@ const TokenChartScreen: React.FC<Props> = ({ navigation, route }) => {
               <ActivityIndicator color={Colors.accent} />
               <Text style={styles.loadingText}>Loading market data...</Text>
             </View>
-          ) : shouldShowError ? (
+          ) : error ? (
             <View style={styles.errorState}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={() => loadData(range)}>
-                <Text style={styles.retryText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : data.length === 0 ? (
-            <View style={styles.errorState}>
-              <Text style={styles.errorText}>No chart data available.</Text>
               <TouchableOpacity style={styles.retryButton} onPress={() => loadData(range)}>
                 <Text style={styles.retryText}>Retry</Text>
               </TouchableOpacity>
@@ -236,17 +193,10 @@ const TokenChartScreen: React.FC<Props> = ({ navigation, route }) => {
           ) : (
             <>
               <View style={styles.chartHeader}>
-                <Text style={styles.chartLabel}>{symbol || chain || 'Asset'}</Text>
-                <View style={styles.chartHeaderRight}>
-                  {usingDemoData && (
-                    <View style={styles.demoBadge}>
-                      <Text style={styles.demoBadgeText}>Demo</Text>
-                    </View>
-                  )}
-                  <Text style={[styles.chartChange, isPositive ? styles.positive : styles.negative]}>
-                    {changeLabel}
-                  </Text>
-                </View>
+                <Text style={styles.chartLabel}>SLN</Text>
+                <Text style={[styles.chartChange, isPositive ? styles.positive : styles.negative]}>
+                  {changeLabel}
+                </Text>
               </View>
               <View style={styles.chart}>
                 <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
@@ -260,11 +210,6 @@ const TokenChartScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Path d={linePath} fill="none" stroke={Colors.white} strokeWidth={2.5} />
                 </Svg>
               </View>
-              {usingDemoData && (
-                <Text style={styles.demoNotice}>
-                  Showing demo data until a CoinGecko API key is configured.
-                </Text>
-              )}
             </>
           )}
         </View>
@@ -361,14 +306,12 @@ const styles = StyleSheet.create({
     color: Colors.error,
   },
   chartContainer: {
-    marginHorizontal: Spacing.lg,
+    marginHorizontal: Spacing.xl,
     backgroundColor: Colors.card,
-    borderRadius: 28,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    padding: Spacing.xl,
-    minHeight: CHART_HEIGHT + Spacing.lg,
-    justifyContent: 'center',
+    padding: Spacing.lg,
   },
   chartHeader: {
     flexDirection: 'row',
@@ -380,35 +323,13 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: Typography.fontSize.sm,
   },
-  chartHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
   chartChange: {
     fontSize: Typography.fontSize.md,
     fontWeight: Typography.fontWeight.semibold,
   },
-  demoBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colors.accent,
-  },
-  demoBadgeText: {
-    color: Colors.accent,
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-  },
   chart: {
-    width: '100%',
+    width: CHART_WIDTH,
     height: CHART_HEIGHT,
-  },
-  demoNotice: {
-    marginTop: Spacing.md,
-    color: Colors.textSecondary,
-    fontSize: Typography.fontSize.xs,
   },
   loadingState: {
     alignItems: 'center',
