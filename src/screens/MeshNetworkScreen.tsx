@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,27 +25,62 @@ export default function MeshNetworkScreen() {
   });
   const [isDiscovering, setIsDiscovering] = useState(false);
 
-  useEffect(() => {
-    initializeMesh();
+  // Memoize functions to prevent re-creation on every render
+  const loadPeers = useCallback(() => {
+    const peerList = meshNetwork.getPeers();
+    setPeers(peerList);
+  }, []);
 
-    const onPeerDiscovered = () => {
+  const loadStats = useCallback(() => {
+    const networkStats = meshNetwork.getNetworkStats();
+    setStats(networkStats);
+  }, []);
+
+  const initializeMesh = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await meshNetwork.initialize();
       loadPeers();
       loadStats();
+    } catch (error) {
+      console.error('Mesh initialization failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadPeers, loadStats]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let updateTimeout: NodeJS.Timeout | null = null;
+
+    // Debounce peer/stats updates to prevent excessive re-renders
+    const debouncedUpdate = () => {
+      if (updateTimeout) clearTimeout(updateTimeout);
+      updateTimeout = setTimeout(() => {
+        if (isMounted) {
+          loadPeers();
+          loadStats();
+        }
+      }, 300); // 300ms debounce
+    };
+
+    const onPeerDiscovered = () => {
+      if (isMounted) debouncedUpdate();
     };
 
     const onPeerConnected = () => {
-      loadPeers();
-      loadStats();
+      if (isMounted) debouncedUpdate();
     };
 
     const onPeerDisconnected = () => {
-      loadPeers();
-      loadStats();
+      if (isMounted) debouncedUpdate();
     };
 
     const onNetworkStatus = () => {
-      loadStats();
+      if (isMounted) loadStats();
     };
+
+    initializeMesh();
 
     meshNetwork.on('peer:discovered', onPeerDiscovered);
     meshNetwork.on('peer:connected', onPeerConnected);
@@ -53,70 +88,62 @@ export default function MeshNetworkScreen() {
     meshNetwork.on('network:status', onNetworkStatus);
 
     return () => {
+      isMounted = false;
+      if (updateTimeout) clearTimeout(updateTimeout);
       meshNetwork.off('peer:discovered', onPeerDiscovered);
       meshNetwork.off('peer:connected', onPeerConnected);
       meshNetwork.off('peer:disconnected', onPeerDisconnected);
       meshNetwork.off('network:status', onNetworkStatus);
     };
-  }, []);
+  }, [initializeMesh, loadPeers, loadStats]);
 
-  const initializeMesh = async () => {
-    try {
-      setIsLoading(true);
-      await meshNetwork.initialize();
-      loadPeers();
-      loadStats();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadPeers = () => {
-    const peerList = meshNetwork.getPeers();
-    setPeers(peerList);
-  };
-
-  const loadStats = () => {
-    const networkStats = meshNetwork.getNetworkStats();
-    setStats(networkStats);
-  };
-
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    loadPeers();
-    loadStats();
-    setIsRefreshing(false);
-  };
+    try {
+      await Promise.all([
+        new Promise(resolve => { loadPeers(); resolve(null); }),
+        new Promise(resolve => { loadStats(); resolve(null); })
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadPeers, loadStats]);
 
-  const handleDiscoverPeers = async () => {
+  const handleDiscoverPeers = useCallback(async () => {
+    if (isDiscovering) return; // Prevent multiple simultaneous discoveries
+    
     try {
       setIsDiscovering(true);
       await meshNetwork.discoverPeers();
       loadPeers();
       loadStats();
+    } catch (error) {
+      console.error('Peer discovery failed:', error);
     } finally {
       setIsDiscovering(false);
     }
-  };
+  }, [isDiscovering, loadPeers, loadStats]);
 
+  const handleToggleNetwork = useCallback((enabled: boolean) => {
+    try {
+      meshNetwork.setNetworkStatus(enabled);
+      loadStats();
 
-
-  const handleToggleNetwork = (enabled: boolean) => {
-    meshNetwork.setNetworkStatus(enabled);
-    loadStats();
-
-    if (enabled) {
-      meshNetwork.processOfflineQueue();
+      if (enabled) {
+        meshNetwork.processOfflineQueue();
+      }
+    } catch (error) {
+      console.error('Failed to toggle network:', error);
     }
-  };
+  }, [loadStats]);
 
-  const handleSync = async (peerId: string) => {
+  const handleSync = useCallback(async (peerId: string) => {
     try {
       await meshNetwork.syncWithPeer(peerId);
-    } catch {
-      // Sync failed
+    } catch (error) {
+      console.error('Sync failed:', error);
     }
-  };
+  }, []);
 
   const formatNodeId = (nodeId: string) => {
     return nodeId.substring(0, 8) + '...' + nodeId.substring(nodeId.length - 8);
