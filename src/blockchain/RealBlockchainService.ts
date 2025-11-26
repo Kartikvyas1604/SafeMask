@@ -49,12 +49,12 @@ export interface NetworkConfig {
 export class RealBlockchainService {
   private static instance: RealBlockchainService;
   
-  // Testnet RPC endpoints for testing
+  // Testnet RPC endpoints for testing (using more reliable providers)
   private readonly networks = new Map<string, NetworkConfig>([
     ['ethereum', {
       name: 'Sepolia Testnet',
       chainId: 11155111,
-      rpcUrl: 'https://rpc.sepolia.org',
+      rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
       explorerUrl: 'https://sepolia.etherscan.io',
       nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
     }],

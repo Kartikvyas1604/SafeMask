@@ -19,7 +19,6 @@ import RealDEXSwapService, { SwapQuote } from '../blockchain/RealDEXSwapService'
 import { KNOWN_TOKENS } from '../blockchain/TokenService';
 import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import ChainIcon from '../components/ChainIcon';
-import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -524,8 +523,6 @@ export default function RealSwapScreen() {
           </View>
         </View>
       </Modal>
-      
-      <BottomTabBar />
     </View>
   );
 }

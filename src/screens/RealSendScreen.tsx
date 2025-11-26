@@ -1,9 +1,3 @@
-/**
- * Real Send Screen - Actual blockchain transaction sending
- * Redesigned to match current theme and style
- * Supports: ETH, MATIC, SOL, BTC, ZEC
- */
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
@@ -24,10 +18,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
-import BlockchainService from '../services/blockchainService';
-import AccountManager from '../services/accountManager';
+import RealBlockchainService from '../blockchain/RealBlockchainService';
+import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import ChainIcon from '../components/ChainIcon';
-import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -62,8 +55,10 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
   const [memo, setMemo] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [balance, setBalance] = useState('0');
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [gasEstimate, setGasEstimate] = useState('0');
   const [privateKey, setPrivateKey] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [showNFC, setShowNFC] = useState(false);
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
 
@@ -77,6 +72,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
     if (!hasLoadedWallet.current) {
       loadWalletData();
+      loadBalance(); // Load balance on initial mount
       hasLoadedWallet.current = true;
     }
   }, []);
@@ -101,16 +97,27 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
 
   const loadWalletData = async () => {
     try {
-      const encryptedWallet = await AsyncStorage.getItem('Zetaris_wallet');
-      if (!encryptedWallet) {
+      const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
+                            await AsyncStorage.getItem('Zetaris_wallet');
+      if (!walletDataStr) {
         Alert.alert('Error', 'No wallet found');
         navigation.goBack();
         return;
       }
 
-      const wallet = JSON.parse(encryptedWallet);
-      // In production, this should be properly encrypted/decrypted
-      setPrivateKey(wallet.privateKey || '');
+      const walletData = JSON.parse(walletDataStr);
+      const tempWallet = new ZetarisWalletCore();
+      await tempWallet.importWallet(walletData.seedPhrase);
+      
+      // Get Ethereum account with its private key
+      const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
+      if (ethAccount) {
+        setWalletAddress(ethAccount.address);
+        setPrivateKey(ethAccount.privateKey); // Get private key from account
+        logger.info(`Loaded wallet address: ${ethAccount.address}`);
+      } else {
+        throw new Error('Failed to get Ethereum account');
+      }
     } catch (error) {
       logger.error('Failed to load wallet:', error);
       Alert.alert('Error', 'Failed to load wallet data');
@@ -119,62 +126,74 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
 
   const loadBalance = async () => {
     try {
-      const activeAccount = await AccountManager.getActiveAccount();
-      if (!activeAccount) return;
+      setIsLoadingBalance(true);
+      // Get wallet data and initialize HD wallet
+      const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
+                            await AsyncStorage.getItem('Zetaris_wallet');
+      
+      if (!walletDataStr) {
+        logger.warn('No wallet found in storage');
+        setBalance('0.00');
+        return;
+      }
 
-      const addresses = activeAccount.addresses;
-      let balanceValue = '0';
+      const walletData = JSON.parse(walletDataStr);
+      const tempWallet = new ZetarisWalletCore();
+      
+      // Import wallet to get addresses
+      await tempWallet.importWallet(walletData.seedPhrase);
+      
+      let address: string | undefined;
+      let balanceValue = '0.00';
 
       switch (selectedChain.id) {
-        case 'ethereum':
-          const ethBalance = await BlockchainService.getEthereumBalance(addresses.ethereum);
-          balanceValue = ethBalance.balance;
+        case 'ethereum': {
+          const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
+          if (ethAccount) {
+            address = ethAccount.address;
+            logger.info(`Loading ETH balance for: ${address}`);
+            const ethBalance = await RealBlockchainService.getRealBalance('ethereum', address);
+            balanceValue = ethBalance.balanceFormatted;
+            logger.info(`ETH balance: ${balanceValue}`);
+          }
           break;
-        case 'polygon':
-          const maticBalance = await BlockchainService.getPolygonBalance(addresses.polygon);
-          balanceValue = maticBalance.balance;
+        }
+        case 'polygon': {
+          const polyAccount = tempWallet.getAccount(ChainType.POLYGON);
+          if (polyAccount) {
+            address = polyAccount.address;
+            logger.info(`Loading MATIC balance for: ${address}`);
+            const maticBalance = await RealBlockchainService.getRealBalance('polygon', address);
+            balanceValue = maticBalance.balanceFormatted;
+            logger.info(`MATIC balance: ${balanceValue}`);
+          }
           break;
+        }
         case 'solana':
-          const solBalance = await BlockchainService.getSolanaBalance(addresses.solana);
-          balanceValue = solBalance.balance;
+          // Solana devnet balance (would need SolanaIntegration)
+          balanceValue = '0.00';
           break;
         case 'bitcoin':
-          const btcBalance = await BlockchainService.getBitcoinBalance(addresses.bitcoin);
-          balanceValue = btcBalance.balance;
+          balanceValue = '0.00';
           break;
         case 'zcash':
-          const zecBalance = await BlockchainService.getZcashBalance(addresses.zcash);
-          balanceValue = zecBalance.balance;
+          balanceValue = '0.00';
           break;
       }
 
       setBalance(balanceValue);
+      setIsLoadingBalance(false);
     } catch (error) {
       logger.error('Failed to load balance:', error);
+      setBalance('0.00');
+      setIsLoadingBalance(false);
     }
   };
 
   const estimateGas = async () => {
-    if (!recipientAddress || !amount || parseFloat(amount) <= 0) {
-      setGasEstimate('0');
-      return;
-    }
-
-    try {
-      if (selectedChain.id === 'ethereum') {
-        const estimate = await BlockchainService.estimateEthereumGas(recipientAddress, amount);
-        setGasEstimate(estimate);
-      } else if (selectedChain.id === 'polygon') {
-        // Polygon gas estimation (similar to Ethereum)
-        const estimate = await BlockchainService.estimateEthereumGas(recipientAddress, amount);
-        setGasEstimate(estimate);
-      } else {
-        setGasEstimate('0');
-      }
-    } catch (error) {
-      logger.error('Failed to estimate gas:', error);
-      setGasEstimate('0');
-    }
+    // Gas estimation would require RealBlockchainService.estimateGas method
+    // For now, set a default estimate
+    setGasEstimate('0.0001');
   };
 
   const validateInputs = (): boolean => {
@@ -241,24 +260,59 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
     setIsSending(true);
 
     try {
+      // Get the wallet and correct account for the selected chain
+      const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
+                            await AsyncStorage.getItem('Zetaris_wallet');
+      
+      if (!walletDataStr) {
+        throw new Error('No wallet found');
+      }
+
+      const walletData = JSON.parse(walletDataStr);
+      const tempWallet = new ZetarisWalletCore();
+      await tempWallet.importWallet(walletData.seedPhrase);
+
       let txHash = '';
+      let currentPrivateKey = '';
+      let currentAddress = '';
 
       switch (selectedChain.id) {
-        case 'ethereum':
-          txHash = await BlockchainService.sendEthereumTransaction(
-            privateKey,
+        case 'ethereum': {
+          const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
+          if (!ethAccount) {
+            throw new Error('Ethereum account not found');
+          }
+          currentPrivateKey = ethAccount.privateKey;
+          currentAddress = ethAccount.address;
+          
+          const txResult = await RealBlockchainService.sendRealTransaction(
+            'ethereum',
+            currentAddress,
             recipientAddress,
-            amount
+            amount,
+            currentPrivateKey
           );
+          txHash = txResult.hash;
           break;
-
-        case 'polygon':
-          txHash = await BlockchainService.sendPolygonTransaction(
-            privateKey,
+        }
+        case 'polygon': {
+          const polyAccount = tempWallet.getAccount(ChainType.POLYGON);
+          if (!polyAccount) {
+            throw new Error('Polygon account not found');
+          }
+          currentPrivateKey = polyAccount.privateKey;
+          currentAddress = polyAccount.address;
+          
+          const txResult = await RealBlockchainService.sendRealTransaction(
+            'polygon',
+            currentAddress,
             recipientAddress,
-            amount
+            amount,
+            currentPrivateKey
           );
+          txHash = txResult.hash;
           break;
+        }
 
         case 'solana':
           // Solana sending would require different implementation
@@ -502,9 +556,16 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
         {/* Balance Display */}
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceValue}>
-            {parseFloat(balance).toFixed(6)} {selectedChain.symbol}
-          </Text>
+          {isLoadingBalance ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ActivityIndicator size="small" color={Colors.accent} />
+              <Text style={styles.balanceValue}>Loading...</Text>
+            </View>
+          ) : (
+            <Text style={styles.balanceValue}>
+              {parseFloat(balance).toFixed(6)} {selectedChain.symbol}
+            </Text>
+          )}
         </View>
 
         {/* Recipient Address */}
@@ -634,8 +695,6 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </TouchableOpacity>
       </Modal>
-
-      <BottomTabBar />
     </KeyboardAvoidingView>
   );
 };
