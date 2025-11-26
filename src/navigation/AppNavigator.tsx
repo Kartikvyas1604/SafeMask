@@ -2,10 +2,12 @@
  * App Navigator
  * 
  * Sets up navigation between all wallet screens
+ * Uses Tab Navigator for main screens to prevent reloading
  */
 
 import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ProductionWalletScreen from '../screens/ProductionWalletScreen';
 import RealSendScreen from '../screens/RealSendScreen';
@@ -21,6 +23,7 @@ import BackupWalletScreen from '../screens/BackupWalletScreen';
 import { BridgeScreen } from '../screens/BridgeScreen';
 import MeshNetworkScreen from '../screens/MeshNetworkScreen';
 import BrowserScreen from '../screens/BrowserScreen';
+import BottomTabBar from '../components/BottomTabBar';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -28,6 +31,7 @@ export type RootStackParamList = {
   VerifySeedPhrase: { seedPhrase: string };
   ImportWallet: undefined;
   ImportPrivateKey: undefined;
+  MainTabs: undefined;
   Wallet: undefined;
   Send: { walletAddress: string; balances: any[] };
   Receive: { walletAddress: string };
@@ -43,6 +47,25 @@ export type RootStackParamList = {
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator();
+
+// Main tabs component - these screens won't reload when switching
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <BottomTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Tab.Screen name="Wallet" component={ProductionWalletScreen} />
+      <Tab.Screen name="RealSend" component={RealSendScreen} />
+      <Tab.Screen name="RealReceive" component={RealReceiveScreen} />
+      <Tab.Screen name="RealSwap" component={RealSwapScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
+    </Tab.Navigator>
+  );
+}
 
 export default function AppNavigator() {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
@@ -66,7 +89,7 @@ export default function AppNavigator() {
 
   return (
     <Stack.Navigator
-      initialRouteName={hasWallet ? 'Wallet' : 'WalletSetup'}
+      initialRouteName={hasWallet ? 'MainTabs' : 'WalletSetup'}
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: '#0a0a0a' },
@@ -79,14 +102,12 @@ export default function AppNavigator() {
       <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
       <Stack.Screen name="ImportPrivateKey" component={ImportPrivateKeyScreen} />
       
-      {/* Main Wallet Screens - PRODUCTION */}
-      <Stack.Screen name="Wallet" component={ProductionWalletScreen} />
-      <Stack.Screen name="RealSend" component={RealSendScreen} />
-      <Stack.Screen name="RealReceive" component={RealReceiveScreen} />
-      <Stack.Screen name="RealSwap" component={RealSwapScreen} />
+      {/* Main Tab Navigator - screens stay mounted */}
+      <Stack.Screen name="MainTabs" component={MainTabs} />
+      
+      {/* Other screens */}
       <Stack.Screen name="Bridge" component={BridgeScreen} />
       <Stack.Screen name="MeshNetwork" component={MeshNetworkScreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="BackupWallet" component={BackupWalletScreen} />
       <Stack.Screen name="Browser" component={BrowserScreen} />
     </Stack.Navigator>

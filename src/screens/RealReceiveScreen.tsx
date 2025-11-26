@@ -3,7 +3,7 @@
  * Redesigned to match home page theme and style
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -46,9 +46,15 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
   const [hdWallet] = useState(() => new ZetarisWalletCore());
+  const hasLoadedAddresses = useRef(false);
 
+  // Only load addresses once when component mounts
+  // Tab Navigator keeps this screen mounted
   useEffect(() => {
-    loadAddresses();
+    if (!hasLoadedAddresses.current) {
+      loadAddresses();
+      hasLoadedAddresses.current = true;
+    }
   }, []);
 
   const loadAddresses = async () => {

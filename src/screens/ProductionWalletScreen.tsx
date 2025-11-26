@@ -140,6 +140,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
   
   const blockchainService = RealBlockchainService;
   
+  // Use ref to track if wallet has been loaded (persists across re-renders)
+  const hasLoadedWallet = useRef(false);
+  
   // Animation values for scroll-based animations
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnims = useRef(
@@ -169,27 +172,32 @@ export default function ProductionWalletScreen({ navigation }: any) {
   };
   
   /**
-   * Initialize wallet on component mount
+   * Initialize wallet only once when component first mounts
+   * Tab Navigator keeps this screen mounted, so useEffect only runs once
    */
   useEffect(() => {
-    initializeWallet();
-    // Animate items in on mount
-    Animated.stagger(100, 
-      fadeAnims.map((anim, index) => 
-        Animated.parallel([
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(slideAnims[index], {
-            toValue: 0,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ])
-      )
-    ).start();
+    if (!hasLoadedWallet.current) {
+      initializeWallet();
+      hasLoadedWallet.current = true;
+      
+      // Animate items in on mount
+      Animated.stagger(100, 
+        fadeAnims.map((anim, index) => 
+          Animated.parallel([
+            Animated.timing(anim, {
+              toValue: 1,
+              duration: 500,
+              useNativeDriver: true,
+            }),
+            Animated.timing(slideAnims[index], {
+              toValue: 0,
+              duration: 500,
+              useNativeDriver: true,
+            }),
+          ])
+        )
+      ).start();
+    }
   }, []);
   
   const handleScroll = Animated.event(

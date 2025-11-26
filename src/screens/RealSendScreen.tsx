@@ -70,11 +70,14 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
   // Prevent unnecessary reloads by memoizing loaded state
   const isInitialMount = useRef(true);
   const lastChain = useRef(selectedChain.id);
+  const hasLoadedWallet = useRef(false);
 
+  // Only load wallet data once when component mounts
+  // Tab Navigator keeps this screen mounted
   useEffect(() => {
-    if (isInitialMount.current) {
+    if (!hasLoadedWallet.current) {
       loadWalletData();
-      isInitialMount.current = false;
+      hasLoadedWallet.current = true;
     }
   }, []);
 
@@ -355,44 +358,80 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
         '📱 NFC Send Mode',
         "Hold your phone near the receiver's device to send payment via NFC.\n\nMake sure NFC is enabled on both devices.",
         [
-          { text: 'Cancel', onPress: () => setShowNFC(false) },
+          { 
+            text: 'Cancel', 
+            onPress: () => {
+              setShowNFC(false);
+              NfcManager.cancelTechnologyRequest().catch(() => {});
+            }
+          },
           {
             text: 'Start Scanning',
             onPress: async () => {
               try {
-                // Initialize NFC
-                await NfcManager.start();
+                // Cancel any existing requests first
+                await NfcManager.cancelTechnologyRequest().catch(() => {});
+                
+                // Small delay to ensure cleanup
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Initialize NFC if not already started
+                try {
+                  await NfcManager.start();
+                } catch (err) {
+                  // Already started, ignore
+                }
                 
                 // Request NFC tech
-                await NfcManager.requestTechnology(NfcTech.Ndef);
+                await NfcManager.requestTechnology(NfcTech.Ndef, {
+                  alertMessage: 'Hold your phone near the NFC tag'
+                });
                 
-                // Read NFC tag
-                const tag = await NfcManager.getTag();
+                // Read NFC tag with timeout
+                const tag = await Promise.race([
+                  NfcManager.getTag(),
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout')), 10000)
+                  )
+                ]);
+                
                 logger.info('📱 NFC tag detected:', tag);
 
                 // Parse NDEF messages for wallet address
-                if (tag && tag.ndefMessage && tag.ndefMessage.length > 0) {
+                if (tag && typeof tag === 'object' && 'ndefMessage' in tag && tag.ndefMessage && Array.isArray(tag.ndefMessage) && tag.ndefMessage.length > 0) {
                   const ndefRecords = tag.ndefMessage;
                   for (const record of ndefRecords) {
                     if (record && typeof record === 'object' && 'payload' in record) {
-                      // Decode payload (assuming UTF-8 wallet address)
-                      const payloadStr = Ndef.text.decodePayload((record as any).payload);
-                      if (payloadStr && payloadStr.length > 20) {
-                        setRecipientAddress(payloadStr);
-                        Alert.alert('Address Scanned', `Recipient: ${payloadStr.substring(0, 10)}...`);
-                        break;
+                      try {
+                        // Decode payload (assuming UTF-8 wallet address)
+                        const payloadStr = Ndef.text.decodePayload((record as any).payload);
+                        if (payloadStr && payloadStr.length > 20) {
+                          setRecipientAddress(payloadStr);
+                          Alert.alert('✅ Address Scanned', `Recipient: ${payloadStr.substring(0, 10)}...${payloadStr.substring(payloadStr.length - 8)}`);
+                          break;
+                        }
+                      } catch (decodeError) {
+                        logger.error('Payload decode error:', decodeError);
                       }
                     }
                   }
+                } else {
+                  Alert.alert('⚠️ Empty Tag', 'NFC tag has no wallet address data');
                 }
 
                 setShowNFC(false);
-              } catch (error) {
+              } catch (error: any) {
                 logger.error('NFC read error:', error);
-                Alert.alert('NFC Error', 'Failed to read NFC tag. Make sure devices are close together.');
+                if (error.message === 'Timeout') {
+                  Alert.alert('⏱️ Timeout', 'No NFC tag detected. Please try again.');
+                } else if (error.message?.includes('one request')) {
+                  Alert.alert('⚠️ NFC Busy', 'Please wait a moment and try again.');
+                } else {
+                  Alert.alert('❌ NFC Error', 'Failed to read NFC tag. Make sure NFC is enabled and devices are close together.');
+                }
               } finally {
                 // Clean up NFC
-                NfcManager.cancelTechnologyRequest().catch(() => {});
+                await NfcManager.cancelTechnologyRequest().catch(() => {});
                 setShowNFC(false);
               }
             },

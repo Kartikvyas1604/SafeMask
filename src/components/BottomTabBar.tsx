@@ -7,6 +7,7 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Colors } from '../design/colors';
 
@@ -24,33 +25,53 @@ const tabs: TabItem[] = [
   { name: 'profile', icon: 'person', route: 'Settings' },
 ];
 
-export default function BottomTabBar() {
-  const navigation = useNavigation<any>();
-  const route = useRoute();
+export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
+  // If used within Tab Navigator, use props; otherwise use hooks
+  const hookNavigation = useNavigation<any>();
+  const hookRoute = useRoute();
+  
+  const navigation = props?.navigation || hookNavigation;
+  const state = props?.state;
+  const currentRoute = hookRoute.name;
 
-  const handlePress = (tab: TabItem) => {
-    navigation.navigate(tab.route);
+  const handlePress = (tab: TabItem, index?: number) => {
+    if (state && index !== undefined) {
+      // Tab Navigator mode
+      const route = state.routes[index];
+      const isFocused = state.index === index;
+      if (!isFocused) {
+        navigation.navigate(route.name);
+      }
+    } else {
+      // Standalone mode (legacy)
+      if (currentRoute !== tab.route) {
+        navigation.navigate(tab.route);
+      }
+    }
   };
 
-  const isActive = (tab: TabItem) => {
-    // Only home should be active on Wallet screen
-    if (route.name === 'Wallet') {
+  const isActive = (index: number, tab: TabItem) => {
+    if (state) {
+      // Tab Navigator mode
+      return state.index === index;
+    }
+    // Standalone mode
+    if (currentRoute === 'Wallet') {
       return tab.name === 'home';
     }
-    // For other screens, check if route matches
-    return route.name === tab.route;
+    return currentRoute === tab.route;
   };
 
   return (
     <View style={styles.container}>
       <BlurView intensity={80} tint="dark" style={styles.tabBar}>
-        {tabs.map((tab) => {
-          const active = isActive(tab);
+        {tabs.map((tab, index) => {
+          const active = isActive(index, tab);
           return (
             <TouchableOpacity
               key={tab.name}
               style={styles.tabItem}
-              onPress={() => handlePress(tab)}
+              onPress={() => handlePress(tab, index)}
               activeOpacity={0.7}
             >
               {active ? (

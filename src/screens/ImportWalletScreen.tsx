@@ -1,8 +1,3 @@
-/**
- * Import Wallet Screen
- * Import existing wallet from 24-word seed phrase
- */
-
 import React, { useState } from 'react';
 import {
   View,
@@ -35,6 +30,12 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
   const [seedPhrase, setSeedPhrase] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [step, setStep] = useState<'import' | 'password'>('import');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [importedWallet, setImportedWallet] = useState<any>(null);
 
   const handleImport = async () => {
     const trimmedPhrase = seedPhrase.trim();
@@ -57,19 +58,47 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
       const walletCore = new ZetarisWalletCore();
       const wallet = await walletCore.importWallet(trimmedPhrase);
       
-      // Save to AsyncStorage
-      await AsyncStorage.setItem('Zetaris_wallet', JSON.stringify(wallet));
-      await AsyncStorage.setItem('Zetaris_has_wallet', 'true');
-      
-      // Navigate to main wallet
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Wallet' }],
-      });
-      
-      Alert.alert('Success', 'Your wallet has been imported!');
+      // Store wallet temporarily and move to password setup
+      setImportedWallet(wallet);
+      setStep('password');
     } catch (err) {
       setError('Invalid recovery phrase. Please check and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordSetup = async () => {
+    if (!password.trim()) {
+      Alert.alert('Error', 'Please enter a password');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Save to AsyncStorage
+      await AsyncStorage.setItem('Zetaris_wallet', JSON.stringify(importedWallet));
+      await AsyncStorage.setItem('Zetaris_has_wallet', 'true');
+      await AsyncStorage.setItem('Zetaris_password', password);
+      await AsyncStorage.setItem('Zetaris_last_unlock', Date.now().toString());
+      
+      // Navigate to main wallet
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainTabs' }],
+        });      Alert.alert('Success', 'Your wallet has been imported!');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to save wallet');
     } finally {
       setLoading(false);
     }
@@ -82,67 +111,160 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
     >
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Text style={styles.backButtonText}>←</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>Import Wallet</Text>
-            <Text style={styles.subtitle}>
-              Enter your 12 or 24-word recovery phrase
-            </Text>
-          </View>
-
-          {/* Seed Phrase Input */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.textArea}
-              value={seedPhrase}
-              onChangeText={(text) => {
-                setSeedPhrase(text);
-                setError('');
-              }}
-              placeholder="word1 word2 word3 ..."
-              placeholderTextColor="#6B7280"
-              multiline
-              numberOfLines={6}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="off"
-            />
-          </View>
-
-          {/* Error Message */}
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
-          {/* Info Box */}
-          <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={20} color={Colors.info} />
-            <View style={styles.infoTextContainer}>
-              <Text style={styles.infoText}>
-                Enter words separated by spaces. Make sure there are no extra spaces or typos.
+        {step === 'import' ? (
+          <>
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <Text style={styles.backButtonText}>←</Text>
+              </TouchableOpacity>
+              <Text style={styles.title}>Import Wallet</Text>
+              <Text style={styles.subtitle}>
+                Enter your 12 or 24-word recovery phrase
               </Text>
             </View>
-          </View>
 
-          {/* Import Button */}
-          <TouchableOpacity
-            style={[styles.button, (loading || !seedPhrase.trim()) && styles.buttonDisabled]}
-            onPress={handleImport}
-            disabled={loading || !seedPhrase.trim()}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Importing...' : 'Import Wallet'}
-            </Text>
+            {/* Seed Phrase Input */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textArea}
+                value={seedPhrase}
+                onChangeText={(text) => {
+                  setSeedPhrase(text);
+                  setError('');
+                }}
+                placeholder="word1 word2 word3 ..."
+                placeholderTextColor="#6B7280"
+                multiline
+                numberOfLines={6}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="off"
+              />
+            </View>
+
+            {/* Error Message */}
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            {/* Info Box */}
+            <View style={styles.infoBox}>
+              <Ionicons name="information-circle" size={20} color={Colors.info} />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoText}>
+                  Enter words separated by spaces. Make sure there are no extra spaces or typos.
+                </Text>
+              </View>
+            </View>
+
+            {/* Import Button */}
+            <TouchableOpacity
+              style={[styles.button, (loading || !seedPhrase.trim()) && styles.buttonDisabled]}
+              onPress={handleImport}
+              disabled={loading || !seedPhrase.trim()}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'Importing...' : 'Continue'}
+              </Text>
             </TouchableOpacity>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      );
-    }const styles = StyleSheet.create({
+          </>
+        ) : (
+          <>
+            {/* Password Setup Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => setStep('import')} style={styles.backButton}>
+                <Text style={styles.backButtonText}>←</Text>
+              </TouchableOpacity>
+              <Text style={styles.title}>Set Wallet Password</Text>
+              <Text style={styles.subtitle}>
+                Create a password to secure your wallet
+              </Text>
+            </View>
+
+            {/* Password Inputs */}
+            <View style={styles.inputContainer}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <View style={styles.passwordInputWrapper}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Enter password (min 6 characters)"
+                    placeholderTextColor="#6B7280"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                      size={20}
+                      color="#9CA3AF"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Confirm Password</Text>
+                <View style={styles.passwordInputWrapper}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Re-enter password"
+                    placeholderTextColor="#6B7280"
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                      size={20}
+                      color="#9CA3AF"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Password Requirements */}
+            <View style={styles.infoBox}>
+              <Ionicons name="information-circle" size={20} color={Colors.info} />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoText}>
+                  Password must be at least 6 characters long. This password will be required each time you open the app.
+                </Text>
+              </View>
+            </View>
+
+            {/* Complete Import Button */}
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handlePasswordSetup}
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'Importing Wallet...' : 'Complete Import'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0a0a0a',
@@ -236,5 +358,31 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  inputGroup: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: '#9CA3AF',
+    fontSize: 14,
+  },
+  passwordInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111111',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1f1f1f',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  eyeIcon: {
+    padding: 12,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -51,11 +51,14 @@ export default function RealSwapScreen() {
   
   const dexService = RealDEXSwapService;
   const hdWallet = new ZetarisWalletCore();
+  const hasLoadedWallet = useRef(false);
   
-  // Load wallet data if not provided via params
+  // Load wallet data once when component mounts if not provided via params
+  // Tab Navigator keeps this screen mounted
   useEffect(() => {
-    if (!walletAddress) {
+    if (!walletAddress && !hasLoadedWallet.current) {
       loadWalletData();
+      hasLoadedWallet.current = true;
     }
   }, []);
   

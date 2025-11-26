@@ -1,9 +1,4 @@
-/**
- * Settings Screen - Complete wallet settings interface
- * Redesigned to match current theme and style
- */
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,10 +9,13 @@ import {
   Alert,
   StatusBar,
   Animated,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
 import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
@@ -36,6 +34,23 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [autoLockEnabled, setAutoLockEnabled] = useState(true);
   const [privacyMode, setPrivacyMode] = useState(true);
   const [showBalances, setShowBalances] = useState(true);
+  const [currency, setCurrency] = useState('USD');
+  const [language, setLanguage] = useState('English');
+  const [gasFee, setGasFee] = useState('Standard');
+  const [developerMode, setDeveloperMode] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showGasFeeModal, setShowGasFeeModal] = useState(false);
+  const [showNetworkModal, setShowNetworkModal] = useState(false);
+
+  const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'INR'];
+  const languages = ['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Korean', 'Portuguese'];
+  const gasFees = [
+    { name: 'Slow', description: '~5 min', multiplier: 0.8 },
+    { name: 'Standard', description: '~2 min', multiplier: 1.0 },
+    { name: 'Fast', description: '~30 sec', multiplier: 1.5 },
+    { name: 'Instant', description: '~15 sec', multiplier: 2.0 },
+  ];
   
   // Animation values for scroll-based animations
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -47,6 +62,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   ).current;
 
   useEffect(() => {
+    loadSettings();
     // Animate items in on mount
     Animated.stagger(50, 
       fadeAnims.map((anim, index) => 
@@ -64,7 +80,108 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         ])
       )
     ).start();
-  }, []);
+  }, [fadeAnims, slideAnims]);
+
+  const loadSettings = async () => {
+    try {
+      const savedCurrency = await AsyncStorage.getItem('Zetaris_currency');
+      const savedLanguage = await AsyncStorage.getItem('Zetaris_language');
+      const savedGasFee = await AsyncStorage.getItem('Zetaris_gasFee');
+      const savedBiometric = await AsyncStorage.getItem('Zetaris_biometric');
+      const savedAutoLock = await AsyncStorage.getItem('Zetaris_autoLock');
+      const savedPrivacy = await AsyncStorage.getItem('Zetaris_privacyMode');
+      const savedBalances = await AsyncStorage.getItem('Zetaris_showBalances');
+      const savedDevMode = await AsyncStorage.getItem('Zetaris_developerMode');
+
+      if (savedCurrency) setCurrency(savedCurrency);
+      if (savedLanguage) setLanguage(savedLanguage);
+      if (savedGasFee) setGasFee(savedGasFee);
+      if (savedBiometric) setBiometricEnabled(savedBiometric === 'true');
+      if (savedAutoLock) setAutoLockEnabled(savedAutoLock === 'true');
+      if (savedPrivacy) setPrivacyMode(savedPrivacy === 'true');
+      if (savedBalances) setShowBalances(savedBalances === 'true');
+      if (savedDevMode) setDeveloperMode(savedDevMode === 'true');
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  };
+
+  const handleBiometricToggle = async (value: boolean) => {
+    if (value) {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      if (!compatible) {
+        Alert.alert('Not Supported', 'Your device does not support biometric authentication');
+        return;
+      }
+
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!enrolled) {
+        Alert.alert('Not Configured', 'Please configure biometric authentication in your device settings first');
+        return;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Verify your identity',
+        fallbackLabel: 'Use passcode',
+      });
+
+      if (result.success) {
+        setBiometricEnabled(true);
+        await AsyncStorage.setItem('Zetaris_biometric', 'true');
+        Alert.alert('✅ Success', 'Biometric authentication enabled');
+      }
+    } else {
+      setBiometricEnabled(false);
+      await AsyncStorage.setItem('Zetaris_biometric', 'false');
+    }
+  };
+
+  const handleAutoLockToggle = async (value: boolean) => {
+    setAutoLockEnabled(value);
+    await AsyncStorage.setItem('Zetaris_autoLock', value.toString());
+    if (value) {
+      Alert.alert('Auto-Lock Enabled', 'Wallet will lock after 5 minutes of inactivity');
+    }
+  };
+
+  const handlePrivacyModeToggle = async (value: boolean) => {
+    setPrivacyMode(value);
+    await AsyncStorage.setItem('Zetaris_privacyMode', value.toString());
+  };
+
+  const handleShowBalancesToggle = async (value: boolean) => {
+    setShowBalances(value);
+    await AsyncStorage.setItem('Zetaris_showBalances', value.toString());
+  };
+
+  const handleDeveloperModeToggle = async (value: boolean) => {
+    setDeveloperMode(value);
+    await AsyncStorage.setItem('Zetaris_developerMode', value.toString());
+    if (value) {
+      Alert.alert('Developer Mode', 'Advanced options enabled. Use with caution!');
+    }
+  };
+
+  const handleCurrencySelect = async (curr: string) => {
+    setCurrency(curr);
+    await AsyncStorage.setItem('Zetaris_currency', curr);
+    setShowCurrencyModal(false);
+    Alert.alert('Currency Updated', `Display currency set to ${curr}`);
+  };
+
+  const handleLanguageSelect = async (lang: string) => {
+    setLanguage(lang);
+    await AsyncStorage.setItem('Zetaris_language', lang);
+    setShowLanguageModal(false);
+    Alert.alert('Language Updated', `Language set to ${lang}`);
+  };
+
+  const handleGasFeeSelect = async (fee: string) => {
+    setGasFee(fee);
+    await AsyncStorage.setItem('Zetaris_gasFee', fee);
+    setShowGasFeeModal(false);
+    Alert.alert('Gas Fee Updated', `Default gas fee set to ${fee}`);
+  };
 
   const handleBackupWallet = () => {
     Alert.alert(
@@ -202,7 +319,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             </View>
             <Switch
               value={biometricEnabled}
-              onValueChange={setBiometricEnabled}
+              onValueChange={handleBiometricToggle}
               trackColor={{ false: Colors.cardBorderSecondary, true: Colors.accent }}
               thumbColor={biometricEnabled ? Colors.white : Colors.textTertiary}
             />
@@ -220,7 +337,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             </View>
             <Switch
               value={autoLockEnabled}
-              onValueChange={setAutoLockEnabled}
+              onValueChange={handleAutoLockToggle}
               trackColor={{ false: Colors.cardBorderSecondary, true: Colors.accent }}
               thumbColor={autoLockEnabled ? Colors.white : Colors.textTertiary}
             />
@@ -258,7 +375,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             </View>
             <Switch
               value={privacyMode}
-              onValueChange={setPrivacyMode}
+              onValueChange={handlePrivacyModeToggle}
               trackColor={{ false: Colors.cardBorderSecondary, true: Colors.accent }}
               thumbColor={privacyMode ? Colors.white : Colors.textTertiary}
             />
@@ -276,14 +393,14 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             </View>
             <Switch
               value={showBalances}
-              onValueChange={setShowBalances}
+              onValueChange={handleShowBalancesToggle}
               trackColor={{ false: Colors.cardBorderSecondary, true: Colors.accent }}
               thumbColor={showBalances ? Colors.white : Colors.textTertiary}
             />
           </Animated.View>
 
           <Animated.View style={getAnimatedStyle(itemIndex++)}>
-            <TouchableOpacity style={styles.settingItem}>
+            <TouchableOpacity style={styles.settingItem} onPress={() => setShowNetworkModal(true)}>
               <View style={styles.settingLeft}>
                 <View style={styles.iconContainer}>
                   <Ionicons name="globe-outline" size={20} color={Colors.textSecondary} />
@@ -303,14 +420,14 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           <Text style={styles.sectionTitle}>PREFERENCES</Text>
           
           <Animated.View style={getAnimatedStyle(itemIndex++)}>
-            <TouchableOpacity style={styles.settingItem}>
+            <TouchableOpacity style={styles.settingItem} onPress={() => setShowCurrencyModal(true)}>
               <View style={styles.settingLeft}>
                 <View style={styles.iconContainer}>
                   <Ionicons name="cash-outline" size={20} color={Colors.textSecondary} />
                 </View>
                 <View>
                   <Text style={styles.settingLabel}>Currency</Text>
-                  <Text style={styles.settingDescription}>USD</Text>
+                  <Text style={styles.settingDescription}>{currency}</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
@@ -318,14 +435,14 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           </Animated.View>
 
           <Animated.View style={getAnimatedStyle(itemIndex++)}>
-            <TouchableOpacity style={styles.settingItem}>
+            <TouchableOpacity style={styles.settingItem} onPress={() => setShowLanguageModal(true)}>
               <View style={styles.settingLeft}>
                 <View style={styles.iconContainer}>
                   <Ionicons name="language-outline" size={20} color={Colors.textSecondary} />
                 </View>
                 <View>
                   <Text style={styles.settingLabel}>Language</Text>
-                  <Text style={styles.settingDescription}>English</Text>
+                  <Text style={styles.settingDescription}>{language}</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
@@ -333,14 +450,14 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           </Animated.View>
 
           <Animated.View style={getAnimatedStyle(itemIndex++)}>
-            <TouchableOpacity style={styles.settingItem}>
+            <TouchableOpacity style={styles.settingItem} onPress={() => setShowGasFeeModal(true)}>
               <View style={styles.settingLeft}>
                 <View style={styles.iconContainer}>
                   <Ionicons name="flash-outline" size={20} color={Colors.textSecondary} />
                 </View>
                 <View>
                   <Text style={styles.settingLabel}>Default Gas Fee</Text>
-                  <Text style={styles.settingDescription}>Standard</Text>
+                  <Text style={styles.settingDescription}>{gasFee}</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
@@ -367,19 +484,22 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             </TouchableOpacity>
           </Animated.View>
 
-          <Animated.View style={getAnimatedStyle(itemIndex++)}>
-            <TouchableOpacity style={styles.settingItem}>
-              <View style={styles.settingLeft}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="stats-chart-outline" size={20} color={Colors.textSecondary} />
-                </View>
-                <View>
-                  <Text style={styles.settingLabel}>Developer Mode</Text>
-                  <Text style={styles.settingDescription}>Show advanced options</Text>
-                </View>
+          <Animated.View style={[styles.settingItem, getAnimatedStyle(itemIndex++)]}>
+            <View style={styles.settingLeft}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="stats-chart-outline" size={20} color={Colors.textSecondary} />
               </View>
-              <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-            </TouchableOpacity>
+              <View>
+                <Text style={styles.settingLabel}>Developer Mode</Text>
+                <Text style={styles.settingDescription}>Show advanced options</Text>
+              </View>
+            </View>
+            <Switch
+              value={developerMode}
+              onValueChange={handleDeveloperModeToggle}
+              trackColor={{ false: Colors.cardBorderSecondary, true: Colors.accent }}
+              thumbColor={developerMode ? Colors.white : Colors.textTertiary}
+            />
           </Animated.View>
 
           <Animated.View style={getAnimatedStyle(itemIndex++)}>
@@ -456,6 +576,148 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         <View style={{ height: 100 }} />
       </ScrollView>
       
+      {/* Currency Selection Modal */}
+      <Modal
+        visible={showCurrencyModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Currency</Text>
+              <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={currencies}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, currency === item && styles.modalItemSelected]}
+                  onPress={() => handleCurrencySelect(item)}
+                >
+                  <Text style={[styles.modalItemText, currency === item && styles.modalItemTextSelected]}>
+                    {item}
+                  </Text>
+                  {currency === item && (
+                    <Ionicons name="checkmark" size={20} color={Colors.accent} />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={showLanguageModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLanguageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Language</Text>
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={languages}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, language === item && styles.modalItemSelected]}
+                  onPress={() => handleLanguageSelect(item)}
+                >
+                  <Text style={[styles.modalItemText, language === item && styles.modalItemTextSelected]}>
+                    {item}
+                  </Text>
+                  {language === item && (
+                    <Ionicons name="checkmark" size={20} color={Colors.accent} />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Gas Fee Selection Modal */}
+      <Modal
+        visible={showGasFeeModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowGasFeeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Gas Fee</Text>
+              <TouchableOpacity onPress={() => setShowGasFeeModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={gasFees}
+              keyExtractor={(item) => item.name}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, gasFee === item.name && styles.modalItemSelected]}
+                  onPress={() => handleGasFeeSelect(item.name)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.modalItemText, gasFee === item.name && styles.modalItemTextSelected]}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.modalItemDescription}>{item.description} • {item.multiplier}x</Text>
+                  </View>
+                  {gasFee === item.name && (
+                    <Ionicons name="checkmark" size={20} color={Colors.accent} />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Network Management Modal */}
+      <Modal
+        visible={showNetworkModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowNetworkModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Custom Networks</Text>
+              <TouchableOpacity onPress={() => setShowNetworkModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={styles.modalDescription}>
+                Manage custom RPC endpoints for different blockchain networks.
+              </Text>
+              <TouchableOpacity style={styles.addNetworkButton}>
+                <Ionicons name="add-circle-outline" size={24} color={Colors.accent} />
+                <Text style={styles.addNetworkText}>Add Custom Network</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalNote}>
+                This feature allows you to connect to custom RPC endpoints for enhanced privacy and performance.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <BottomTabBar />
     </View>
   );
@@ -599,5 +861,91 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xs,
     color: Colors.textMuted,
     marginTop: Spacing.xs,
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  modalTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorderSecondary,
+  },
+  modalItemSelected: {
+    backgroundColor: Colors.cardHover,
+  },
+  modalItemText: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  modalItemTextSelected: {
+    color: Colors.accent,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  modalItemDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textTertiary,
+    marginTop: 4,
+  },
+  modalBody: {
+    padding: Spacing.xl,
+  },
+  modalDescription: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.lg,
+    lineHeight: 22,
+  },
+  addNetworkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.cardHover,
+    padding: Spacing.lg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    borderStyle: 'dashed',
+    marginBottom: Spacing.lg,
+  },
+  addNetworkText: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.accent,
+    marginLeft: Spacing.sm,
+  },
+  modalNote: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textTertiary,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });

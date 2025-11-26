@@ -1,17 +1,3 @@
-/**
- * Receive Screen
- * 
- * Features:
- * - QR code generation for addresses
- * - Multi-chain address display
- * - Share functionality
- * - Payment request with custom amounts
- * - Copy to clipboard
- * - Stealth address generation
- */
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
