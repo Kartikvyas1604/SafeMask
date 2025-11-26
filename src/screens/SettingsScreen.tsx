@@ -60,27 +60,34 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const slideAnims = useRef(
     Array.from({ length: 25 }, () => new Animated.Value(30))
   ).current;
+  const hasLoadedSettings = useRef(false);
 
+  // Load settings only once when component mounts
+  // Tab Navigator keeps this screen mounted
   useEffect(() => {
-    loadSettings();
-    // Animate items in on mount
-    Animated.stagger(50, 
-      fadeAnims.map((anim, index) => 
-        Animated.parallel([
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(slideAnims[index], {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ])
-      )
-    ).start();
-  }, [fadeAnims, slideAnims]);
+    if (!hasLoadedSettings.current) {
+      loadSettings();
+      hasLoadedSettings.current = true;
+      
+      // Animate items in on mount
+      Animated.stagger(50, 
+        fadeAnims.map((anim, index) => 
+          Animated.parallel([
+            Animated.timing(anim, {
+              toValue: 1,
+              duration: 400,
+              useNativeDriver: true,
+            }),
+            Animated.timing(slideAnims[index], {
+              toValue: 0,
+              duration: 400,
+              useNativeDriver: true,
+            }),
+          ])
+        )
+      ).start();
+    }
+  }, []);
 
   const loadSettings = async () => {
     try {

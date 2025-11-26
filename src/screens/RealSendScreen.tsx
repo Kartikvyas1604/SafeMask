@@ -47,11 +47,11 @@ interface ChainOption {
 }
 
 const SUPPORTED_CHAINS: ChainOption[] = [
-  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH' },
-  { id: 'polygon', name: 'Polygon', symbol: 'MATIC' },
-  { id: 'solana', name: 'Solana', symbol: 'SOL' },
-  { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' },
-  { id: 'zcash', name: 'Zcash', symbol: 'ZEC' },
+  { id: 'ethereum', name: 'Sepolia Testnet', symbol: 'ETH' },
+  { id: 'polygon', name: 'Polygon Amoy', symbol: 'MATIC' },
+  { id: 'solana', name: 'Solana Devnet', symbol: 'SOL' },
+  { id: 'bitcoin', name: 'Bitcoin (Demo)', symbol: 'BTC' },
+  { id: 'zcash', name: 'Zcash (Demo)', symbol: 'ZEC' },
 ];
 
 const RealSendScreen: React.FC<Props> = ({ navigation }) => {

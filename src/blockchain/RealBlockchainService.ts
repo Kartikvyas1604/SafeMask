@@ -49,41 +49,41 @@ export interface NetworkConfig {
 export class RealBlockchainService {
   private static instance: RealBlockchainService;
   
-  // Production RPC endpoints
+  // Testnet RPC endpoints for testing
   private readonly networks = new Map<string, NetworkConfig>([
     ['ethereum', {
-      name: 'Ethereum Mainnet',
-      chainId: 1,
-      rpcUrl: 'https://eth.llamarpc.com',
-      explorerUrl: 'https://etherscan.io',
-      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      name: 'Sepolia Testnet',
+      chainId: 11155111,
+      rpcUrl: 'https://rpc.sepolia.org',
+      explorerUrl: 'https://sepolia.etherscan.io',
+      nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
     }],
     ['polygon', {
-      name: 'Polygon',
-      chainId: 137,
-      rpcUrl: 'https://polygon-rpc.com',
-      explorerUrl: 'https://polygonscan.com',
+      name: 'Polygon Amoy Testnet',
+      chainId: 80002,
+      rpcUrl: 'https://rpc-amoy.polygon.technology',
+      explorerUrl: 'https://amoy.polygonscan.com',
       nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
     }],
     ['arbitrum', {
-      name: 'Arbitrum One',
-      chainId: 42161,
-      rpcUrl: 'https://arb1.arbitrum.io/rpc',
-      explorerUrl: 'https://arbiscan.io',
+      name: 'Arbitrum Sepolia',
+      chainId: 421614,
+      rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+      explorerUrl: 'https://sepolia.arbiscan.io',
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     }],
     ['optimism', {
-      name: 'Optimism',
-      chainId: 10,
-      rpcUrl: 'https://mainnet.optimism.io',
-      explorerUrl: 'https://optimistic.etherscan.io',
+      name: 'Optimism Sepolia',
+      chainId: 11155420,
+      rpcUrl: 'https://sepolia.optimism.io',
+      explorerUrl: 'https://sepolia-optimism.etherscan.io',
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     }],
     ['base', {
-      name: 'Base',
-      chainId: 8453,
-      rpcUrl: 'https://mainnet.base.org',
-      explorerUrl: 'https://basescan.org',
+      name: 'Base Sepolia',
+      chainId: 84532,
+      rpcUrl: 'https://sepolia.base.org',
+      explorerUrl: 'https://sepolia.basescan.org',
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     }],
   ]);
@@ -102,10 +102,7 @@ export class RealBlockchainService {
     }
     return RealBlockchainService.instance;
   }
-  
-  /**
-   * Initialize RPC providers for all networks
-   */
+
   private initializeProviders(): void {
     for (const [networkName, config] of this.networks.entries()) {
       try {
@@ -319,13 +316,6 @@ export class RealBlockchainService {
     }
   }
   
-  /**
-   * Get REAL transaction history from blockchain explorer
-   * @param network - Network name
-   * @param address - Wallet address
-   * @param page - Page number for pagination
-   * @returns Array of real transactions
-   */
   public async getRealTransactionHistory(
     network: string,
     address: string,

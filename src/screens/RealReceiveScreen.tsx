@@ -85,32 +85,32 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
 
       const addressList: ChainAddress[] = [
         {
-          chain: 'Ethereum',
+          chain: 'Sepolia Testnet',
           symbol: 'ETH',
           address: ethAccount?.address || '',
           icon: '',
         },
         {
-          chain: 'Polygon',
+          chain: 'Polygon Amoy',
           symbol: 'MATIC',
           address: polyAccount?.address || '',
           icon: '',
         },
         {
-          chain: 'Solana',
+          chain: 'Solana Devnet',
           symbol: 'SOL',
           address: solAccount?.address || '',
           icon: '',
         },
         {
-          chain: 'Bitcoin',
+          chain: 'Bitcoin (Demo)',
           symbol: 'BTC',
           address: btcAccount?.address || '',
           icon: '',
           warning: 'Only send Bitcoin to this address',
         },
         {
-          chain: 'Zcash',
+          chain: 'Zcash (Demo)',
           symbol: 'ZEC',
           address: zecAccount?.address || '',
           icon: '',

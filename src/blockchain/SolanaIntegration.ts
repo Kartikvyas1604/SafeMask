@@ -30,7 +30,7 @@ export interface SPLTransferParams {
 class SolanaIntegrationService {
   private static instance: SolanaIntegrationService;
   private connection: Connection | null = null;
-  private cluster: 'mainnet-beta' | 'devnet' | 'testnet' = 'mainnet-beta';
+  private cluster: 'mainnet-beta' | 'devnet' | 'testnet' = 'devnet'; // Changed to devnet for testing
 
   private readonly RPC_ENDPOINTS = {
     'mainnet-beta': process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
@@ -50,7 +50,7 @@ class SolanaIntegrationService {
     return SolanaIntegrationService.instance;
   }
 
-  async initialize(cluster: 'mainnet-beta' | 'devnet' | 'testnet' = 'mainnet-beta') {
+  async initialize(cluster: 'mainnet-beta' | 'devnet' | 'testnet' = 'devnet') { // Changed default to devnet
     this.cluster = cluster;
     this.connection = new Connection(this.RPC_ENDPOINTS[cluster], 'confirmed');
     logger.info(`Solana connection initialized on ${cluster}`);
