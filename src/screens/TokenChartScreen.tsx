@@ -27,9 +27,10 @@ interface PricePoint {
   price: number;
 }
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const CHART_WIDTH = width - Spacing['4xl'];
-const CHART_HEIGHT = 220;
+// Make the chart cover a large portion of the screen
+const CHART_HEIGHT = Math.min(360, height * 0.45);
 
 const TokenChartScreen: React.FC = () => {
   const route = useRoute<TokenChartRoute>();
@@ -60,7 +61,7 @@ const TokenChartScreen: React.FC = () => {
         // Current price + 24h change from ChainlinkService
         const current = await chainlinkService.getPriceData(symbol);
 
-        // Price history from CoinGecko for chart (7d hourly)
+        // Price history from CoinGecko for chart
         const coinIdMap: { [key: string]: string } = {
           ETH: 'ethereum',
           MATIC: 'matic-network',
@@ -69,8 +70,17 @@ const TokenChartScreen: React.FC = () => {
           SOL: 'solana',
         };
         const coinId = coinIdMap[symbol] || symbol.toLowerCase();
+
+        // Map selected period to CoinGecko `days` parameter
+        const daysParam =
+          selectedPeriod === 'D' ? '1' :
+          selectedPeriod === 'W' ? '7' :
+          selectedPeriod === 'M' ? '30' :
+          selectedPeriod === '6M' ? '180' :
+          selectedPeriod === 'Y' ? '365' :
+          'max';
         const response = await fetch(
-          `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=7&interval=hourly`
+          `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${daysParam}&interval=hourly`
         );
 
         if (!response.ok) {
@@ -104,7 +114,7 @@ const TokenChartScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [symbol]);
+  }, [symbol, selectedPeriod]);
 
   const chartPath = useMemo(() => {
     if (!history.length) return '';
@@ -273,7 +283,8 @@ const TokenChartScreen: React.FC = () => {
             style={styles.buyButton}
             onPress={() => {
               (navigation as any).navigate('RealSwap', {
-                outputToken: symbol,
+                outputTokenSymbol: symbol,
+                initialNetwork: (name || '').toLowerCase().includes('polygon') ? 'polygon' : 'ethereum',
               });
             }}
           >
@@ -282,7 +293,9 @@ const TokenChartScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.sellButton}
             onPress={() => {
-              (navigation as any).navigate('RealSend');
+              (navigation as any).navigate('RealSend', {
+                initialChain: (name || '').toLowerCase().includes('polygon') ? 'polygon' : 'ethereum',
+              });
             }}
           >
             <Text style={styles.sellButtonText}>Sell</Text>

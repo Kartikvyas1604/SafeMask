@@ -30,7 +30,11 @@ type SendScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RealSen
 
 interface Props {
   navigation: SendScreenNavigationProp;
-  route?: any;
+  route?: {
+    params?: {
+      initialChain?: string;
+    };
+  };
 }
 
 interface ChainOption {
@@ -47,7 +51,7 @@ const SUPPORTED_CHAINS: ChainOption[] = [
   { id: 'zcash', name: 'Zcash (Demo)', symbol: 'ZEC' },
 ];
 
-const RealSendScreen: React.FC<Props> = ({ navigation }) => {
+const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const [selectedChain, setSelectedChain] = useState<ChainOption>(SUPPORTED_CHAINS[0]);
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -76,6 +80,17 @@ const RealSendScreen: React.FC<Props> = ({ navigation }) => {
       hasLoadedWallet.current = true;
     }
   }, []);
+
+  // If an initialChain param is provided (e.g. from chart screen), preselect it
+  useEffect(() => {
+    const initialChainId = route?.params?.initialChain;
+    if (initialChainId) {
+      const match = SUPPORTED_CHAINS.find((c) => c.id === initialChainId);
+      if (match) {
+        setSelectedChain(match);
+      }
+    }
+  }, [route?.params?.initialChain]);
 
   useEffect(() => {
     // Only reload balance if chain actually changed

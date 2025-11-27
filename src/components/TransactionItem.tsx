@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 
 interface TransactionItemProps {
   type: string;
@@ -97,54 +99,59 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
+    padding: Spacing.lg,
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: Spacing.md,
     flex: 1,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   title: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
     color: Colors.textPrimary,
   },
   privacyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    backgroundColor: Colors.accentLight,
+    borderRadius: 8,
   },
   privacyBadgeText: {
-    fontSize: 11,
+    fontSize: Typography.fontSize.xs,
     color: Colors.accent,
+    fontWeight: Typography.fontWeight.medium,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: Typography.fontSize.sm,
     color: Colors.textSecondary,
+    lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
   },
   right: {
     alignItems: 'flex-end',
+    marginLeft: Spacing.md,
   },
   amount: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    marginBottom: Spacing.xs,
   },
   positive: {
     color: Colors.success,
@@ -153,12 +160,13 @@ const styles = StyleSheet.create({
     color: Colors.error,
   },
   time: {
-    fontSize: 13,
-    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textTertiary,
   },
   confirmations: {
-    fontSize: 11,
+    fontSize: Typography.fontSize.xs,
     color: Colors.success,
-    marginTop: 2,
+    marginTop: Spacing.xs,
+    fontWeight: Typography.fontWeight.medium,
   },
 });

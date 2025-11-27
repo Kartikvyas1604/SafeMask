@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
 import TransactionItem from '../components/TransactionItem';
+import BottomTabBar from '../components/BottomTabBar';
 
 // Simple placeholder data for now; can later be wired to real history source
 const MOCK_TRANSACTIONS = [
@@ -41,43 +43,69 @@ const MOCK_TRANSACTIONS = [
 
 export default function RecentTransactionsScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const transactions = useMemo(() => MOCK_TRANSACTIONS, []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="time" size={20} color={Colors.white} />
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons name="chevron-back" size={20} color={Colors.white} />
+          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="time" size={20} color={Colors.white} />
+            </View>
           </View>
-          <View>
-            <Text style={styles.title}>Recent Activity</Text>
-            <Text style={styles.subtitle}>All your latest transactions</Text>
-          </View>
+        </View>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Recent Activity</Text>
+          <Text style={styles.subtitle}>All your latest transactions</Text>
         </View>
       </View>
 
       {/* Content */}
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {transactions.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="time-outline" size={40} color={Colors.textTertiary} />
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="time-outline" size={48} color={Colors.textTertiary} />
+            </View>
             <Text style={styles.emptyTitle}>No activity yet</Text>
             <Text style={styles.emptySubtitle}>
               Your recent transactions will appear here once you start using the wallet.
             </Text>
           </View>
         ) : (
-          <View style={styles.listCard}>
-            {transactions.map((tx) => (
-              <View key={tx.id} style={styles.itemWrapper}>
+          <View style={styles.transactionsContainer}>
+            {transactions.map((tx, index) => (
+              <View 
+                key={tx.id} 
+                style={[
+                  styles.transactionCard,
+                  index === transactions.length - 1 && styles.lastCard
+                ]}
+              >
                 <TransactionItem {...tx} />
               </View>
             ))}
           </View>
         )}
       </ScrollView>
+      
+      {/* Floating Bottom Tab Bar */}
+      <BottomTabBar />
     </View>
   );
 }
@@ -88,11 +116,29 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    paddingHorizontal: Spacing['3xl'],
+    paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing['2xl'],
+    paddingBottom: Spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorderSecondary,
   },
-  headerLeft: {
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
@@ -101,51 +147,72 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerContent: {
+    marginTop: Spacing.sm,
+  },
   title: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
   },
   subtitle: {
     fontSize: Typography.fontSize.sm,
     color: Colors.textSecondary,
-    marginTop: 2,
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
-    paddingHorizontal: Spacing['3xl'],
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
     paddingBottom: 120,
   },
-  listCard: {
+  transactionsContainer: {
+    gap: Spacing.md,
+  },
+  transactionCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    paddingVertical: Spacing.md,
+    overflow: 'hidden',
   },
-  itemWrapper: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+  lastCard: {
+    marginBottom: Spacing.md,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: Spacing['4xl'],
+    paddingTop: Spacing['5xl'],
+    paddingHorizontal: Spacing['2xl'],
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
   },
   emptyTitle: {
-    marginTop: Spacing.lg,
-    fontSize: Typography.fontSize.md,
+    fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
   },
   emptySubtitle: {
-    marginTop: Spacing.sm,
     fontSize: Typography.fontSize.sm,
     color: Colors.textSecondary,
     textAlign: 'center',
+    lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.sm,
   },
 });
 

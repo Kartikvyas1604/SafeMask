@@ -10,6 +10,8 @@ import {
   StyleSheet,
   Clipboard,
   Animated,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +24,7 @@ import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
+import { KNOWN_TOKENS } from '../blockchain/TokenService';
 import * as logger from '../utils/logger';
 
 // Sparkline graph component with smooth curves
@@ -136,6 +139,8 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const [totalUSD, setTotalUSD] = useState(0);
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [balanceHidden, setBalanceHidden] = useState(false);
+  const [showTokenPicker, setShowTokenPicker] = useState(false);
+  const [favoriteTokens, setFavoriteTokens] = useState<{ symbol: string; chain: string }[]>([]);
   const [hdWallet] = useState(() => new ZetarisWalletCore());
   
   const blockchainService = RealBlockchainService;
@@ -467,13 +472,13 @@ export default function ProductionWalletScreen({ navigation }: any) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fundsScrollView}>
             <View style={styles.fundsContainer}>
               {/* Add Funds Card */}
-              <TouchableOpacity style={styles.addFundCard}>
+              <TouchableOpacity style={styles.addFundCard} onPress={() => setShowTokenPicker(true)}>
                 <View style={styles.addFundIcon}>
                   <Ionicons name="add" size={32} color={Colors.textSecondary} />
                 </View>
               </TouchableOpacity>
               
-              {/* Crypto Fund Cards */}
+              {/* Crypto Fund Cards from real balances */}
               {balances.map((balance, index) => {
                 // Mock performance data for each asset
                 const isPositive = index % 2 === 0;
@@ -521,6 +526,40 @@ export default function ProductionWalletScreen({ navigation }: any) {
                   </TouchableOpacity>
                 );
               })}
+
+              {/* Favorite tokens (quick access charts) */}
+              {favoriteTokens.map((fav, index) => (
+                <TouchableOpacity
+                  key={`${fav.chain}-${fav.symbol}-${index}`}
+                  style={styles.fundCard}
+                  onPress={() =>
+                    (navigation as any).navigate('TokenChart', {
+                      symbol: fav.symbol,
+                      name: fav.chain,
+                    })
+                  }
+                >
+                  <View style={styles.fundCardHeader}>
+                    <ChainIcon chain={fav.chain.toLowerCase()} size={40} />
+                    <View style={styles.fundCardInfo}>
+                      <Text style={styles.fundCardName}>{fav.chain}</Text>
+                      <Text style={styles.fundCardTicker}>{fav.symbol}</Text>
+                    </View>
+                  </View>
+                  <SparklineGraph isPositive />
+                  <View style={styles.fundCardValue}>
+                    <Text style={styles.fundCardAmount}>—</Text>
+                    <View style={styles.fundCardPerformance}>
+                      <Text style={[styles.fundCardChange, { color: Colors.textSecondary }]}>
+                        Favorite
+                      </Text>
+                      <Text style={[styles.fundCardChangePercent, { color: Colors.textSecondary }]}>
+                        Tap for chart
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
           </ScrollView>
         </Animated.View>
@@ -560,6 +599,54 @@ export default function ProductionWalletScreen({ navigation }: any) {
       
       {/* Floating Bottom Tab Bar */}
       <BottomTabBar />
+
+      {/* Token picker modal */}
+      <Modal
+        visible={showTokenPicker}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowTokenPicker(false)}
+      >
+        <View style={styles.tokenModalBackdrop}>
+          <View style={styles.tokenModalCard}>
+            <View style={styles.tokenModalHeader}>
+              <Text style={styles.tokenModalTitle}>Add favorite token</Text>
+              <TouchableOpacity onPress={() => setShowTokenPicker(false)}>
+                <Ionicons name="close" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={[
+                ...((KNOWN_TOKENS.ethereum || []).map(t => ({ ...t, chain: 'Ethereum' }))),
+                ...((KNOWN_TOKENS.polygon || []).map(t => ({ ...t, chain: 'Polygon' }))),
+              ]}
+              keyExtractor={(item) => `${item.chain}-${item.symbol}-${item.address}`}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.tokenRow}
+                  onPress={() => {
+                    setFavoriteTokens(prev => {
+                      if (prev.find(p => p.symbol === item.symbol && p.chain === item.chain)) {
+                        return prev;
+                      }
+                      return [...prev, { symbol: item.symbol, chain: item.chain }];
+                    });
+                  }}
+                >
+                  <View style={styles.tokenRowLeft}>
+                    <ChainIcon chain={item.chain.toLowerCase()} size={28} />
+                    <View>
+                      <Text style={styles.tokenRowSymbol}>{item.symbol}</Text>
+                      <Text style={styles.tokenRowChain}>{item.chain}</Text>
+                    </View>
+                  </View>
+                  <Ionicons name="star-outline" size={20} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -828,6 +915,55 @@ const styles = StyleSheet.create({
   recentActionsSection: {
     paddingHorizontal: Spacing.xl,
     marginBottom: Spacing['2xl'],
+  },
+  tokenModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  tokenModalCard: {
+    backgroundColor: Colors.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: Spacing['3xl'],
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing['4xl'],
+    borderTopWidth: 1,
+    borderColor: Colors.cardBorder,
+    maxHeight: '70%',
+  },
+  tokenModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  tokenModalTitle: {
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  tokenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  tokenRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  tokenRowSymbol: {
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  tokenRowChain: {
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.xs,
   },
   actionsList: {
     gap: Spacing.md,

@@ -36,6 +36,15 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
   const currentRoute = hookRoute.name;
 
   const handlePress = (tab: TabItem, index?: number) => {
+    // Special handling for RecentTransactions - it's a Stack screen, not a Tab screen
+    if (tab.route === 'RecentTransactions') {
+      // Always navigate to Stack screen, regardless of mode
+      if (currentRoute !== tab.route) {
+        navigation.navigate(tab.route as any);
+      }
+      return;
+    }
+
     if (state && index !== undefined) {
       // Tab Navigator mode
       const route = state.routes[index];
@@ -44,22 +53,32 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
         navigation.navigate(route.name);
       }
     } else {
-      // Standalone mode (legacy)
+      // Standalone mode - navigate to Stack screens
       if (currentRoute !== tab.route) {
-        navigation.navigate(tab.route);
+        navigation.navigate(tab.route as any);
       }
     }
   };
 
   const isActive = (index: number, tab: TabItem) => {
-    if (state) {
-      // Tab Navigator mode
-      return state.index === index;
+    // Special handling for RecentTransactions - it's a Stack screen
+    if (tab.route === 'RecentTransactions') {
+      return currentRoute === 'RecentTransactions';
     }
-    // Standalone mode
-    if (currentRoute === 'Wallet') {
+
+    if (state) {
+      // Tab Navigator mode - only check if the route exists in Tab Navigator
+      // RecentTransactions is not in Tab Navigator, so skip state check for it
+      if (index < state.routes.length) {
+        return state.index === index;
+      }
+      return false;
+    }
+    // Standalone mode - check current route
+    if (currentRoute === 'Wallet' || currentRoute === 'MainTabs') {
       return tab.name === 'home';
     }
+    // For other Stack screens, check by route name
     return currentRoute === tab.route;
   };
 

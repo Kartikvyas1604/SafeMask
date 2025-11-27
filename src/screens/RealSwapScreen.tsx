@@ -34,7 +34,11 @@ export default function RealSwapScreen() {
   const insets = useSafeAreaInsets();
   // Handle optional route params - may not be provided when navigating from tab bar
   const routeParams = route?.params || {};
-  const { walletAddress: paramWalletAddress } = routeParams;
+  const { walletAddress: paramWalletAddress, outputTokenSymbol, initialNetwork } = routeParams as {
+    walletAddress?: string;
+    outputTokenSymbol?: string;
+    initialNetwork?: string;
+  };
   
   const [inputToken, setInputToken] = useState<string>('');
   const [outputToken, setOutputToken] = useState<string>('');
@@ -43,7 +47,7 @@ export default function RealSwapScreen() {
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
-  const [network, setNetwork] = useState('ethereum');
+  const [network, setNetwork] = useState(initialNetwork || 'ethereum');
   const [walletAddress, setWalletAddress] = useState<string>(paramWalletAddress || '');
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
   const [showInputTokenPicker, setShowInputTokenPicker] = useState(false);
@@ -60,6 +64,19 @@ export default function RealSwapScreen() {
       hasLoadedWallet.current = true;
     }
   }, []);
+
+  // Prefill output token when coming from a token detail/chart screen
+  useEffect(() => {
+    if (outputTokenSymbol) {
+      const tokensForNetwork = KNOWN_TOKENS[network] || [];
+      const match = tokensForNetwork.find(
+        (t) => t.symbol.toUpperCase() === outputTokenSymbol.toUpperCase()
+      );
+      if (match) {
+        setOutputToken(match.address);
+      }
+    }
+  }, [network, outputTokenSymbol]);
   
   const loadWalletData = async () => {
     try {
@@ -226,7 +243,8 @@ export default function RealSwapScreen() {
   };
   
   const inputTokenSymbol = getTokenSymbol(inputToken);
-  const outputTokenSymbol = getTokenSymbol(outputToken);
+  // Use outputTokenSymbol from route params if available, otherwise calculate from address
+  const currentOutputTokenSymbol = outputTokenSymbol || getTokenSymbol(outputToken);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -345,12 +363,12 @@ export default function RealSwapScreen() {
                 <ActivityIndicator size="small" color={Colors.accent} />
               ) : (
                 <Text style={styles.outputAmount}>
-                  {parseFloat(quote.outputAmount).toFixed(6)} {outputTokenSymbol}
+                  {parseFloat(quote.outputAmount).toFixed(6)} {currentOutputTokenSymbol}
                 </Text>
               )}
               {quote && (
                 <Text style={styles.outputMin}>
-                  Min: {parseFloat(quote.outputAmountMin).toFixed(6)} {outputTokenSymbol}
+                  Min: {parseFloat(quote.outputAmountMin).toFixed(6)} {currentOutputTokenSymbol}
                 </Text>
               )}
             </View>
