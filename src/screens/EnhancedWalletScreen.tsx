@@ -133,7 +133,7 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Zetaris</Text>
+          <Text style={styles.headerTitle}>SafeMask</Text>
           <Text style={styles.headerSubtitle}>
             {activeAccount?.name || 'Account 1'}
           </Text>
@@ -206,7 +206,16 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           ) : (
             balances.map((balance, index) => (
-              <View key={index} style={styles.assetCard}>
+              <TouchableOpacity
+                key={index}
+                style={styles.assetCard}
+                onPress={() =>
+                  (navigation as any).navigate('TokenChart', {
+                    symbol: balance.symbol,
+                    name: balance.chain,
+                  })
+                }
+              >
                 <View style={styles.assetInfo}>
                   <View style={styles.assetIconContainer}>
                     <Text style={styles.assetIcon}>
@@ -231,7 +240,7 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
                     {balanceHidden ? '••••' : `$${balance.balanceUSD.toFixed(2)}`}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>

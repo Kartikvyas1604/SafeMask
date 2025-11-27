@@ -22,7 +22,8 @@ const tabs: TabItem[] = [
   { name: 'send', icon: 'arrow-up', route: 'RealSend' },
   { name: 'receive', icon: 'arrow-down', route: 'RealReceive' },
   { name: 'swap', icon: 'swap-horizontal', route: 'RealSwap' },
-  { name: 'profile', icon: 'person', route: 'Settings' },
+  // Recent transactions tab (clock icon)
+  { name: 'recent', icon: 'time', route: 'RecentTransactions' },
 ];
 
 export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {

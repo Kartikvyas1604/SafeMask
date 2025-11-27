@@ -536,7 +536,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
               </View>
               <View>
                 <Text style={styles.settingLabel}>Version</Text>
-                <Text style={styles.settingDescription}>1.0.0 (Zetaris)</Text>
+                <Text style={styles.settingDescription}>1.0.0 (SafeMask)</Text>
               </View>
             </View>
           </Animated.View>
@@ -572,7 +572,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
         <Animated.View style={[styles.footer, getAnimatedStyle(itemIndex++)]}>
           <Text style={styles.footerText}>
-            Zetaris Privacy-First Wallet
+            SafeMask Privacy-First Wallet
           </Text>
           <Text style={styles.footerSubtext}>
             Your keys, your crypto, your privacy

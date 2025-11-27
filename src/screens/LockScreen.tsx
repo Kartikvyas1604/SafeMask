@@ -86,7 +86,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
   const handleBiometricAuth = async () => {
     try {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock Zetaris Wallet',
+        promptMessage: 'Unlock SafeMask Wallet',
         fallbackLabel: 'Use password',
         disableDeviceFallback: false,
         cancelLabel: 'Cancel',
@@ -226,7 +226,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Zetaris keeps your wallet secure
+            SafeMask keeps your wallet secure
           </Text>
         </View>
       </Animated.View>

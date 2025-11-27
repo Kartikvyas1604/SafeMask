@@ -395,12 +395,18 @@ export default function ProductionWalletScreen({ navigation }: any) {
             </View>
             
             <View style={styles.headerRight}>
-              <View style={styles.profileContainer}>
+              <TouchableOpacity
+                style={styles.profileContainer}
+                onPress={() => navigation.navigate('Settings')}
+              >
                 <View style={styles.profileIcon}>
                   <Ionicons name="person" size={20} color={Colors.white} />
                 </View>
-              </View>
-              <TouchableOpacity style={styles.notificationIcon}>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.notificationIcon}
+                onPress={() => navigation.navigate('RecentTransactions')}
+              >
                 <Ionicons name="notifications-outline" size={24} color={Colors.white} />
               </TouchableOpacity>
             </View>
@@ -475,7 +481,16 @@ export default function ProductionWalletScreen({ navigation }: any) {
                 const mockChangePercent = isPositive ? 0.92 : -5.62;
                 
                 return (
-                  <TouchableOpacity key={index} style={styles.fundCard}>
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.fundCard}
+                    onPress={() =>
+                      (navigation as any).navigate('TokenChart', {
+                        symbol: balance.symbol,
+                        name: balance.chain,
+                      })
+                    }
+                  >
                     <View style={styles.fundCardHeader}>
                       <ChainIcon chain={balance.chain.toLowerCase()} size={40} />
                       <View style={styles.fundCardInfo}>

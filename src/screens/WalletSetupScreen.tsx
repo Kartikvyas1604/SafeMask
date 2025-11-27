@@ -4,14 +4,11 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  StatusBar,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 
 interface WalletSetupScreenProps {
   navigation: {
@@ -27,7 +24,7 @@ export default function WalletSetupScreen({ navigation }: WalletSetupScreenProps
       <View style={styles.content}>
         {/* Logo/Title */}
         <View style={styles.header}>
-          <Text style={styles.title}>Zetaris</Text>
+          <Text style={styles.title}>SafeMask</Text>
           <Text style={styles.subtitle}>Privacy-First Multi-Chain Wallet</Text>
         </View>
 
@@ -60,61 +57,65 @@ export default function WalletSetupScreen({ navigation }: WalletSetupScreenProps
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.backgroundSecondary,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing['4xl'],
   },
   header: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: Spacing['5xl'],
   },
   title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#9CA3AF',
+    fontSize: Typography.fontSize.md,
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   buttonContainer: {
     width: '100%',
     maxWidth: 400,
-    gap: 16,
+    gap: Spacing.lg,
   },
   button: {
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing['3xl'],
+    borderRadius: 16,
     alignItems: 'center',
   },
   primaryButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: Colors.accent,
+    shadowColor: Colors.accent,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   secondaryButton: {
-    backgroundColor: '#111111',
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.white,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
   },
   secondaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
   },
   footer: {
-    marginTop: 40,
-    color: '#6B7280',
-    fontSize: 14,
+    marginTop: Spacing['4xl'],
+    color: Colors.textTertiary,
+    fontSize: Typography.fontSize.sm,
   },
 });

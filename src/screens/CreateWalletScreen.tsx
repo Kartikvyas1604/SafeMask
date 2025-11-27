@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
 import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 
 interface CreateWalletScreenProps {
   navigation: {
@@ -137,10 +139,10 @@ export default function CreateWalletScreen({ navigation }: CreateWalletScreenPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.backgroundSecondary,
   },
   scrollContent: {
-    padding: 24,
+    padding: Spacing['3xl'],
   },
   loadingContainer: {
     flex: 1,
@@ -148,116 +150,114 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#7C3AED',
-    fontSize: 16,
+    color: Colors.accent,
+    fontSize: Typography.fontSize.md,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: Spacing['2xl'],
   },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   backButtonText: {
-    color: '#7C3AED',
-    fontSize: 32,
+    color: Colors.accent,
+    fontSize: Typography.fontSize['2xl'],
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    lineHeight: 20,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
   },
   seedPhraseContainer: {
-    backgroundColor: '#111111',
+    backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
+    padding: Spacing.lg,
+    marginBottom: Spacing['2xl'],
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
   seedPhraseGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: Spacing.md,
   },
   wordCard: {
     width: '30%',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: Colors.cardHover,
+    borderRadius: 12,
+    padding: Spacing.md,
     alignItems: 'center',
   },
   wordNumber: {
-    color: '#6B7280',
-    fontSize: 10,
+    color: Colors.textMuted,
+    fontSize: Typography.fontSize.xs,
     marginBottom: 4,
   },
   wordText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'monospace',
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    fontFamily: Typography.fontFamily.mono,
   },
   warningBox: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
     backgroundColor: 'rgba(251, 191, 36, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(251, 191, 36, 0.3)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  warningIcon: {
-    fontSize: 24,
-    marginRight: 12,
+    borderRadius: 16,
+    padding: Spacing.lg,
+    marginBottom: Spacing['2xl'],
   },
   warningTextContainer: {
     flex: 1,
   },
   warningTitle: {
-    color: '#FBBF24',
-    fontWeight: 'bold',
-    fontSize: 14,
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
     marginBottom: 4,
   },
   warningText: {
-    color: '#FCD34D',
-    fontSize: 12,
-    lineHeight: 18,
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.sm,
+    lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
   },
   buttonContainer: {
-    gap: 12,
+    gap: Spacing.md,
   },
   button: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing['3xl'],
+    borderRadius: 16,
     alignItems: 'center',
   },
   primaryButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: Colors.accent,
   },
   secondaryButton: {
-    backgroundColor: '#111111',
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.white,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
   },
   secondaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
   },
 });

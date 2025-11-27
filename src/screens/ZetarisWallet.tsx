@@ -232,7 +232,7 @@ const ZetarisWallet: React.FC<Props> = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#A855F7" />
-        <Text style={styles.loadingText}>Loading Zetaris...</Text>
+        <Text style={styles.loadingText}>Loading SafeMask...</Text>
       </View>
     );
   }
@@ -245,9 +245,9 @@ const ZetarisWallet: React.FC<Props> = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.logo}>
-            <Text style={styles.logoIcon}>🔐</Text>
+            <Text style={styles.logoIcon}>🦁</Text>
           </View>
-          <Text style={styles.logoText}>Zetaris</Text>
+          <Text style={styles.logoText}>SafeMask</Text>
         </View>
         
         <View style={styles.headerRight}>
@@ -268,7 +268,7 @@ const ZetarisWallet: React.FC<Props> = ({ navigation }) => {
         }
       >
         {/* Balance Card */}
-        <View style={styles.balanceCard}>
+          <View style={styles.balanceCard}>
           <View style={styles.balanceHeader}>
             <View>
               <Text style={styles.balanceLabel}>Total Balance</Text>
@@ -298,7 +298,16 @@ const ZetarisWallet: React.FC<Props> = ({ navigation }) => {
           {/* Asset Cards */}
           <View style={styles.assetsGrid}>
             {assets.slice(0, 3).map((asset, index) => (
-              <TouchableOpacity key={index} style={styles.assetCard}>
+              <TouchableOpacity
+                key={index}
+                style={styles.assetCard}
+                onPress={() =>
+                  (navigation as any).navigate('TokenChart', {
+                    symbol: asset.symbol,
+                    name: asset.name,
+                  })
+                }
+              >
                 <View style={styles.assetHeader}>
                   <View style={[styles.assetIcon, { backgroundColor: `${asset.color}20` }]}>
                     <Text style={styles.assetIconText}>{asset.icon}</Text>

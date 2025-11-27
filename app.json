@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Zetaris",
-    "slug": "Zetaris",
+    "name": "SafeMask",
+    "slug": "SafeMask",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon.jpeg",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,14 +15,14 @@
       "bundleIdentifier": "com.kartikvyas.Zetaris",
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Allow Zetaris to use the camera for QR code scanning",
-        "NSLocationWhenInUseUsageDescription": "Allow Zetaris to access your location for mesh network features"
+        "NSCameraUsageDescription": "Allow SafeMask to use the camera for QR code scanning",
+        "NSLocationWhenInUseUsageDescription": "Allow SafeMask to access your location for mesh network features"
       }
     },
     "android": {
       "package": "com.kartikvyas.Zetaris",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.jpeg",
         "backgroundColor": "#ffffff"
       },
       "permissions": [

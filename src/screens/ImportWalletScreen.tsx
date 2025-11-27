@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
 import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 
 interface ImportWalletScreenProps {
   navigation: {
@@ -206,7 +208,7 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
                     <Ionicons
                       name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                       size={20}
-                      color="#9CA3AF"
+                      color={Colors.textSecondary}
                     />
                   </TouchableOpacity>
                 </View>
@@ -232,7 +234,7 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
                     <Ionicons
                       name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
                       size={20}
-                      color="#9CA3AF"
+                      color={Colors.textSecondary}
                     />
                   </TouchableOpacity>
                 </View>
@@ -264,125 +266,124 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}const styles = StyleSheet.create({
+}
+
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.backgroundSecondary,
   },
   scrollContent: {
-    padding: 24,
+    padding: Spacing['3xl'],
   },
   header: {
-    marginBottom: 32,
+    marginBottom: Spacing['3xl'],
   },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   backButtonText: {
-    color: '#7C3AED',
-    fontSize: 32,
+    color: Colors.accent,
+    fontSize: Typography.fontSize['2xl'],
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    lineHeight: 20,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
   },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   textArea: {
-    backgroundColor: '#111111',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#FFFFFF',
-    fontSize: 16,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.md,
     minHeight: 120,
     textAlignVertical: 'top',
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
   errorBox: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 16,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   errorText: {
-    color: '#FCA5A5',
-    fontSize: 14,
+    color: Colors.error,
+    fontSize: Typography.fontSize.sm,
   },
   infoBox: {
     flexDirection: 'row',
     backgroundColor: 'rgba(124, 58, 237, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(124, 58, 237, 0.3)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  infoIcon: {
-    fontSize: 20,
-    marginRight: 12,
+    borderRadius: 16,
+    padding: Spacing.lg,
+    marginBottom: Spacing['2xl'],
   },
   infoTextContainer: {
     flex: 1,
+    marginLeft: Spacing.md,
   },
   infoText: {
-    color: '#BFDBFE',
-    fontSize: 12,
-    lineHeight: 18,
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.sm,
+    lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
   },
   button: {
-    backgroundColor: '#7C3AED',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing['3xl'],
+    borderRadius: 16,
     alignItems: 'center',
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.white,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
   },
   inputGroup: {
-    gap: 8,
-    marginBottom: 16,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   inputLabel: {
-    color: '#9CA3AF',
-    fontSize: 14,
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.sm,
   },
   passwordInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111111',
-    borderRadius: 12,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#1f1f1f',
+    borderColor: Colors.cardBorder,
   },
   passwordInput: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#FFFFFF',
-    fontSize: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.md,
   },
   eyeIcon: {
-    padding: 12,
+    padding: Spacing.md,
   },
 });

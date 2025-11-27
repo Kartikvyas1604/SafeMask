@@ -24,6 +24,8 @@ import { BridgeScreen } from '../screens/BridgeScreen';
 import MeshNetworkScreen from '../screens/MeshNetworkScreen';
 import BrowserScreen from '../screens/BrowserScreen';
 import BottomTabBar from '../components/BottomTabBar';
+import RecentTransactionsScreen from '../screens/RecentTransactionsScreen';
+import TokenChartScreen from '../screens/TokenChartScreen';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -39,11 +41,13 @@ export type RootStackParamList = {
   RealSend: { walletAddress?: string; balances?: any[] };
   RealReceive: { walletAddress?: string };
   RealSwap: { walletAddress?: string; balances?: any[] };
+  TokenChart: { symbol: string; name: string };
   Bridge: undefined;
   MeshNetwork: undefined;
   Settings: undefined;
   BackupWallet: undefined;
   Browser: undefined;
+  RecentTransactions: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -110,6 +114,9 @@ export default function AppNavigator() {
       <Stack.Screen name="MeshNetwork" component={MeshNetworkScreen} />
       <Stack.Screen name="BackupWallet" component={BackupWalletScreen} />
       <Stack.Screen name="Browser" component={BrowserScreen} />
+      {/* Activity / history */}
+      <Stack.Screen name="RecentTransactions" component={RecentTransactionsScreen} />
+      <Stack.Screen name="TokenChart" component={TokenChartScreen} />
     </Stack.Navigator>
   );
 }
