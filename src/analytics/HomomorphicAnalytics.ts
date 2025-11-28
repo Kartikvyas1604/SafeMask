@@ -40,8 +40,8 @@ class PaillierCrypto {
   } {
     // In production, use proper prime generation
     // For React Native, simulate with smaller numbers
-    const p = this.generatePrime(bitLength / 2);
-    const q = this.generatePrime(bitLength / 2);
+    const p = this.generatePrime();
+    const q = this.generatePrime();
     
     const n = p * q;
     const nSquared = n * n;
@@ -201,7 +201,7 @@ class PaillierCrypto {
   /**
    * Generate prime (simplified for mobile)
    */
-  private static generatePrime(_bits: number): bigint {
+  private static generatePrime(): bigint {
     // In production, use proper prime generation algorithm
     // For React Native, use pre-generated primes
     const primes = [

@@ -52,7 +52,7 @@ class UnifiedAddressService {
   async initialize(ethRpcUrl: string) {
     this.ensProvider = new ethers.JsonRpcProvider(ethRpcUrl);
     
-    for (const [chain, chainId] of Object.entries(this.SUPPORTED_CHAINS)) {
+    for (const [chain, _chainId] of Object.entries(this.SUPPORTED_CHAINS)) {
       const rpcUrl = this.getRpcUrlForChain(chain);
       if (rpcUrl) {
         this.providers.set(chain, new ethers.JsonRpcProvider(rpcUrl));
@@ -167,7 +167,6 @@ class UnifiedAddressService {
 
       const registry = new ethers.Contract(this.UNS_REGISTRY, registryAbi, provider);
       
-      const labels = domain.split('.').reverse();
       const tokenId = ethers.namehash(domain);
       
       const resolverAddress = await registry.resolverOf(tokenId);
@@ -237,7 +236,7 @@ class UnifiedAddressService {
     if (!entry) return [];
 
     const resolutions: AddressResolution[] = [];
-    for (const [chain, resolution] of entry.resolutions) {
+    for (const [_chain, resolution] of entry.resolutions) {
       resolutions.push(resolution);
     }
     return resolutions;

@@ -1,7 +1,7 @@
 import { ProductionTransactionService } from './ProductionTransactionService';
 import { priceOracle } from './PriceOracleService';
 import { biometricAuth } from './BiometricAuthService';
-import { SafeMaskWalletCore } from '../core/SafeMaskWalletCore';
+import { SafeMaskWalletCore } from '../core/ZetarisWalletCore';
 import * as logger from '../utils/logger';
 
 export interface WalletBalance {

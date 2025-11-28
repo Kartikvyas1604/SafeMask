@@ -183,7 +183,7 @@ export class CrossChainResolver {
   async resolveWithProof(
     metaAddress: string,
     chain: string,
-    authProof: Uint8Array
+    _authProof: Uint8Array
   ): Promise<string | null> {
     return this.resolve(metaAddress, chain);
   }

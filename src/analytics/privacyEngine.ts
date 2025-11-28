@@ -1,4 +1,3 @@
-import { sha256 } from '@noble/hashes/sha256';
 import { randomBytes } from '@noble/hashes/utils';
 import { CryptoUtils } from '../utils/crypto';
 

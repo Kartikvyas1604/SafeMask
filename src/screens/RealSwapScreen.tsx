@@ -17,7 +17,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RealDEXSwapService, { SwapQuote } from '../blockchain/RealDEXSwapService';
 import { KNOWN_TOKENS } from '../blockchain/TokenService';
-import { SafeMaskWalletCore, ChainType } from '../core/SafeMaskWalletCore';
+import { SafeMaskWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import ChainIcon from '../components/ChainIcon';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';

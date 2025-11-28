@@ -5,7 +5,7 @@
 
 import { ethers } from 'ethers';
 import * as logger from '../utils/logger';
-import { SafeMaskWalletCore } from '../core/SafeMaskWalletCore';
+import { SafeMaskWalletCore } from '../core/ZetarisWalletCore';
 import { FusionPlusClient } from '../fusion/FusionPlusClient';
 import MeshNetworkProtocol from '../mesh/MeshNetworkProtocol';
 import NFCProtocol from '../nfc/NFCProtocol';

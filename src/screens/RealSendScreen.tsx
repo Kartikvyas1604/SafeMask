@@ -19,7 +19,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 import RealBlockchainService from '../blockchain/RealBlockchainService';
-import { SafeMaskWalletCore, ChainType } from '../core/SafeMaskWalletCore';
+import { SafeMaskWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import ChainIcon from '../components/ChainIcon';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
@@ -159,13 +159,13 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
       // Import wallet to get addresses
       await tempWallet.importWallet(walletData.seedPhrase);
       
-      let address: string | undefined;
+      let address: string = '';
       let balanceValue = '0.00';
 
       switch (selectedChain.id) {
         case 'ethereum': {
           const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
-          if (ethAccount) {
+          if (ethAccount && ethAccount.address) {
             address = ethAccount.address;
             logger.info(`Loading ETH balance for: ${address}`);
             const ethBalance = await RealBlockchainService.getRealBalance('ethereum', address);
@@ -176,7 +176,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
         }
         case 'polygon': {
           const polyAccount = tempWallet.getAccount(ChainType.POLYGON);
-          if (polyAccount) {
+          if (polyAccount && polyAccount.address) {
             address = polyAccount.address;
             logger.info(`Loading MATIC balance for: ${address}`);
             const maticBalance = await RealBlockchainService.getRealBalance('polygon', address);
