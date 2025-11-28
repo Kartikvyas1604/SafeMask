@@ -13,6 +13,7 @@ import {
   StatusBar,
   Alert,
   Clipboard,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,9 +65,10 @@ export default function CreateWalletScreen({ navigation }: CreateWalletScreenPro
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" />
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
         <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.accent} />
           <Text style={styles.loadingText}>Generating secure wallet...</Text>
         </View>
       </View>
@@ -75,12 +77,15 @@ export default function CreateWalletScreen({ navigation }: CreateWalletScreenPro
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="light-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Text style={styles.backButtonText}>←</Text>
+              <Ionicons name="chevron-back" size={24} color={Colors.white} />
             </TouchableOpacity>
             <Text style={styles.title}>Your Secret Recovery Phrase</Text>
             <Text style={styles.subtitle}>
@@ -139,28 +144,36 @@ export default function CreateWalletScreen({ navigation }: CreateWalletScreenPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.background,
   },
   scrollContent: {
-    padding: Spacing['3xl'],
+    padding: Spacing.xl,
+    paddingBottom: Spacing['5xl'],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: Spacing.md,
   },
   loadingText: {
-    color: Colors.accent,
+    color: Colors.textSecondary,
     fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.medium,
   },
   header: {
-    marginBottom: Spacing['2xl'],
+    marginBottom: Spacing['3xl'],
   },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
     justifyContent: 'center',
-    marginBottom: Spacing.md,
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
   },
   backButtonText: {
     color: Colors.accent,
@@ -179,8 +192,8 @@ const styles = StyleSheet.create({
   },
   seedPhraseContainer: {
     backgroundColor: Colors.card,
-    borderRadius: 16,
-    padding: Spacing.lg,
+    borderRadius: 20,
+    padding: Spacing.xl,
     marginBottom: Spacing['2xl'],
     borderWidth: 1,
     borderColor: Colors.cardBorder,
@@ -192,10 +205,12 @@ const styles = StyleSheet.create({
   },
   wordCard: {
     width: '30%',
-    backgroundColor: Colors.cardHover,
+    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: Spacing.md,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorderSecondary,
   },
   wordNumber: {
     color: Colors.textMuted,
@@ -215,8 +230,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(251, 191, 36, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(251, 191, 36, 0.3)',
-    borderRadius: 16,
-    padding: Spacing.lg,
+    borderRadius: 20,
+    padding: Spacing.xl,
     marginBottom: Spacing['2xl'],
   },
   warningTextContainer: {
@@ -241,9 +256,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing['3xl'],
     borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
   },
   primaryButton: {
     backgroundColor: Colors.accent,
+    shadowColor: Colors.accent,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   secondaryButton: {
     backgroundColor: Colors.card,

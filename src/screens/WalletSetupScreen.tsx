@@ -57,7 +57,7 @@ export default function WalletSetupScreen({ navigation }: WalletSetupScreenProps
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,

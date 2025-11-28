@@ -111,6 +111,12 @@ export class MeshNetwork extends EventEmitter {
 
     const bleService = BLEMeshService.getInstance();
     
+    // Check if BLE is available before attempting to use it
+    if (!bleService.isBLEAvailable()) {
+      logger.warn('BLE is not available. Skipping BLE peer discovery.');
+      return [];
+    }
+    
     try {
       await bleService.initialize();
       

@@ -119,14 +119,17 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <StatusBar barStyle="light-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {step === 'import' ? (
           <>
             {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                <Text style={styles.backButtonText}>←</Text>
+                <Ionicons name="chevron-back" size={24} color={Colors.white} />
               </TouchableOpacity>
               <Text style={styles.title}>Import Wallet</Text>
               <Text style={styles.subtitle}>
@@ -186,7 +189,7 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
             {/* Password Setup Header */}
             <View style={styles.header}>
               <TouchableOpacity onPress={() => setStep('import')} style={styles.backButton}>
-                <Text style={styles.backButtonText}>←</Text>
+                <Ionicons name="chevron-back" size={24} color={Colors.white} />
               </TouchableOpacity>
               <Text style={styles.title}>Set Wallet Password</Text>
               <Text style={styles.subtitle}>
@@ -279,10 +282,11 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.background,
   },
   scrollContent: {
-    padding: Spacing['3xl'],
+    padding: Spacing.xl,
+    paddingBottom: Spacing['5xl'],
   },
   header: {
     marginBottom: Spacing['3xl'],
@@ -290,8 +294,13 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
     justifyContent: 'center',
-    marginBottom: Spacing.md,
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
   },
   backButtonText: {
     color: Colors.accent,
@@ -313,7 +322,7 @@ const styles = StyleSheet.create({
   },
   textArea: {
     backgroundColor: Colors.card,
-    borderRadius: 16,
+    borderRadius: 20,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     color: Colors.textPrimary,
@@ -322,13 +331,14 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+    fontFamily: Typography.fontFamily.mono,
   },
   errorBox: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderRadius: 16,
-    padding: Spacing.lg,
+    borderRadius: 20,
+    padding: Spacing.xl,
     marginBottom: Spacing.md,
   },
   errorText: {
@@ -337,16 +347,16 @@ const styles = StyleSheet.create({
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    backgroundColor: 'rgba(20, 96, 247, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(124, 58, 237, 0.3)',
-    borderRadius: 16,
-    padding: Spacing.lg,
+    borderColor: 'rgba(20, 96, 247, 0.3)',
+    borderRadius: 20,
+    padding: Spacing.xl,
     marginBottom: Spacing['2xl'],
+    gap: Spacing.md,
   },
   infoTextContainer: {
     flex: 1,
-    marginLeft: Spacing.md,
   },
   infoText: {
     color: Colors.textSecondary,
@@ -359,6 +369,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing['3xl'],
     borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
+    shadowColor: Colors.accent,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -380,7 +397,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.card,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },

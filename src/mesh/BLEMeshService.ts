@@ -1,7 +1,20 @@
-import { BleManager, Device, State } from 'react-native-ble-plx';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { ErrorHandler } from '../utils/errorHandler';
 import * as logger from '../utils/logger';
+
+// Optional BLE import - will be null if module is not available
+let BleManager: any = null;
+let Device: any = null;
+let State: any = null;
+
+try {
+  const bleModule = require('react-native-ble-plx');
+  BleManager = bleModule.BleManager;
+  Device = bleModule.Device;
+  State = bleModule.State;
+} catch (error) {
+  logger.warn('react-native-ble-plx not available. BLE features will be disabled.');
+}
 
 const SERVICE_UUID = '0000180A-0000-1000-8000-00805F9B34FB';
 const CHARACTERISTIC_UUID = '00002A58-0000-1000-8000-00805F9B34FB';
@@ -10,18 +23,29 @@ export interface BLEPeer {
   id: string;
   name: string;
   rssi: number;
-  device: Device;
+  device: any; // Changed from Device to any since Device might not be available
 }
 
 export class BLEMeshService {
   private static instance: BLEMeshService;
-  private manager: BleManager;
+  private manager: any; // Changed from BleManager to any
   private isScanning: boolean = false;
   private discoveredPeers: Map<string, BLEPeer> = new Map();
   private scanCallback?: (peer: BLEPeer) => void;
+  private isAvailable: boolean = false;
 
   private constructor() {
-    this.manager = new BleManager();
+    if (BleManager) {
+      try {
+        this.manager = new BleManager();
+        this.isAvailable = true;
+      } catch (error) {
+        logger.warn('Failed to initialize BLE Manager:', error);
+        this.isAvailable = false;
+      }
+    } else {
+      this.isAvailable = false;
+    }
   }
 
   static getInstance(): BLEMeshService {
@@ -32,6 +56,11 @@ export class BLEMeshService {
   }
 
   async initialize(): Promise<void> {
+    if (!this.isAvailable) {
+      logger.warn('BLE is not available. Skipping initialization.');
+      throw new Error('BLE module is not available. Please use a development build.');
+    }
+
     try {
       if (Platform.OS === 'android') {
         await this.requestAndroidPermissions();
@@ -85,6 +114,11 @@ export class BLEMeshService {
   }
 
   async startScanning(onPeerFound: (peer: BLEPeer) => void): Promise<void> {
+    if (!this.isAvailable) {
+      logger.warn('BLE is not available. Cannot start scanning.');
+      return;
+    }
+
     if (this.isScanning) {
       logger.warn('Already scanning');
       return;
@@ -100,7 +134,7 @@ export class BLEMeshService {
       this.manager.startDeviceScan(
         [SERVICE_UUID],
         { allowDuplicates: false },
-        (error, device) => {
+        (error: any, device: any) => {
           if (error) {
             logger.error('BLE scan error:', error);
             this.stopScanning();
@@ -138,7 +172,7 @@ export class BLEMeshService {
   }
 
   stopScanning(): void {
-    if (!this.isScanning) return;
+    if (!this.isAvailable || !this.isScanning) return;
 
     this.manager.stopDeviceScan();
     this.isScanning = false;
@@ -146,6 +180,10 @@ export class BLEMeshService {
   }
 
   async connectToPeer(peerId: string): Promise<void> {
+    if (!this.isAvailable) {
+      throw new Error('BLE module is not available');
+    }
+
     try {
       const peer = this.discoveredPeers.get(peerId);
       if (!peer) {
@@ -166,6 +204,10 @@ export class BLEMeshService {
   }
 
   async sendData(peerId: string, data: string): Promise<void> {
+    if (!this.isAvailable) {
+      throw new Error('BLE module is not available');
+    }
+
     try {
       const base64Data = Buffer.from(data).toString('base64');
       
@@ -184,6 +226,10 @@ export class BLEMeshService {
   }
 
   async disconnect(peerId: string): Promise<void> {
+    if (!this.isAvailable) {
+      return;
+    }
+
     try {
       await this.manager.cancelDeviceConnection(peerId);
       this.discoveredPeers.delete(peerId);
@@ -203,6 +249,12 @@ export class BLEMeshService {
 
   async destroy(): Promise<void> {
     this.stopScanning();
-    await this.manager.destroy();
+    if (this.isAvailable && this.manager) {
+      await this.manager.destroy();
+    }
+  }
+
+  isBLEAvailable(): boolean {
+    return this.isAvailable;
   }
 }
