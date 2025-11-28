@@ -505,8 +505,10 @@ export default function ProductionWalletScreen({ navigation }: any) {
             <View style={styles.fundsContainer}>
               {/* Add Funds Card */}
               <TouchableOpacity style={styles.addFundCard} onPress={() => setShowTokenPicker(true)}>
-                <View style={styles.addFundIcon}>
-                  <Ionicons name="add" size={32} color={Colors.textSecondary} />
+                <View style={styles.addFundIconContainer}>
+                  <View style={styles.addFundIcon}>
+                    <Ionicons name="add" size={32} color={Colors.textSecondary} />
+                  </View>
                 </View>
               </TouchableOpacity>
               
@@ -887,10 +889,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+    minHeight: 200, // Match approximate height of fund cards
+  },
+  addFundIconContainer: {
+    flex: 1,
+    width: '100%',
   },
   addFundIcon: {
     width: '100%',
-    height: 120,
+    height: '100%',
+    minHeight: 160, // Ensure minimum height
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
