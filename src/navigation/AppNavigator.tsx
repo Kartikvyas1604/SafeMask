@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ProductionWalletScreen from '../screens/ProductionWalletScreen';
@@ -60,6 +60,8 @@ function MainTabs() {
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        // Faster tab switching - tabs are already mounted, just show/hide
+        animationEnabled: false, // Instant tab switching since tabs are pre-mounted
       }}
     >
       <Tab.Screen name="Wallet" component={ProductionWalletScreen} />
@@ -97,6 +99,36 @@ export default function AppNavigator() {
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: '#0a0a0a' },
+        // Faster transitions
+        animationEnabled: true,
+        transitionSpec: {
+          open: {
+            animation: 'timing',
+            config: {
+              duration: 200, // Reduced from default 350ms
+            },
+          },
+          close: {
+            animation: 'timing',
+            config: {
+              duration: 200, // Reduced from default 350ms
+            },
+          },
+        },
+        cardStyleInterpolator: ({ current, next, layouts }) => {
+          return {
+            cardStyle: {
+              transform: [
+                {
+                  translateX: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [layouts.screen.width, 0],
+                  }),
+                },
+              ],
+            },
+          };
+        },
       }}
     >
       {/* Wallet Setup Flow */}

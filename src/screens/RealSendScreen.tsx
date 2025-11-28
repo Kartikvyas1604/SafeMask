@@ -507,9 +507,12 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
       {/* Header - Matching home page style */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={20} color={Colors.white} />
-          </TouchableOpacity>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={20} color={Colors.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Send</Text>
+          </View>
           
           <View style={styles.headerRight}>
             <View style={styles.profileContainer}>
@@ -521,11 +524,6 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
               <Ionicons name="notifications-outline" size={24} color={Colors.white} />
             </TouchableOpacity>
           </View>
-        </View>
-        
-        <View style={styles.greetingSection}>
-          <Text style={styles.greetingText}>Send</Text>
-          <Text style={styles.greetingSubtext}>Transfer funds to another wallet</Text>
         </View>
       </View>
 
@@ -728,15 +726,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    flex: 1,
+  },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 20,
     backgroundColor: Colors.card,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+  },
+  headerTitle: {
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
   },
   headerRight: {
     flexDirection: 'row',

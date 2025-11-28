@@ -8,7 +8,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useNavigationState } from '@react-navigation/native';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -32,11 +32,34 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
   // If used within Tab Navigator, use props; otherwise use hooks
   const hookNavigation = useNavigation<any>();
   const hookRoute = useRoute();
+  const navigationState = useNavigationState(state => state);
   
   const navigation = props?.navigation || hookNavigation;
   const state = props?.state;
   const currentRoute = hookRoute.name;
   const [showSendReceiveModal, setShowSendReceiveModal] = useState(false);
+
+  // Get the currently focused route name from navigation state
+  const getFocusedRouteName = (): string | undefined => {
+    if (state && state.routes && state.index !== undefined) {
+      return state.routes[state.index]?.name;
+    }
+    if (navigationState) {
+      // Try to get the focused route from navigation state
+      const getActiveRoute = (navState: any): string | undefined => {
+        if (!navState) return undefined;
+        const route = navState.routes[navState.index];
+        if (route.state) {
+          return getActiveRoute(route.state);
+        }
+        return route.name;
+      };
+      return getActiveRoute(navigationState);
+    }
+    return currentRoute;
+  };
+
+  const focusedRoute = getFocusedRouteName() || currentRoute;
 
   const handlePress = (tab: TabItem, index?: number) => {
     // Handle special action items
@@ -46,9 +69,6 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
     }
 
     if (tab.name === 'graph') {
-      // Navigate to a default chart or show chart picker
-      // For now, navigate to the first available token chart
-      // In production, you might want to show a token picker
       navigation.navigate('TokenChart', {
         symbol: 'ETH',
         name: 'Ethereum',
@@ -56,68 +76,134 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
       return;
     }
 
-    // Special handling for RecentTransactions - it's a Stack screen, not a Tab screen
+    // Special handling for RecentTransactions - it's a Stack screen
     if (tab.route === 'RecentTransactions') {
-      // Always navigate to Stack screen, regardless of mode
       if (currentRoute !== tab.route) {
         navigation.navigate(tab.route as any);
       }
       return;
     }
 
+    // If we're in Tab Navigator mode (state is provided), use tab navigation
     if (state && index !== undefined) {
-      // Tab Navigator mode
       const route = state.routes[index];
       const isFocused = state.index === index;
       if (!isFocused && route) {
         navigation.navigate(route.name);
       }
-    } else {
-      // Standalone mode - navigate to Stack screens
-      if (tab.route && currentRoute !== tab.route) {
-        navigation.navigate(tab.route as any);
+      return;
+    }
+
+    // Standalone mode - we're on a Stack screen, need to navigate to Tab Navigator
+    if (tab.route) {
+      const tabNavigatorScreens = ['Wallet', 'RealSend', 'RealReceive', 'RealSwap', 'Settings'];
+      
+      if (tabNavigatorScreens.includes(tab.route)) {
+        // Navigate to MainTabs with the specific screen parameter for nested navigation
+        if (currentRoute !== 'MainTabs' && currentRoute !== tab.route) {
+          (navigation as any).navigate('MainTabs', {
+            screen: tab.route,
+          });
+        } else if (currentRoute === 'MainTabs') {
+          // Already in MainTabs, navigate to the specific tab
+          (navigation as any).navigate(tab.route);
+        }
+      } else {
+        // Stack screen - navigate directly
+        if (currentRoute !== tab.route) {
+          navigation.navigate(tab.route as any);
+        }
       }
     }
   };
 
   const handleSendReceiveAction = (action: 'send' | 'receive') => {
     setShowSendReceiveModal(false);
-    if (action === 'send') {
-      navigation.navigate('RealSend' as any);
+    const targetRoute = action === 'send' ? 'RealSend' : 'RealReceive';
+    
+    // Check if we're in Tab Navigator mode
+    if (state && state.routes) {
+      // We're in Tab Navigator, navigate directly to the tab
+      const targetIndex = state.routes.findIndex(r => r.name === targetRoute);
+      if (targetIndex !== -1) {
+        navigation.navigate(targetRoute);
+      }
     } else {
-      navigation.navigate('RealReceive' as any);
+      // We're on a Stack screen, navigate through MainTabs
+      (navigation as any).navigate('MainTabs', {
+        screen: targetRoute,
+      });
     }
   };
 
   const isActive = (index: number, tab: TabItem) => {
-    // Special handling for action items (no route)
+    // Action items (no route) - check special cases
     if (!tab.route) {
-      return false; // Action items are never "active" in the traditional sense
-    }
-
-    // Special handling for RecentTransactions - it's a Stack screen
-    if (tab.route === 'RecentTransactions') {
-      return currentRoute === 'RecentTransactions';
-    }
-
-    // Special handling for TokenChart - it's a Stack screen
-    if (tab.name === 'graph') {
-      return currentRoute === 'TokenChart';
-    }
-
-    if (state) {
-      // Tab Navigator mode - only check if the route exists in Tab Navigator
-      if (index < state.routes.length) {
-        return state.index === index;
+      // Special case: graph tab should be active when on TokenChart
+      if (tab.name === 'graph') {
+        const routesToCheck = [currentRoute, focusedRoute].filter(Boolean) as string[];
+        return routesToCheck.includes('TokenChart');
+      }
+      // Special case: sendReceive (QR code) should be active when on RealSend or RealReceive
+      if (tab.name === 'sendReceive') {
+        const routesToCheck = [currentRoute, focusedRoute].filter(Boolean) as string[];
+        return routesToCheck.includes('RealSend') || routesToCheck.includes('RealReceive');
       }
       return false;
     }
-    // Standalone mode - check current route
-    if (currentRoute === 'Wallet' || currentRoute === 'MainTabs') {
-      return tab.name === 'home';
+
+    // If we're in Tab Navigator mode, ONLY use the Tab Navigator's state
+    // This ensures only ONE tab is active at a time
+    if (state && state.routes && state.index !== undefined) {
+      // Special case: sendReceive (QR code) should be active when on RealSend or RealReceive
+      if (tab.name === 'sendReceive') {
+        const currentScreen = state.routes[state.index]?.name;
+        return currentScreen === 'RealSend' || currentScreen === 'RealReceive';
+      }
+      
+      // Map our tab array indices to Tab Navigator screen indices
+      // tabs: [home(0), graph(1), sendReceive(2), swap(3), transaction(4)]
+      // Tab Navigator: [Wallet(0), RealSend(1), RealReceive(2), RealSwap(3), Settings(4)]
+      const tabToScreenMap: { [key: number]: number } = {
+        0: 0, // home -> Wallet (index 0)
+        3: 3, // swap -> RealSwap (index 3)
+      };
+      
+      const mappedIndex = tabToScreenMap[index];
+      if (mappedIndex !== undefined) {
+        // Only this specific tab should be active
+        return state.index === mappedIndex;
+      }
+      // For tabs not in Tab Navigator (transaction), check route
+      if (tab.name === 'transaction') {
+        return false; // Transaction is a Stack screen, not in Tab Navigator
+      }
+      return false;
     }
-    // For other Stack screens, check by route name
-    return currentRoute === tab.route;
+
+    // Standalone mode - we're on a Stack screen
+    // Check both currentRoute and focusedRoute
+    const routesToCheck = [currentRoute, focusedRoute].filter(Boolean) as string[];
+
+    // Special cases for route aliases
+    if (tab.name === 'home') {
+      return routesToCheck.some(r => r === 'Wallet' || r === 'MainTabs');
+    }
+
+    if (tab.name === 'graph') {
+      return routesToCheck.includes('TokenChart');
+    }
+
+    if (tab.name === 'transaction') {
+      return routesToCheck.includes('RecentTransactions');
+    }
+
+    if (tab.name === 'swap') {
+      return routesToCheck.includes('RealSwap');
+    }
+
+    // Direct route matching for other cases
+    return routesToCheck.includes(tab.route);
   };
 
   return (

@@ -53,21 +53,20 @@ export default function RecentTransactionsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Ionicons name="chevron-back" size={20} color={Colors.white} />
-          </TouchableOpacity>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Ionicons name="chevron-back" size={20} color={Colors.white} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Recent Activity</Text>
+          </View>
           <View style={styles.headerRight}>
             <View style={styles.iconCircle}>
               <Ionicons name="time" size={20} color={Colors.white} />
             </View>
           </View>
-        </View>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Recent Activity</Text>
-          <Text style={styles.subtitle}>All your latest transactions</Text>
         </View>
       </View>
 
@@ -126,7 +125,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    flex: 1,
   },
   backButton: {
     width: 40,
@@ -151,18 +155,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerContent: {
-    marginTop: Spacing.sm,
-  },
   title: {
     fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
-  },
-  subtitle: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
   },
   scrollView: {
     flex: 1,
