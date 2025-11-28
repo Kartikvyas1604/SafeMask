@@ -1,24 +1,10 @@
-/**
- * Secure Storage Service
- * 
- * Provides encrypted storage for sensitive data using platform-specific secure storage
- * iOS: Keychain Services
- * Android: Android Keystore
- * 
- * Features:
- * - AES-256-GCM encryption
- * - Scrypt key derivation (N=32768, r=8, p=1)
- * - Automatic key rotation
- * - Secure wipe on logout
- * - Biometric authentication support
- */
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { pbkdf2 } from '@noble/hashes/pbkdf2';
 import { randomBytes as nobleRandomBytes } from '@noble/hashes/utils';
 import { sha256 } from '@noble/hashes/sha256';
 import { CryptoUtils } from '../utils/crypto';
+import * as Keychain from 'react-native-keychain';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -340,14 +326,16 @@ export class SecureStorage {
    * Store in iOS Keychain or Android Keystore
    */
   private async storeInKeychain(key: string, value: string): Promise<void> {
-    if (Platform.OS === 'ios') {
-      // In production: Use react-native-keychain or @react-native-community/keychain
-      // For now, fallback to AsyncStorage
-      await AsyncStorage.setItem(key, value);
-    } else if (Platform.OS === 'android') {
-      // In production: Use Android Keystore via native module
-      // For now, fallback to AsyncStorage
-      await AsyncStorage.setItem(key, value);
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      try {
+        // Use hardware-backed secure storage
+        await Keychain.setGenericPassword(key, value, {
+          service: key,
+        });
+      } catch (error) {
+        console.error('⚠️  Keychain storage failed, falling back to AsyncStorage:', error);
+        await AsyncStorage.setItem(key, value);
+      }
     } else {
       await AsyncStorage.setItem(key, value);
     }
@@ -357,12 +345,17 @@ export class SecureStorage {
    * Retrieve from iOS Keychain or Android Keystore
    */
   private async retrieveFromKeychain(key: string): Promise<string | null> {
-    if (Platform.OS === 'ios') {
-      // In production: Use react-native-keychain
-      return await AsyncStorage.getItem(key);
-    } else if (Platform.OS === 'android') {
-      // In production: Use Android Keystore
-      return await AsyncStorage.getItem(key);
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      try {
+        const credentials = await Keychain.getGenericPassword({ service: key });
+        if (credentials && typeof credentials !== 'boolean') {
+          return credentials.password;
+        }
+        return null;
+      } catch (error) {
+        console.error('⚠️  Keychain retrieval failed, falling back to AsyncStorage:', error);
+        return await AsyncStorage.getItem(key);
+      }
     } else {
       return await AsyncStorage.getItem(key);
     }
@@ -373,8 +366,12 @@ export class SecureStorage {
    */
   private async removeFromKeychain(key: string): Promise<void> {
     if (Platform.OS === 'ios' || Platform.OS === 'android') {
-      // In production: Use platform-specific deletion
-      await AsyncStorage.removeItem(key);
+      try {
+        await Keychain.resetGenericPassword({ service: key });
+      } catch (error) {
+        console.error('⚠️  Keychain deletion failed, falling back to AsyncStorage:', error);
+        await AsyncStorage.removeItem(key);
+      }
     } else {
       await AsyncStorage.removeItem(key);
     }

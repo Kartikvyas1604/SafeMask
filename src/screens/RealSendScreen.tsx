@@ -25,6 +25,8 @@ import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
+import { ErrorHandler, withErrorHandling } from '../utils/errorHandler';
+import { LoadingOverlay } from '../components/LoadingOverlay';
 
 type SendScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RealSend'>;
 
@@ -111,13 +113,11 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
   }, [recipientAddress, amount, selectedChain.id]);
 
   const loadWalletData = async () => {
-    try {
+    const result = await withErrorHandling(async () => {
       const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
                             await AsyncStorage.getItem('Zetaris_wallet');
       if (!walletDataStr) {
-        Alert.alert('Error', 'No wallet found');
-        navigation.goBack();
-        return;
+        throw new Error('No wallet found');
       }
 
       const walletData = JSON.parse(walletDataStr);
@@ -128,20 +128,21 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
       const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
       if (ethAccount) {
         setWalletAddress(ethAccount.address);
-        setPrivateKey(ethAccount.privateKey); // Get private key from account
+        setPrivateKey(ethAccount.privateKey);
         logger.info(`Loaded wallet address: ${ethAccount.address}`);
       } else {
         throw new Error('Failed to get Ethereum account');
       }
-    } catch (error) {
-      logger.error('Failed to load wallet:', error);
-      Alert.alert('Error', 'Failed to load wallet data');
+    }, 'Load Wallet Data');
+
+    if (!result) {
+      navigation.goBack();
     }
   };
 
   const loadBalance = async () => {
-    try {
-      setIsLoadingBalance(true);
+    setIsLoadingBalance(true);
+    await withErrorHandling(async () => {
       // Get wallet data and initialize HD wallet
       const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
                             await AsyncStorage.getItem('Zetaris_wallet');
@@ -198,11 +199,9 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
 
       setBalance(balanceValue);
       setIsLoadingBalance(false);
-    } catch (error) {
-      logger.error('Failed to load balance:', error);
-      setBalance('0.00');
-      setIsLoadingBalance(false);
-    }
+    }, 'Load Balance');
+    
+    setIsLoadingBalance(false);
   };
 
   const estimateGas = async () => {
@@ -213,12 +212,12 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const validateInputs = (): boolean => {
     if (!recipientAddress.trim()) {
-      Alert.alert('Error', 'Please enter recipient address');
+      ErrorHandler.error('Please enter recipient address');
       return false;
     }
 
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      ErrorHandler.error('Please enter a valid amount');
       return false;
     }
 
@@ -226,29 +225,29 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
     const balanceNum = parseFloat(balance);
 
     if (amountNum > balanceNum) {
-      Alert.alert('Error', 'Insufficient balance');
+      ErrorHandler.handle('INSUFFICIENT_FUNDS');
       return false;
     }
 
     // Address validation
     if (selectedChain.id === 'ethereum' || selectedChain.id === 'polygon') {
       if (!recipientAddress.startsWith('0x') || recipientAddress.length !== 42) {
-        Alert.alert('Error', 'Invalid Ethereum/Polygon address');
+        ErrorHandler.handle('INVALID_ADDRESS');
         return false;
       }
     } else if (selectedChain.id === 'solana') {
       if (recipientAddress.length < 32 || recipientAddress.length > 44) {
-        Alert.alert('Error', 'Invalid Solana address');
+        ErrorHandler.handle('INVALID_ADDRESS');
         return false;
       }
     } else if (selectedChain.id === 'bitcoin') {
       if (!recipientAddress.match(/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$|^bc1[a-z0-9]{39,59}$/)) {
-        Alert.alert('Error', 'Invalid Bitcoin address');
+        ErrorHandler.handle('INVALID_ADDRESS');
         return false;
       }
     } else if (selectedChain.id === 'zcash') {
       if (!recipientAddress.startsWith('t') && !recipientAddress.startsWith('z')) {
-        Alert.alert('Error', 'Invalid Zcash address');
+        ErrorHandler.handle('INVALID_ADDRESS');
         return false;
       }
     }
@@ -330,49 +329,35 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
         }
 
         case 'solana':
-          // Solana sending would require different implementation
-          Alert.alert('Info', 'Solana sending coming soon!');
+          ErrorHandler.info('Solana sending coming soon!');
           setIsSending(false);
           return;
 
         case 'bitcoin':
-          // Bitcoin sending requires UTXO management
-          Alert.alert('Info', 'Bitcoin sending coming soon!');
+          ErrorHandler.info('Bitcoin sending coming soon!');
           setIsSending(false);
           return;
 
         case 'zcash':
-          // Zcash shielded transactions
-          Alert.alert('Info', 'Zcash sending coming soon!');
+          ErrorHandler.info('Zcash sending coming soon!');
           setIsSending(false);
           return;
       }
 
       setIsSending(false);
 
-      Alert.alert(
-        'Success!',
-        `Transaction sent successfully!\n\nTx Hash: ${txHash.substring(0, 20)}...`,
-        [
-          {
-            text: 'View on Explorer',
-            onPress: () => openExplorer(txHash),
-          },
-          {
-            text: 'Done',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      ErrorHandler.success(`Transaction sent! Hash: ${txHash.substring(0, 10)}...`);
 
       // Clear form
       setRecipientAddress('');
       setAmount('');
       setMemo('');
+      
+      // Reload balance
+      loadBalance();
     } catch (error: any) {
       setIsSending(false);
-      logger.error('Transaction failed:', error);
-      Alert.alert('Transaction Failed', error.message || 'Unknown error occurred');
+      ErrorHandler.handle(error, 'Send Transaction');
     }
   };
 
@@ -710,6 +695,12 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         </TouchableOpacity>
       </Modal>
+      
+      {/* Loading Overlay */}
+      <LoadingOverlay 
+        visible={isSending} 
+        message="Sending transaction..." 
+      />
     </KeyboardAvoidingView>
   );
 };

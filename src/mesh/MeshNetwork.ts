@@ -1,5 +1,6 @@
 import { EventEmitter } from '../utils/EventEmitter';
 import * as logger from '../utils/logger';
+import { BLEMeshService, BLEPeer } from './BLEMeshService';
 
 export interface Peer {
   id: string;
@@ -108,7 +109,35 @@ export class MeshNetwork extends EventEmitter {
   private async discoverBLEPeers(): Promise<Peer[]> {
     logger.info('Scanning for BLE peers...');
 
-    return [];
+    const bleService = BLEMeshService.getInstance();
+    
+    try {
+      await bleService.initialize();
+      
+      const peers: Peer[] = [];
+      
+      await bleService.startScanning((blePeer: BLEPeer) => {
+        const peer: Peer = {
+          id: blePeer.id,
+          address: blePeer.device.id,
+          publicKey: '',
+          lastSeen: Date.now(),
+          latency: Math.abs(blePeer.rssi) * 2,
+          protocol: 'ble',
+          reputation: 100,
+        };
+        peers.push(peer);
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      bleService.stopScanning();
+      
+      return peers;
+    } catch (error) {
+      logger.error('BLE discovery failed:', error);
+      return [];
+    }
   }
 
   private async discoverWiFiPeers(): Promise<Peer[]> {
