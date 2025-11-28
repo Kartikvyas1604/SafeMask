@@ -19,6 +19,19 @@ const MOCK_TRANSACTIONS = [
     time: '2 min ago',
     color: Colors.error,
     isPrivate: false,
+    txHash: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    fromAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    toAddress: '0x8ba1f109551bD432803012645Hac136c22C9b8C',
+    chain: 'Ethereum',
+    blockNumber: 18500000,
+    confirmations: 12,
+    gasUsed: '21,000',
+    gasPrice: '30 Gwei',
+    fee: '0.00063 ETH',
+    status: 'confirmed' as const,
+    timestamp: Date.now() - 120000, // 2 min ago
+    explorerUrl: 'https://etherscan.io/tx/0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    nonce: 42,
   },
   {
     id: '2',
@@ -28,6 +41,19 @@ const MOCK_TRANSACTIONS = [
     time: '1 h ago',
     color: Colors.success,
     isPrivate: false,
+    txHash: '0x8ba1f109551bD432803012645Hac136c22C9b8C',
+    fromAddress: '0x8ba1f109551bD432803012645Hac136c22C9b8C',
+    toAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    chain: 'Polygon',
+    blockNumber: 45000000,
+    confirmations: 128,
+    gasUsed: '65,000',
+    gasPrice: '50 Gwei',
+    fee: '0.00325 MATIC',
+    status: 'confirmed' as const,
+    timestamp: Date.now() - 3600000, // 1 hour ago
+    explorerUrl: 'https://polygonscan.com/tx/0x8ba1f109551bD432803012645Hac136c22C9b8C',
+    nonce: 15,
   },
   {
     id: '3',
@@ -38,6 +64,19 @@ const MOCK_TRANSACTIONS = [
     time: 'Yesterday',
     color: Colors.accent,
     isPrivate: false,
+    txHash: '0x3f5CE1FB7E6B5C5C5C5C5C5C5C5C5C5C5C5C5C5C5C',
+    fromAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    toAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    chain: 'Ethereum',
+    blockNumber: 18495000,
+    confirmations: 500,
+    gasUsed: '180,000',
+    gasPrice: '35 Gwei',
+    fee: '0.0063 ETH',
+    status: 'confirmed' as const,
+    timestamp: Date.now() - 86400000, // Yesterday
+    explorerUrl: 'https://etherscan.io/tx/0x3f5CE1FB7E6B5C5C5C5C5C5C5C5C5C5C5C5C5C5C',
+    nonce: 41,
   },
 ];
 
@@ -89,15 +128,19 @@ export default function RecentTransactionsScreen() {
         ) : (
           <View style={styles.transactionsContainer}>
             {transactions.map((tx, index) => (
-              <View 
-                key={tx.id} 
+              <TouchableOpacity
+                key={tx.id}
                 style={[
                   styles.transactionCard,
                   index === transactions.length - 1 && styles.lastCard
                 ]}
+                onPress={() => {
+                  (navigation as any).navigate('TransactionDetail', { transaction: tx });
+                }}
+                activeOpacity={0.7}
               >
                 <TransactionItem {...tx} />
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -151,7 +194,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
     justifyContent: 'center',
     alignItems: 'center',
   },

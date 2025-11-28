@@ -21,6 +21,7 @@ import RealBlockchainService, { RealBalance } from '../blockchain/RealBlockchain
 import { SafeMaskWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import ChainIcon from '../components/ChainIcon';
 import BottomTabBar from '../components/BottomTabBar';
+import PrivacyScoreBreakdown from '../components/PrivacyScoreBreakdown';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -141,6 +142,8 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const [balanceHidden, setBalanceHidden] = useState(false);
   const [showTokenPicker, setShowTokenPicker] = useState(false);
   const [favoriteTokens, setFavoriteTokens] = useState<{ symbol: string; chain: string }[]>([]);
+  const [privacyScore, setPrivacyScore] = useState(0);
+  const [privacyScoreVisible, setPrivacyScoreVisible] = useState(false);
   const [hdWallet] = useState(() => new SafeMaskWalletCore());
   
   const blockchainService = RealBlockchainService;
@@ -314,6 +317,35 @@ export default function ProductionWalletScreen({ navigation }: any) {
       // Calculate total USD value
       const total = realBalances.reduce((sum, balance) => sum + balance.balanceUSD, 0);
       setTotalUSD(total);
+      
+      // Calculate overall privacy score based on asset types and privacy features
+      // Privacy coins (ZEC) = 100 points
+      // Privacy-enabled transactions = +20 points per transaction
+      // Stealth addresses = +15 points
+      // Zero-knowledge proofs = +10 points
+      // Mixing/obfuscation = +5 points
+      
+      const privacyCoins = realBalances.filter(b => ['ZEC'].includes(b.symbol));
+      const privacyCoinValue = privacyCoins.reduce((sum, b) => sum + b.balanceUSD, 0);
+      const totalValue = realBalances.reduce((sum, b) => sum + b.balanceUSD, 0);
+      
+      let score = 0;
+      
+      if (totalValue > 0) {
+        // Base score from privacy coin percentage (0-70 points)
+        const privacyCoinPercentage = (privacyCoinValue / totalValue) * 100;
+        score += (privacyCoinPercentage / 100) * 70;
+        
+        // Add bonus points for privacy features (0-30 points)
+        // In production, these would come from actual wallet features
+        score += 15; // Stealth addresses enabled
+        score += 10; // Zero-knowledge proofs available
+        score += 5;  // Mixing capabilities
+      }
+      
+      // Cap at 100
+      score = Math.min(Math.round(score), 100);
+      setPrivacyScore(score);
       
       logger.info(`✅ Loaded ${realBalances.length} real balances`);
       logger.info(`💰 Total portfolio value: $${total.toFixed(2)}`);
@@ -591,6 +623,11 @@ export default function ProductionWalletScreen({ navigation }: any) {
               <Text style={styles.emptyActionsText}>No recent actions</Text>
             </View>
           )}
+        </Animated.View>
+        
+        {/* Privacy Score Breakdown */}
+        <Animated.View style={[styles.privacyScoreSection, getAnimatedStyle(3)]}>
+          <PrivacyScoreBreakdown privacyScore={privacyScore} />
         </Animated.View>
         
         {/* Bottom padding for tab bar */}
@@ -914,6 +951,9 @@ const styles = StyleSheet.create({
   // RECENT ACTIONS Section
   recentActionsSection: {
     paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing['2xl'],
+  },
+  privacyScoreSection: {
     marginBottom: Spacing['2xl'],
   },
   tokenModalBackdrop: {

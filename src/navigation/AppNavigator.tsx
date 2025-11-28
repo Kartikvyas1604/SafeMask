@@ -26,6 +26,7 @@ import BrowserScreen from '../screens/BrowserScreen';
 import BottomTabBar from '../components/BottomTabBar';
 import RecentTransactionsScreen from '../screens/RecentTransactionsScreen';
 import TokenChartScreen from '../screens/TokenChartScreen';
+import TransactionDetailScreen from '../screens/TransactionDetailScreen';
 
 export type RootStackParamList = {
   WalletSetup: undefined;
@@ -48,6 +49,7 @@ export type RootStackParamList = {
   BackupWallet: undefined;
   Browser: undefined;
   RecentTransactions: undefined;
+  TransactionDetail: { transaction: any };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -148,6 +150,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Browser" component={BrowserScreen} />
       {/* Activity / history */}
       <Stack.Screen name="RecentTransactions" component={RecentTransactionsScreen} />
+      <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
       <Stack.Screen name="TokenChart" component={TokenChartScreen} />
     </Stack.Navigator>
   );

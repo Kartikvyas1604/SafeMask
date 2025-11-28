@@ -3,8 +3,8 @@
  * Matches exact reference design with capsule shape
  */
 
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -206,6 +206,30 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
     return routesToCheck.includes(tab.route);
   };
 
+  // Create animated values for each tab
+  const scaleAnims = useRef(tabs.map(() => new Animated.Value(1))).current;
+
+  const handleTabPress = (tab: TabItem, index: number) => {
+    // Animate scale on press
+    Animated.sequence([
+      Animated.spring(scaleAnims[index], {
+        toValue: 1.3,
+        useNativeDriver: true,
+        tension: 300,
+        friction: 10,
+      }),
+      Animated.spring(scaleAnims[index], {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 300,
+        friction: 10,
+      }),
+    ]).start();
+
+    // Handle the actual navigation
+    handlePress(tab, index);
+  };
+
   return (
     <>
       <View style={styles.container}>
@@ -216,26 +240,23 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
               <TouchableOpacity
                 key={tab.name}
                 style={styles.tabItem}
-                onPress={() => handlePress(tab, index)}
-                activeOpacity={0.7}
+                onPress={() => handleTabPress(tab, index)}
+                activeOpacity={1}
               >
-                {active ? (
-                  <View style={styles.activeIconContainer}>
-                    <Ionicons
-                      name={tab.icon}
-                      size={22}
-                      color={Colors.white}
-                    />
-                  </View>
-                ) : (
-                  <View style={styles.inactiveIconContainer}>
-                    <Ionicons
-                      name={tab.icon}
-                      size={20}
-                      color={Colors.textTertiary}
-                    />
-                  </View>
-                )}
+                <Animated.View
+                  style={[
+                    active ? styles.activeIconContainer : styles.inactiveIconContainer,
+                    {
+                      transform: [{ scale: scaleAnims[index] }],
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={tab.icon}
+                    size={active ? 24 : 22}
+                    color={active ? Colors.white : Colors.textTertiary}
+                  />
+                </Animated.View>
               </TouchableOpacity>
             );
           })}
@@ -320,7 +341,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'rgba(42, 42, 42, 0.7)', // Semi-transparent dark gray for glass effect
     borderRadius: 50, // More curvature for capsule shape
-    paddingVertical: 8, // Thinner bar
+    paddingVertical: 0,
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -340,19 +361,20 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 0,
+    height: '100%',
   },
   activeIconContainer: {
-    width: 48, // Bigger blue circle
-    height: 48, // Bigger blue circle
+    width: 52, // Slightly bigger blue circle
+    height: 52, // Slightly bigger blue circle
     borderRadius: 50, // Perfect circle
     backgroundColor: Colors.accent, // Blue circle
     justifyContent: 'center',
     alignItems: 'center',
   },
   inactiveIconContainer: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12, // Rounded square
     borderWidth: 1,
     borderColor: Colors.cardBorderSecondary, // Gray outline
