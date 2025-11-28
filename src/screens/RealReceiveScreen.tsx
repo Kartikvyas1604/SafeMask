@@ -18,7 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore, ChainType } from '../core/SafeMaskWalletCore';
 import ChainIcon from '../components/ChainIcon';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
@@ -44,7 +44,7 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
   const [selectedAddress, setSelectedAddress] = useState<ChainAddress | null>(null);
   const [loading, setLoading] = useState(true);
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
-  const [hdWallet] = useState(() => new ZetarisWalletCore());
+  const [hdWallet] = useState(() => new SafeMaskWalletCore());
   const hasLoadedAddresses = useRef(false);
 
   // Only load addresses once when component mounts
@@ -61,9 +61,9 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
       logger.info('📥 Loading wallet addresses...');
       
       // Load wallet from AsyncStorage
-      let walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data');
+      let walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data');
       if (!walletDataStr) {
-        walletDataStr = await AsyncStorage.getItem('Zetaris_wallet');
+        walletDataStr = await AsyncStorage.getItem('SafeMask_wallet');
       }
       
       if (!walletDataStr) {

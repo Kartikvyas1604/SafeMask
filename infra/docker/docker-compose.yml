@@ -5,7 +5,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.bridge-watcher
-    container_name: Zetaris-bridge-watcher
+    container_name: SafeMask-bridge-watcher
     environment:
       - NODE_ENV=production
       - ETHEREUM_RPC_URL=${ETHEREUM_RPC_URL}
@@ -18,7 +18,7 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - Zetaris
+      - SafeMask
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -30,7 +30,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.mesh-node
-    container_name: Zetaris-mesh-node
+    container_name: SafeMask-mesh-node
     environment:
       - NODE_ENV=production
       - MESH_PORT=8333
@@ -41,7 +41,7 @@ services:
       - "8333:8333"
       - "9090:9090"
     networks:
-      - Zetaris
+      - SafeMask
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -51,18 +51,18 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: Zetaris-redis
+    container_name: SafeMask-redis
     ports:
       - "6379:6379"
     networks:
-      - Zetaris
+      - SafeMask
     volumes:
       - redis-data:/data
     restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: Zetaris-prometheus
+    container_name: SafeMask-prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
@@ -72,12 +72,12 @@ services:
     ports:
       - "9091:9090"
     networks:
-      - Zetaris
+      - SafeMask
     restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
-    container_name: Zetaris-grafana
+    container_name: SafeMask-grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -87,11 +87,11 @@ services:
     ports:
       - "3001:3000"
     networks:
-      - Zetaris
+      - SafeMask
     restart: unless-stopped
 
 networks:
-  Zetaris:
+  SafeMask:
     driver: bridge
 
 volumes:

@@ -32,7 +32,7 @@ const EXPLORER_APIS = {
   },
 };
 
-const CACHE_KEY_PREFIX = '@Zetaris:tx_history:';
+const CACHE_KEY_PREFIX = '@SafeMask:tx_history:';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 interface CachedData {

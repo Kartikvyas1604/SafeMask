@@ -1,5 +1,5 @@
 #!/bin/bash
-# Circuit Compilation Script for Zetaris
+# Circuit Compilation Script for SafeMask
 # Compiles Circom circuits to R1CS, WASM, and generates ZKeys
 
 set -e
@@ -16,7 +16,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Zetaris Circuit Compilation${NC}"
+echo -e "${GREEN}SafeMask Circuit Compilation${NC}"
 echo "================================"
 
 # Create build directory
@@ -70,10 +70,10 @@ compile_circuit() {
     
     # Contribute to the ceremony (Phase 2)
     echo "  - Contributing to Phase 2 ceremony..."
-    echo "Zetaris-contribution" | snarkjs zkey contribute \
+    echo "SafeMask-contribution" | snarkjs zkey contribute \
         "$output_dir/circuit_0000.zkey" \
         "$output_dir/circuit_final.zkey" \
-        --name="Zetaris Contribution" \
+        --name="SafeMask Contribution" \
         > /dev/null 2>&1
     
     # Export verification key

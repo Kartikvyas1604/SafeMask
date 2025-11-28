@@ -277,7 +277,7 @@ export class NFCTransferProtocol extends EventEmitter {
     // Create NDEF record
     const record = {
       tnf: Ndef.TNF_EXTERNAL_TYPE,
-      type: 'zetaris.wallet:transfer',
+      type: 'SafeMask.wallet:transfer',
       id: Buffer.from(''),
       payload: payloadBytes,
     };
@@ -289,13 +289,13 @@ export class NFCTransferProtocol extends EventEmitter {
    * Parse NDEF message to payload
    */
   private parseNdefMessage(ndefMessage: any[]): NFCTransferPayload {
-    // Find Zetaris transfer record
+    // Find SafeMask transfer record
     const record = ndefMessage.find(
-      (r) => r.type && Buffer.from(r.type).toString() === 'zetaris.wallet:transfer'
+      (r) => r.type && Buffer.from(r.type).toString() === 'SafeMask.wallet:transfer'
     );
 
     if (!record || !record.payload) {
-      throw new Error('Invalid NDEF message: no Zetaris transfer record found');
+      throw new Error('Invalid NDEF message: no SafeMask transfer record found');
     }
 
     // Deserialize payload

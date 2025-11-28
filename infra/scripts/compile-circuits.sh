@@ -5,7 +5,7 @@
 
 set -e
 
-echo "=== Zetaris Circuit Compilation ==="
+echo "=== SafeMask Circuit Compilation ==="
 
 # Check if circom is installed
 if ! command -v circom &> /dev/null; then
@@ -58,7 +58,7 @@ for circuit_file in circom/*.circom; do
     snarkjs zkey contribute \
         "build/${circuit_name}_0000.zkey" \
         "build/${circuit_name}_final.zkey" \
-        --name="Zetaris" \
+        --name="SafeMask" \
         -e="$(date +%s)"
     
     # Export verification key

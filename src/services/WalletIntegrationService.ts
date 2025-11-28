@@ -1,7 +1,7 @@
 import { ProductionTransactionService } from './ProductionTransactionService';
 import { priceOracle } from './PriceOracleService';
 import { biometricAuth } from './BiometricAuthService';
-import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore } from '../core/SafeMaskWalletCore';
 import * as logger from '../utils/logger';
 
 export interface WalletBalance {
@@ -25,7 +25,7 @@ export interface TransactionParams {
 export class WalletIntegrationService {
   private static instance: WalletIntegrationService;
   private txService: ProductionTransactionService;
-  private walletCore: ZetarisWalletCore | null = null;
+  private walletCore: SafeMaskWalletCore | null = null;
 
   private constructor() {
     this.txService = ProductionTransactionService.getInstance();
@@ -43,8 +43,8 @@ export class WalletIntegrationService {
    */
   public async initializeWallet(mnemonic: string): Promise<boolean> {
     try {
-      this.walletCore = new ZetarisWalletCore();
-      // Note: Actual wallet initialization handled by ZetarisWalletCore internally
+      this.walletCore = new SafeMaskWalletCore();
+      // Note: Actual wallet initialization handled by SafeMaskWalletCore internally
       logger.info('✅ Wallet initialized');
       return true;
     } catch (error) {

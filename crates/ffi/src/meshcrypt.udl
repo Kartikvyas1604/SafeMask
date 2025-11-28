@@ -1,4 +1,4 @@
-namespace Zetaris {
+namespace SafeMask {
     // Wallet operations
     WalletHandle create_wallet(string mnemonic, string password);
     string generate_mnemonic();
@@ -83,7 +83,7 @@ dictionary ZkProof {
 };
 
 [Error]
-enum ZetarisError {
+enum SafeMaskError {
     "InvalidMnemonic",
     "InvalidPassword",
     "InvalidAddress",

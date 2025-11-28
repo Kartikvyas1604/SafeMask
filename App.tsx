@@ -23,7 +23,7 @@ export default function App() {
 
   const checkInitialState = async () => {
     try {
-      const wallet = await AsyncStorage.getItem('Zetaris_has_wallet');
+      const wallet = await AsyncStorage.getItem('SafeMask_has_wallet');
       const hasWalletValue = wallet === 'true';
       setHasWallet(hasWalletValue);
       
@@ -32,7 +32,7 @@ export default function App() {
         setIsLocked(false);
       } else {
         // Wallet exists - check if we should lock
-        const autoLockEnabled = await AsyncStorage.getItem('Zetaris_autoLock');
+        const autoLockEnabled = await AsyncStorage.getItem('SafeMask_autoLock');
         
         if (autoLockEnabled !== 'false') {
           // Auto-lock is enabled (default true)
@@ -53,19 +53,19 @@ export default function App() {
   const handleAppStateChange = async (nextAppState: AppStateStatus) => {
     if (nextAppState === 'background' || nextAppState === 'inactive') {
       // App going to background
-      const wallet = await AsyncStorage.getItem('Zetaris_has_wallet');
+      const wallet = await AsyncStorage.getItem('SafeMask_has_wallet');
       if (wallet === 'true') {
         // Save the time when app went to background
-        await AsyncStorage.setItem('Zetaris_background_time', Date.now().toString());
+        await AsyncStorage.setItem('SafeMask_background_time', Date.now().toString());
       }
     } else if (nextAppState === 'active') {
       // App coming to foreground
-      const wallet = await AsyncStorage.getItem('Zetaris_has_wallet');
+      const wallet = await AsyncStorage.getItem('SafeMask_has_wallet');
       if (wallet === 'true') {
-        const autoLockEnabled = await AsyncStorage.getItem('Zetaris_autoLock');
+        const autoLockEnabled = await AsyncStorage.getItem('SafeMask_autoLock');
         
         if (autoLockEnabled !== 'false') {
-          const backgroundTime = await AsyncStorage.getItem('Zetaris_background_time');
+          const backgroundTime = await AsyncStorage.getItem('SafeMask_background_time');
           
           if (backgroundTime) {
             const timeInBackground = Date.now() - parseInt(backgroundTime);
@@ -85,7 +85,7 @@ export default function App() {
   };
 
   const handleUnlock = async () => {
-    await AsyncStorage.setItem('Zetaris_last_unlock', Date.now().toString());
+    await AsyncStorage.setItem('SafeMask_last_unlock', Date.now().toString());
     setIsLocked(false);
   };
 

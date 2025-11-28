@@ -33,7 +33,7 @@ interface AssetData {
   color: string;
 }
 
-const ZetarisWallet: React.FC<Props> = ({ navigation }) => {
+const SafeMaskWallet: React.FC<Props> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [balanceHidden, setBalanceHidden] = useState(false);
@@ -52,7 +52,7 @@ const ZetarisWallet: React.FC<Props> = ({ navigation }) => {
       setIsLoading(true);
 
       // Check if wallet exists
-      const encryptedWallet = await AsyncStorage.getItem('Zetaris_wallet');
+      const encryptedWallet = await AsyncStorage.getItem('SafeMask_wallet');
       if (!encryptedWallet) {
         navigation.replace('WalletSetup');
         return;
@@ -68,7 +68,7 @@ const ZetarisWallet: React.FC<Props> = ({ navigation }) => {
 
   const fetchPortfolioData = async () => {
     try {
-      const walletData = await AsyncStorage.getItem('Zetaris_wallet');
+      const walletData = await AsyncStorage.getItem('SafeMask_wallet');
       if (!walletData) {
         // If no wallet, show default data
         setDefaultPortfolio();
@@ -764,4 +764,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ZetarisWallet;
+export default SafeMaskWallet;

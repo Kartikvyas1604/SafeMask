@@ -1,5 +1,5 @@
 [package]
-name = "Zetaris-core"
+name = "SafeMask-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

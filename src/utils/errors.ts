@@ -57,9 +57,9 @@ export interface ErrorMetadata {
 }
 
 /**
- * Base Zetaris Error
+ * Base SafeMask Error
  */
-export class ZetarisError extends Error {
+export class SafeMaskError extends Error {
   public readonly code: ErrorCode;
   public readonly timestamp: number;
   public readonly retryable: boolean;
@@ -74,7 +74,7 @@ export class ZetarisError extends Error {
     originalError?: Error
   ) {
     super(message);
-    this.name = 'ZetarisError';
+    this.name = 'SafeMaskError';
     this.code = code;
     this.timestamp = Date.now();
     this.retryable = retryable;
@@ -103,7 +103,7 @@ export class ZetarisError extends Error {
 /**
  * Network-related errors
  */
-export class NetworkError extends ZetarisError {
+export class NetworkError extends SafeMaskError {
   constructor(
     message: string,
     code: ErrorCode = ErrorCode.NETWORK_UNAVAILABLE,
@@ -132,7 +132,7 @@ export class RpcError extends NetworkError {
 /**
  * Wallet-related errors
  */
-export class WalletError extends ZetarisError {
+export class WalletError extends SafeMaskError {
   constructor(
     message: string,
     code: ErrorCode = ErrorCode.WALLET_NOT_INITIALIZED,
@@ -147,7 +147,7 @@ export class WalletError extends ZetarisError {
 /**
  * Transaction errors
  */
-export class TransactionError extends ZetarisError {
+export class TransactionError extends SafeMaskError {
   constructor(
     message: string,
     code: ErrorCode = ErrorCode.TX_FAILED,
@@ -163,7 +163,7 @@ export class TransactionError extends ZetarisError {
 /**
  * Storage errors
  */
-export class StorageError extends ZetarisError {
+export class StorageError extends SafeMaskError {
   constructor(
     message: string,
     code: ErrorCode = ErrorCode.STORAGE_ERROR,
@@ -178,7 +178,7 @@ export class StorageError extends ZetarisError {
 /**
  * ZK proof errors
  */
-export class ZkError extends ZetarisError {
+export class ZkError extends SafeMaskError {
   constructor(
     message: string,
     code: ErrorCode = ErrorCode.PROOF_GENERATION_FAILED,
@@ -193,7 +193,7 @@ export class ZkError extends ZetarisError {
 /**
  * Circuit breaker open error
  */
-export class CircuitBreakerError extends ZetarisError {
+export class CircuitBreakerError extends SafeMaskError {
   constructor(message: string = 'Circuit breaker is open', context?: Record<string, any>) {
     super(message, ErrorCode.CIRCUIT_OPEN, false, context);
     this.name = 'CircuitBreakerError';
@@ -203,7 +203,7 @@ export class CircuitBreakerError extends ZetarisError {
 /**
  * Validation errors
  */
-export class ValidationError extends ZetarisError {
+export class ValidationError extends SafeMaskError {
   constructor(message: string, context?: Record<string, any>) {
     super(message, ErrorCode.VALIDATION_ERROR, false, context);
     this.name = 'ValidationError';
@@ -214,7 +214,7 @@ export class ValidationError extends ZetarisError {
  * Check if error is retryable
  */
 export function isRetryableError(error: any): boolean {
-  if (error instanceof ZetarisError) {
+  if (error instanceof SafeMaskError) {
     return error.retryable;
   }
 
@@ -238,7 +238,7 @@ export function isRetryableError(error: any): boolean {
 
   return retryablePatterns.some(pattern => message.includes(pattern));
 }
-export function parseEthersError(error: any): ZetarisError {
+export function parseEthersError(error: any): SafeMaskError {
   const message = error?.message || 'Unknown error';
   const code = error?.code || '';
 
@@ -289,5 +289,5 @@ export function parseEthersError(error: any): ZetarisError {
   }
 
   // Default to generic error
-  return new ZetarisError(message, ErrorCode.UNKNOWN_ERROR, isRetryableError(error), { code }, error);
+  return new SafeMaskError(message, ErrorCode.UNKNOWN_ERROR, isRetryableError(error), { code }, error);
 }

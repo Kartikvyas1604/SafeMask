@@ -1,5 +1,5 @@
 /**
- * Zetaris Wallet Core - Multi-Chain HD Wallet
+ * SafeMask Wallet Core - Multi-Chain HD Wallet
  * Supports: Zcash, Ethereum, Polygon, Solana, Bitcoin
  */
 
@@ -41,7 +41,7 @@ export interface WalletData {
   createdAt: number;
 }
 
-export class ZetarisWalletCore {
+export class SafeMaskWalletCore {
   private walletData: WalletData | null = null;
 
   /**

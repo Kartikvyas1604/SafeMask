@@ -1,6 +1,6 @@
-# Zetaris User Manual
+# SafeMask User Manual
 
-Complete guide for using Zetaris privacy wallet.
+Complete guide for using SafeMask privacy wallet.
 
 ## Table of Contents
 1. [Getting Started](#getting-started)
@@ -18,13 +18,13 @@ Complete guide for using Zetaris privacy wallet.
 
 #### iOS
 1. Open the App Store
-2. Search for "Zetaris"
+2. Search for "SafeMask"
 3. Tap **Get** to download
 4. Or join our TestFlight beta: [testflight link]
 
 #### Android
 1. Open Google Play Store
-2. Search for "Zetaris"
+2. Search for "SafeMask"
 3. Tap **Install**
 4. Or download APK from [releases page]
 
@@ -37,7 +37,7 @@ Complete guide for using Zetaris privacy wallet.
 ## Creating Your First Wallet
 
 ### Step 1: Generate Seed Phrase
-1. Open Zetaris
+1. Open SafeMask
 2. Tap **"Create New Wallet"**
 3. Your 24-word seed phrase will be displayed
 4. **CRITICAL**: Write down these words in order on paper
@@ -45,7 +45,7 @@ Complete guide for using Zetaris privacy wallet.
 
 ⚠️ **WARNING**: 
 - Anyone with your seed phrase controls your funds
-- Zetaris cannot recover lost seed phrases
+- SafeMask cannot recover lost seed phrases
 - Never share your seed phrase with anyone
 - Never store it digitally (no photos, cloud, etc.)
 
@@ -158,7 +158,7 @@ Tap the **Privacy Shield** icon to see:
 
 ### Private Token Swaps
 
-Zetaris includes a built-in DEX with privacy:
+SafeMask includes a built-in DEX with privacy:
 
 #### Swap Tokens
 1. Tap **"Swap"** in the home screen
@@ -328,7 +328,7 @@ Zetaris includes a built-in DEX with privacy:
 
 **Solution**:
 1. Use their regular address instead
-2. Or send them a Zetaris invite
+2. Or send them a SafeMask invite
 3. Standard transactions still work
 
 ### Range Proof Generation Failed
@@ -378,14 +378,14 @@ Zetaris includes a built-in DEX with privacy:
 3. Or tap **"Contact Support"**
 
 ### Community
-- **Discord**: [discord.gg/Zetaris](https://discord.gg/Zetaris)
-- **Telegram**: [t.me/Zetaris](https://t.me/Zetaris)
-- **Forum**: [forum.Zetaris.io](https://forum.Zetaris.io)
+- **Discord**: [discord.gg/SafeMask](https://discord.gg/SafeMask)
+- **Telegram**: [t.me/SafeMask](https://t.me/SafeMask)
+- **Forum**: [forum.SafeMask.io](https://forum.SafeMask.io)
 
 ### Email Support
-- General: support@Zetaris.io
-- Technical: tech@Zetaris.io
-- Security: security@Zetaris.io
+- General: support@SafeMask.io
+- Technical: tech@SafeMask.io
+- Security: security@SafeMask.io
 
 ### Response Times
 - **Critical** (funds at risk): <4 hours
@@ -421,4 +421,4 @@ Zetaris includes a built-in DEX with privacy:
 
 ---
 
-**Need more help?** Join our [Discord community](https://discord.gg/Zetaris) for real-time support!
+**Need more help?** Join our [Discord community](https://discord.gg/SafeMask) for real-time support!

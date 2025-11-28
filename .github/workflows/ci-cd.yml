@@ -142,10 +142,10 @@ jobs:
           file: ./infra/docker/Dockerfile.bridge-watcher
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/Zetaris-bridge-watcher:latest
-            ${{ secrets.DOCKER_USERNAME }}/Zetaris-bridge-watcher:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/Zetaris-bridge-watcher:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/Zetaris-bridge-watcher:buildcache,mode=max
+            ${{ secrets.DOCKER_USERNAME }}/SafeMask-bridge-watcher:latest
+            ${{ secrets.DOCKER_USERNAME }}/SafeMask-bridge-watcher:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/SafeMask-bridge-watcher:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/SafeMask-bridge-watcher:buildcache,mode=max
       
       - name: Build and push mesh-node
         uses: docker/build-push-action@v5
@@ -154,8 +154,8 @@ jobs:
           file: ./infra/docker/Dockerfile.mesh-node
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/Zetaris-mesh-node:latest
-            ${{ secrets.DOCKER_USERNAME }}/Zetaris-mesh-node:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/SafeMask-mesh-node:latest
+            ${{ secrets.DOCKER_USERNAME }}/SafeMask-mesh-node:${{ github.sha }}
 
   security-scan:
     name: Security Scanning
@@ -184,7 +184,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     environment:
       name: staging
-      url: https://staging.Zetaris.io
+      url: https://staging.SafeMask.io
     
     steps:
       - name: Checkout code
@@ -204,8 +204,8 @@ jobs:
         run: |
           export KUBECONFIG=./kubeconfig
           kubectl apply -f infra/k8s/staging/
-          kubectl rollout status deployment/Zetaris-bridge-watcher -n Zetaris-staging
-          kubectl rollout status deployment/Zetaris-mesh-node -n Zetaris-staging
+          kubectl rollout status deployment/SafeMask-bridge-watcher -n SafeMask-staging
+          kubectl rollout status deployment/SafeMask-mesh-node -n SafeMask-staging
 
   deploy-production:
     name: Deploy to Production
@@ -214,7 +214,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     environment:
       name: production
-      url: https://Zetaris.io
+      url: https://SafeMask.io
     
     steps:
       - name: Checkout code
@@ -234,11 +234,11 @@ jobs:
         run: |
           export KUBECONFIG=./kubeconfig
           kubectl apply -f infra/k8s/production/
-          kubectl rollout status deployment/Zetaris-bridge-watcher -n Zetaris-prod
-          kubectl rollout status deployment/Zetaris-mesh-node -n Zetaris-prod
+          kubectl rollout status deployment/SafeMask-bridge-watcher -n SafeMask-prod
+          kubectl rollout status deployment/SafeMask-mesh-node -n SafeMask-prod
       
       - name: Verify deployment
         run: |
           export KUBECONFIG=./kubeconfig
-          kubectl get pods -n Zetaris-prod
-          kubectl get services -n Zetaris-prod
+          kubectl get pods -n SafeMask-prod
+          kubectl get services -n SafeMask-prod

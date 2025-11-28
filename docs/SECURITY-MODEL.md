@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Comprehensive security architecture for Zetaris wallet including threat model, cryptographic guarantees, and audit guidelines.
+Comprehensive security architecture for SafeMask wallet including threat model, cryptographic guarantees, and audit guidelines.
 
 **Security Level**: 128-bit minimum across all operations.
 

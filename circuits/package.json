@@ -1,7 +1,7 @@
 {
-  "name": "Zetaris-circuits",
+  "name": "SafeMask-circuits",
   "version": "1.0.0",
-  "description": "Zero-knowledge circuits for Zetaris privacy wallet",
+  "description": "Zero-knowledge circuits for SafeMask privacy wallet",
   "scripts": {
     "compile": "npm run compile:all",
     "compile:all": "npm run compile:transfer && npm run compile:stealth && npm run compile:range && npm run compile:merkle && npm run compile:swap && npm run compile:nullifier",
@@ -28,7 +28,7 @@
     "circom",
     "cryptocurrency"
   ],
-  "author": "Zetaris Team",
+  "author": "SafeMask Team",
   "license": "MIT",
   "devDependencies": {
     "circomlib": "^2.0.5",

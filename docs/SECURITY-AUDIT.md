@@ -1,4 +1,4 @@
-# Zetaris Security Audit Checklist
+# SafeMask Security Audit Checklist
 
 Comprehensive security checklist for pre-launch audit.
 

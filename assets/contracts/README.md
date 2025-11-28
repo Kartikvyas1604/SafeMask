@@ -1,6 +1,6 @@
-# Zetaris Smart Contracts
+# SafeMask Smart Contracts
 
-Solidity smart contracts for the Zetaris privacy wallet ecosystem.
+Solidity smart contracts for the SafeMask privacy wallet ecosystem.
 
 ## Contracts Overview
 

@@ -52,7 +52,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
   const checkBiometric = async () => {
     try {
-      const enabled = await AsyncStorage.getItem('Zetaris_biometric');
+      const enabled = await AsyncStorage.getItem('SafeMask_biometric');
       if (enabled === 'true') {
         const compatible = await LocalAuthentication.hasHardwareAsync();
         const enrolled = await LocalAuthentication.isEnrolledAsync();
@@ -113,11 +113,11 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
     setIsLoading(true);
     try {
-      const storedPassword = await AsyncStorage.getItem('Zetaris_password');
+      const storedPassword = await AsyncStorage.getItem('SafeMask_password');
       
       if (password === storedPassword) {
         // Update last unlock time
-        await AsyncStorage.setItem('Zetaris_last_unlock', Date.now().toString());
+        await AsyncStorage.setItem('SafeMask_last_unlock', Date.now().toString());
         onUnlock();
       } else {
         Alert.alert('Incorrect Password', 'Please try again');

@@ -80,7 +80,7 @@ export default function AppNavigator() {
 
   const checkWallet = async () => {
     try {
-      const wallet = await AsyncStorage.getItem('Zetaris_has_wallet');
+      const wallet = await AsyncStorage.getItem('SafeMask_has_wallet');
       setHasWallet(wallet === 'true');
     } catch {
       setHasWallet(false);

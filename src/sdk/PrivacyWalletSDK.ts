@@ -5,7 +5,7 @@
 
 import { ethers } from 'ethers';
 import * as logger from '../utils/logger';
-import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore } from '../core/SafeMaskWalletCore';
 import { FusionPlusClient } from '../fusion/FusionPlusClient';
 import MeshNetworkProtocol from '../mesh/MeshNetworkProtocol';
 import NFCProtocol from '../nfc/NFCProtocol';
@@ -83,7 +83,7 @@ export interface SDKStatus {
  */
 export class PrivacyWalletSDK {
   // Core components
-  private wallet: ZetarisWalletCore;
+  private wallet: SafeMaskWalletCore;
   private fusion?: FusionPlusClient;
   private mesh?: MeshNetworkProtocol;
   private nfc?: NFCProtocol;
@@ -112,7 +112,7 @@ export class PrivacyWalletSDK {
       ...config,
     };
 
-    this.wallet = new ZetarisWalletCore();
+    this.wallet = new SafeMaskWalletCore();
     logger.info('🚀 Privacy Wallet SDK created');
   }
 
@@ -192,7 +192,7 @@ export class PrivacyWalletSDK {
   /**
    * Get wallet core
    */
-  getWallet(): ZetarisWalletCore {
+  getWallet(): SafeMaskWalletCore {
     return this.wallet;
   }
 

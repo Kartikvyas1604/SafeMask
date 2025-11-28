@@ -19,7 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore, ChainType } from '../core/SafeMaskWalletCore';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -56,7 +56,7 @@ export default function ImportPrivateKeyScreen({ navigation }: ImportPrivateKeyS
     // Try to derive address for preview
     if (text.length > 30) {
       try {
-        const walletCore = new ZetarisWalletCore();
+        const walletCore = new SafeMaskWalletCore();
         const account = await walletCore.importPrivateKey(text.trim(), selectedChain);
         setDerivedAddress(account.address);
       } catch {
@@ -79,7 +79,7 @@ export default function ImportPrivateKeyScreen({ navigation }: ImportPrivateKeyS
     setError('');
 
     try {
-      const walletCore = new ZetarisWalletCore();
+      const walletCore = new SafeMaskWalletCore();
       const account = await walletCore.importPrivateKey(trimmedKey, selectedChain);
       
       // Set default name if not provided
@@ -88,11 +88,11 @@ export default function ImportPrivateKeyScreen({ navigation }: ImportPrivateKeyS
       }
       
       // Save imported account
-      const existingWallet = await AsyncStorage.getItem('Zetaris_wallet');
+      const existingWallet = await AsyncStorage.getItem('SafeMask_wallet');
       if (existingWallet) {
         const wallet = JSON.parse(existingWallet);
         wallet.accounts.push({ ...account, isImported: true });
-        await AsyncStorage.setItem('Zetaris_wallet', JSON.stringify(wallet));
+        await AsyncStorage.setItem('SafeMask_wallet', JSON.stringify(wallet));
       } else {
         // Create new wallet with just this imported account
         const newWallet = {
@@ -100,8 +100,8 @@ export default function ImportPrivateKeyScreen({ navigation }: ImportPrivateKeyS
           unifiedAddress: '',
           createdAt: Date.now(),
         };
-        await AsyncStorage.setItem('Zetaris_wallet', JSON.stringify(newWallet));
-        await AsyncStorage.setItem('Zetaris_has_wallet', 'true');
+        await AsyncStorage.setItem('SafeMask_wallet', JSON.stringify(newWallet));
+        await AsyncStorage.setItem('SafeMask_has_wallet', 'true');
       }
       
       // Navigate to main wallet

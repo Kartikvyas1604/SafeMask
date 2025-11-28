@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore } from '../core/SafeMaskWalletCore';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -100,14 +100,14 @@ export default function VerifySeedPhraseScreen({ route, navigation }: VerifySeed
     // Save wallet
     setLoading(true);
     try {
-      const walletCore = new ZetarisWalletCore();
+      const walletCore = new SafeMaskWalletCore();
       const wallet = await walletCore.importWallet(seedPhrase);
       
       // Save to AsyncStorage
-      await AsyncStorage.setItem('Zetaris_wallet_data', JSON.stringify(wallet));
-      await AsyncStorage.setItem('Zetaris_has_wallet', 'true');
-      await AsyncStorage.setItem('Zetaris_password', password);
-      await AsyncStorage.setItem('Zetaris_last_unlock', Date.now().toString());
+      await AsyncStorage.setItem('SafeMask_wallet_data', JSON.stringify(wallet));
+      await AsyncStorage.setItem('SafeMask_has_wallet', 'true');
+      await AsyncStorage.setItem('SafeMask_password', password);
+      await AsyncStorage.setItem('SafeMask_last_unlock', Date.now().toString());
       
       // Navigate to main wallet
       navigation.reset({

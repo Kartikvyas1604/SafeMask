@@ -1,4 +1,4 @@
-module github.com/Zetaris/bridge-watcher
+module github.com/SafeMask/bridge-watcher
 
 go 1.21
 

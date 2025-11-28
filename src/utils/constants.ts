@@ -166,14 +166,14 @@ export const LIMITS = {
 } as const;
 
 export const STORAGE_KEYS = {
-  WALLET_ENCRYPTED: '@Zetaris:wallet_encrypted',
-  BIOMETRIC_ENABLED: '@Zetaris:biometric_enabled',
-  SELECTED_NETWORK: '@Zetaris:selected_network',
-  CURRENCY_PREFERENCE: '@Zetaris:currency',
-  LANGUAGE: '@Zetaris:language',
-  DARK_MODE: '@Zetaris:dark_mode',
-  RECENT_ADDRESSES: '@Zetaris:recent_addresses',
-  CUSTOM_TOKENS: '@Zetaris:custom_tokens',
+  WALLET_ENCRYPTED: '@SafeMask:wallet_encrypted',
+  BIOMETRIC_ENABLED: '@SafeMask:biometric_enabled',
+  SELECTED_NETWORK: '@SafeMask:selected_network',
+  CURRENCY_PREFERENCE: '@SafeMask:currency',
+  LANGUAGE: '@SafeMask:language',
+  DARK_MODE: '@SafeMask:dark_mode',
+  RECENT_ADDRESSES: '@SafeMask:recent_addresses',
+  CUSTOM_TOKENS: '@SafeMask:custom_tokens',
 } as const;
 
 export const API_ENDPOINTS = {

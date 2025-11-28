@@ -8,11 +8,11 @@ import * as Keychain from 'react-native-keychain';
 
 // Storage keys
 const STORAGE_KEYS = {
-  ENCRYPTED_MNEMONIC: '@Zetaris:encrypted_mnemonic',
-  ENCRYPTED_KEYS: '@Zetaris:encrypted_keys',
-  SALT: '@Zetaris:salt',
-  KEY_ROTATION_DATE: '@Zetaris:key_rotation_date',
-  ENCRYPTED_METADATA: '@Zetaris:metadata',
+  ENCRYPTED_MNEMONIC: '@SafeMask:encrypted_mnemonic',
+  ENCRYPTED_KEYS: '@SafeMask:encrypted_keys',
+  SALT: '@SafeMask:salt',
+  KEY_ROTATION_DATE: '@SafeMask:key_rotation_date',
+  ENCRYPTED_METADATA: '@SafeMask:metadata',
 } as const;
 
 // Encryption configuration

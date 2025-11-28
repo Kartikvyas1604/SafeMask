@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore } from '../core/SafeMaskWalletCore';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -41,7 +41,7 @@ export default function CreateWalletScreen({ navigation }: CreateWalletScreenPro
 
   const generateWallet = async () => {
     try {
-      const walletCore = new ZetarisWalletCore();
+      const walletCore = new SafeMaskWalletCore();
       const wallet = await walletCore.createWallet();
       setSeedPhrase(wallet.seedPhrase);
       setWords(wallet.seedPhrase.split(' '));

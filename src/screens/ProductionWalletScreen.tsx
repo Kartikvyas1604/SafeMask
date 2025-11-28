@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RealBlockchainService, { RealBalance } from '../blockchain/RealBlockchainService';
-import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore, ChainType } from '../core/SafeMaskWalletCore';
 import ChainIcon from '../components/ChainIcon';
 import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';
@@ -141,7 +141,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const [balanceHidden, setBalanceHidden] = useState(false);
   const [showTokenPicker, setShowTokenPicker] = useState(false);
   const [favoriteTokens, setFavoriteTokens] = useState<{ symbol: string; chain: string }[]>([]);
-  const [hdWallet] = useState(() => new ZetarisWalletCore());
+  const [hdWallet] = useState(() => new SafeMaskWalletCore());
   
   const blockchainService = RealBlockchainService;
   
@@ -225,11 +225,11 @@ export default function ProductionWalletScreen({ navigation }: any) {
       logger.info(`🚀 Loading wallet from storage...`);
       
       // Try to load wallet data from AsyncStorage (check both keys for backward compatibility)
-      let walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data');
+      let walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data');
       
       if (!walletDataStr) {
         // Try old key
-        walletDataStr = await AsyncStorage.getItem('Zetaris_wallet');
+        walletDataStr = await AsyncStorage.getItem('SafeMask_wallet');
       }
       
       if (!walletDataStr) {

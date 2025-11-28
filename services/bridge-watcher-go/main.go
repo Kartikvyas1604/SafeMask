@@ -8,14 +8,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Zetaris/bridge-watcher/internal/bridge"
-	"github.com/Zetaris/bridge-watcher/internal/config"
-	"github.com/Zetaris/bridge-watcher/internal/relayer"
-	"github.com/Zetaris/bridge-watcher/internal/server"
+	"github.com/SafeMask/bridge-watcher/internal/bridge"
+	"github.com/SafeMask/bridge-watcher/internal/config"
+	"github.com/SafeMask/bridge-watcher/internal/relayer"
+	"github.com/SafeMask/bridge-watcher/internal/server"
 )
 
 func main() {
-	log.Println("🌉 Starting Zetaris Bridge Watcher...")
+	log.Println("🌉 Starting SafeMask Bridge Watcher...")
 
 	// Load configuration
 	cfg, err := config.Load()

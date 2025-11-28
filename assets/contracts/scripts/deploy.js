@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 async function main() {
-  console.log("🚀 Starting Zetaris contract deployment...\n");
+  console.log("🚀 Starting SafeMask contract deployment...\n");
 
   const [deployer] = await hre.ethers.getSigners();
   console.log("Deploying contracts with account:", deployer.address);

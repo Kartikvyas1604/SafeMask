@@ -1,12 +1,12 @@
 /**
- * TEST: Real Zetaris Wallet - Proves NO MOCKS
+ * TEST: Real SafeMask Wallet - Proves NO MOCKS
  * This actually generates real BIP-39 mnemonics and derives real keys
  */
 
 import { RealKeyManager } from '../src/core/realKeyManager';
 
 async function testRealWallet() {
-  console.log('🚀 Testing REAL Zetaris Wallet (NO MOCKS)\n');
+  console.log('🚀 Testing REAL SafeMask Wallet (NO MOCKS)\n');
   
   // REAL: Generate 24-word mnemonic
   const mnemonic = RealKeyManager.generateMnemonic();
@@ -30,7 +30,7 @@ async function testRealWallet() {
   }
   
   // REAL: Sign a message
-  const message = new TextEncoder().encode('Hello Zetaris!');
+  const message = new TextEncoder().encode('Hello SafeMask!');
   const signature = await wallet.signMessage(message, "m/44'/60'/0'/0/0");
   console.log('✅ Signed message with secp256k1:');
   console.log(`  Signature: 0x${Buffer.from(signature).toString('hex').slice(0, 40)}...\n`);

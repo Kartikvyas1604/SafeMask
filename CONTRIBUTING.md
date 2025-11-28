@@ -1,6 +1,6 @@
-# Contributing to Zetaris
+# Contributing to SafeMask
 
-Thank you for your interest in contributing to Zetaris! This document provides guidelines and instructions for contributors.
+Thank you for your interest in contributing to SafeMask! This document provides guidelines and instructions for contributors.
 
 ## Table of Contents
 1. [Code of Conduct](#code-of-conduct)
@@ -36,7 +36,7 @@ We pledge to make participation in our project a harassment-free experience for 
 - Other conduct which could reasonably be considered inappropriate
 
 ### Enforcement
-Violations may be reported to conduct@Zetaris.io. All complaints will be reviewed and investigated promptly and fairly.
+Violations may be reported to conduct@SafeMask.io. All complaints will be reviewed and investigated promptly and fairly.
 
 ## Getting Started
 
@@ -51,8 +51,8 @@ Violations may be reported to conduct@Zetaris.io. All complaints will be reviewe
 
 1. **Fork the repository**
 ```bash
-gh repo fork Zetaris/Zetaris
-cd Zetaris
+gh repo fork SafeMask/SafeMask
+cd SafeMask
 ```
 
 2. **Install dependencies**
@@ -116,7 +116,7 @@ npm start
 ### Creating New Issues
 
 **Bug reports** should include:
-- Zetaris version
+- SafeMask version
 - Operating system
 - Steps to reproduce
 - Expected vs actual behavior
@@ -519,7 +519,7 @@ Closes #123
 **DO NOT** create public issues for security vulnerabilities.
 
 **Instead**:
-1. Email: security@Zetaris.io
+1. Email: security@SafeMask.io
 2. Include:
    - Vulnerability description
    - Steps to reproduce
@@ -555,8 +555,8 @@ When contributing code that touches:
 
 ## Questions?
 
-- **Discord**: [discord.gg/Zetaris](https://discord.gg/Zetaris)
-- **Telegram**: [t.me/Zetaris-dev](https://t.me/Zetaris-dev)
-- **Email**: dev@Zetaris.io
+- **Discord**: [discord.gg/SafeMask](https://discord.gg/SafeMask)
+- **Telegram**: [t.me/SafeMask-dev](https://t.me/SafeMask-dev)
+- **Email**: dev@SafeMask.io
 
-Thank you for contributing to Zetaris! 🎉
+Thank you for contributing to SafeMask! 🎉

@@ -12,7 +12,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "com.kartikvyas.Zetaris",
+      "bundleIdentifier": "com.kartikvyas.SafeMask",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Allow SafeMask to use the camera for QR code scanning",
@@ -20,7 +20,7 @@
       }
     },
     "android": {
-      "package": "com.kartikvyas.Zetaris",
+      "package": "com.kartikvyas.SafeMask",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.jpeg",
         "backgroundColor": "#ffffff"

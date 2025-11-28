@@ -91,14 +91,14 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
   const loadSettings = async () => {
     try {
-      const savedCurrency = await AsyncStorage.getItem('Zetaris_currency');
-      const savedLanguage = await AsyncStorage.getItem('Zetaris_language');
-      const savedGasFee = await AsyncStorage.getItem('Zetaris_gasFee');
-      const savedBiometric = await AsyncStorage.getItem('Zetaris_biometric');
-      const savedAutoLock = await AsyncStorage.getItem('Zetaris_autoLock');
-      const savedPrivacy = await AsyncStorage.getItem('Zetaris_privacyMode');
-      const savedBalances = await AsyncStorage.getItem('Zetaris_showBalances');
-      const savedDevMode = await AsyncStorage.getItem('Zetaris_developerMode');
+      const savedCurrency = await AsyncStorage.getItem('SafeMask_currency');
+      const savedLanguage = await AsyncStorage.getItem('SafeMask_language');
+      const savedGasFee = await AsyncStorage.getItem('SafeMask_gasFee');
+      const savedBiometric = await AsyncStorage.getItem('SafeMask_biometric');
+      const savedAutoLock = await AsyncStorage.getItem('SafeMask_autoLock');
+      const savedPrivacy = await AsyncStorage.getItem('SafeMask_privacyMode');
+      const savedBalances = await AsyncStorage.getItem('SafeMask_showBalances');
+      const savedDevMode = await AsyncStorage.getItem('SafeMask_developerMode');
 
       if (savedCurrency) setCurrency(savedCurrency);
       if (savedLanguage) setLanguage(savedLanguage);
@@ -134,18 +134,18 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
       if (result.success) {
         setBiometricEnabled(true);
-        await AsyncStorage.setItem('Zetaris_biometric', 'true');
+        await AsyncStorage.setItem('SafeMask_biometric', 'true');
         Alert.alert('✅ Success', 'Biometric authentication enabled');
       }
     } else {
       setBiometricEnabled(false);
-      await AsyncStorage.setItem('Zetaris_biometric', 'false');
+      await AsyncStorage.setItem('SafeMask_biometric', 'false');
     }
   };
 
   const handleAutoLockToggle = async (value: boolean) => {
     setAutoLockEnabled(value);
-    await AsyncStorage.setItem('Zetaris_autoLock', value.toString());
+    await AsyncStorage.setItem('SafeMask_autoLock', value.toString());
     if (value) {
       Alert.alert('Auto-Lock Enabled', 'Wallet will lock after 5 minutes of inactivity');
     }
@@ -153,17 +153,17 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
   const handlePrivacyModeToggle = async (value: boolean) => {
     setPrivacyMode(value);
-    await AsyncStorage.setItem('Zetaris_privacyMode', value.toString());
+    await AsyncStorage.setItem('SafeMask_privacyMode', value.toString());
   };
 
   const handleShowBalancesToggle = async (value: boolean) => {
     setShowBalances(value);
-    await AsyncStorage.setItem('Zetaris_showBalances', value.toString());
+    await AsyncStorage.setItem('SafeMask_showBalances', value.toString());
   };
 
   const handleDeveloperModeToggle = async (value: boolean) => {
     setDeveloperMode(value);
-    await AsyncStorage.setItem('Zetaris_developerMode', value.toString());
+    await AsyncStorage.setItem('SafeMask_developerMode', value.toString());
     if (value) {
       Alert.alert('Developer Mode', 'Advanced options enabled. Use with caution!');
     }
@@ -171,21 +171,21 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
   const handleCurrencySelect = async (curr: string) => {
     setCurrency(curr);
-    await AsyncStorage.setItem('Zetaris_currency', curr);
+    await AsyncStorage.setItem('SafeMask_currency', curr);
     setShowCurrencyModal(false);
     Alert.alert('Currency Updated', `Display currency set to ${curr}`);
   };
 
   const handleLanguageSelect = async (lang: string) => {
     setLanguage(lang);
-    await AsyncStorage.setItem('Zetaris_language', lang);
+    await AsyncStorage.setItem('SafeMask_language', lang);
     setShowLanguageModal(false);
     Alert.alert('Language Updated', `Language set to ${lang}`);
   };
 
   const handleGasFeeSelect = async (fee: string) => {
     setGasFee(fee);
-    await AsyncStorage.setItem('Zetaris_gasFee', fee);
+    await AsyncStorage.setItem('SafeMask_gasFee', fee);
     setShowGasFeeModal(false);
     Alert.alert('Gas Fee Updated', `Default gas fee set to ${fee}`);
   };
@@ -219,7 +219,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           style: 'destructive',
           onPress: async () => {
             // Clear transaction cache
-            await AsyncStorage.removeItem('Zetaris_tx_cache');
+            await AsyncStorage.removeItem('SafeMask_tx_cache');
             Alert.alert('Success', 'Cache cleared successfully');
           },
         },
@@ -237,8 +237,8 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.removeItem('Zetaris_wallet');
-            await AsyncStorage.removeItem('Zetaris_has_wallet');
+            await AsyncStorage.removeItem('SafeMask_wallet');
+            await AsyncStorage.removeItem('SafeMask_has_wallet');
             navigation.navigate('WalletSetup');
           },
         },

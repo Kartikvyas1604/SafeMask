@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Zetaris Deployment Script
+# SafeMask Deployment Script
 # Automates deployment to Kubernetes cluster
 
 set -e
@@ -13,11 +13,11 @@ NC='\033[0m' # No Color
 
 # Configuration
 ENVIRONMENT=${1:-staging}
-NAMESPACE="Zetaris-${ENVIRONMENT}"
+NAMESPACE="SafeMask-${ENVIRONMENT}"
 DOCKER_REGISTRY=${DOCKER_REGISTRY:-"your-registry"}
 IMAGE_TAG=${2:-latest}
 
-echo -e "${GREEN}=== Zetaris Deployment ===${NC}"
+echo -e "${GREEN}=== SafeMask Deployment ===${NC}"
 echo -e "Environment: ${YELLOW}${ENVIRONMENT}${NC}"
 echo -e "Namespace: ${YELLOW}${NAMESPACE}${NC}"
 echo -e "Image Tag: ${YELLOW}${IMAGE_TAG}${NC}"
@@ -45,18 +45,18 @@ kubectl apply -f infra/k8s/${ENVIRONMENT}/
 
 # Update image tags in deployments
 echo -e "${GREEN}Updating image tags...${NC}"
-kubectl set image deployment/Zetaris-bridge-watcher \
-    bridge-watcher=${DOCKER_REGISTRY}/Zetaris-bridge-watcher:${IMAGE_TAG} \
+kubectl set image deployment/SafeMask-bridge-watcher \
+    bridge-watcher=${DOCKER_REGISTRY}/SafeMask-bridge-watcher:${IMAGE_TAG} \
     -n ${NAMESPACE}
 
-kubectl set image deployment/Zetaris-mesh-node \
-    mesh-node=${DOCKER_REGISTRY}/Zetaris-mesh-node:${IMAGE_TAG} \
+kubectl set image deployment/SafeMask-mesh-node \
+    mesh-node=${DOCKER_REGISTRY}/SafeMask-mesh-node:${IMAGE_TAG} \
     -n ${NAMESPACE}
 
 # Wait for rollout to complete
 echo -e "${GREEN}Waiting for rollout to complete...${NC}"
-kubectl rollout status deployment/Zetaris-bridge-watcher -n ${NAMESPACE} --timeout=5m
-kubectl rollout status deployment/Zetaris-mesh-node -n ${NAMESPACE} --timeout=5m
+kubectl rollout status deployment/SafeMask-bridge-watcher -n ${NAMESPACE} --timeout=5m
+kubectl rollout status deployment/SafeMask-mesh-node -n ${NAMESPACE} --timeout=5m
 
 # Verify deployment
 echo -e "${GREEN}Verifying deployment...${NC}"

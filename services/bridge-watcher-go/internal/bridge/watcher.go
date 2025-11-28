@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/Zetaris/bridge-watcher/internal/config"
+	"github.com/SafeMask/bridge-watcher/internal/config"
 )
 
 type BridgeEvent struct {

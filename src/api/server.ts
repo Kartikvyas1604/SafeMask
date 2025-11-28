@@ -1,10 +1,10 @@
 import express, { Request, Response } from 'express';
-import { ZetarisWallet } from '../wallet';
+import { SafeMaskWallet } from '../wallet';
 import { WalletConfig, TransactionRequest } from '../types';
 
 export class WalletAPI {
   private app: express.Application;
-  private wallets: Map<string, ZetarisWallet> = new Map();
+  private wallets: Map<string, SafeMaskWallet> = new Map();
   private port: number;
 
   constructor(port: number = 3000) {
@@ -49,7 +49,7 @@ export class WalletAPI {
         privacyLevel: 'maximum'
       };
 
-      const wallet = new ZetarisWallet(config);
+      const wallet = new SafeMaskWallet(config);
       await wallet.initialize(mnemonic);
 
       const walletId = this.generateWalletId();
@@ -302,7 +302,7 @@ export class WalletAPI {
 
   start(): void {
     this.app.listen(this.port, () => {
-      console.log(`Zetaris Wallet API listening on port ${this.port}`);
+      console.log(`SafeMask Wallet API listening on port ${this.port}`);
     });
   }
 }

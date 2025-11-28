@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore } from '../core/SafeMaskWalletCore';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -57,7 +57,7 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
     setError('');
 
     try {
-      const walletCore = new ZetarisWalletCore();
+      const walletCore = new SafeMaskWalletCore();
       const wallet = await walletCore.importWallet(trimmedPhrase);
       
       // Store wallet temporarily and move to password setup
@@ -88,17 +88,25 @@ export default function ImportWalletScreen({ navigation }: ImportWalletScreenPro
 
     setLoading(true);
     try {
-      // Save to AsyncStorage
-      await AsyncStorage.setItem('Zetaris_wallet', JSON.stringify(importedWallet));
-      await AsyncStorage.setItem('Zetaris_has_wallet', 'true');
-      await AsyncStorage.setItem('Zetaris_password', password);
-      await AsyncStorage.setItem('Zetaris_last_unlock', Date.now().toString());
+      // Create proper wallet structure with seedPhrase
+      const walletData = {
+        ...importedWallet,
+        seedPhrase: seedPhrase.trim()
+      };
+      
+      // Save to AsyncStorage with correct key
+      await AsyncStorage.setItem('SafeMask_wallet_data', JSON.stringify(walletData));
+      await AsyncStorage.setItem('SafeMask_has_wallet', 'true');
+      await AsyncStorage.setItem('SafeMask_password', password);
+      await AsyncStorage.setItem('SafeMask_last_unlock', Date.now().toString());
+      
+      Alert.alert('Success', 'Your wallet has been imported!');
       
       // Navigate to main wallet
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'MainTabs' }],
-        });      Alert.alert('Success', 'Your wallet has been imported!');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      });
     } catch (err) {
       Alert.alert('Error', 'Failed to save wallet');
     } finally {

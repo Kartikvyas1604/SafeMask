@@ -10,7 +10,7 @@ export default function Header() {
         <View style={styles.logo}>
           <Ionicons name="lock-closed" size={24} color={Colors.white} />
         </View>
-        <Text style={styles.title}>Zetaris</Text>
+        <Text style={styles.title}>SafeMask</Text>
       </View>
 
       <View style={styles.right}>

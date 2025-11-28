@@ -1,16 +1,16 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: Zetaris-prod
+  name: SafeMask-prod
   labels:
-    name: Zetaris-prod
+    name: SafeMask-prod
     environment: production
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: Zetaris-config
-  namespace: Zetaris-prod
+  name: SafeMask-config
+  namespace: SafeMask-prod
 data:
   NODE_ENV: "production"
   MESH_PORT: "8333"
@@ -19,8 +19,8 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: Zetaris-secrets
-  namespace: Zetaris-prod
+  name: SafeMask-secrets
+  namespace: SafeMask-prod
 type: Opaque
 stringData:
   ETHEREUM_RPC_URL: "https://mainnet.infura.io/v3/YOUR_KEY"
@@ -34,8 +34,8 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: Zetaris-bridge-watcher
-  namespace: Zetaris-prod
+  name: SafeMask-bridge-watcher
+  namespace: SafeMask-prod
   labels:
     app: bridge-watcher
 spec:
@@ -50,15 +50,15 @@ spec:
     spec:
       containers:
       - name: bridge-watcher
-        image: YOUR_DOCKER_USERNAME/Zetaris-bridge-watcher:latest
+        image: YOUR_DOCKER_USERNAME/SafeMask-bridge-watcher:latest
         ports:
         - containerPort: 3000
           name: http
         envFrom:
         - configMapRef:
-            name: Zetaris-config
+            name: SafeMask-config
         - secretRef:
-            name: Zetaris-secrets
+            name: SafeMask-secrets
         resources:
           requests:
             memory: "256Mi"
@@ -82,8 +82,8 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: Zetaris-mesh-node
-  namespace: Zetaris-prod
+  name: SafeMask-mesh-node
+  namespace: SafeMask-prod
   labels:
     app: mesh-node
 spec:
@@ -98,7 +98,7 @@ spec:
     spec:
       containers:
       - name: mesh-node
-        image: YOUR_DOCKER_USERNAME/Zetaris-mesh-node:latest
+        image: YOUR_DOCKER_USERNAME/SafeMask-mesh-node:latest
         ports:
         - containerPort: 8333
           name: mesh
@@ -106,9 +106,9 @@ spec:
           name: metrics
         envFrom:
         - configMapRef:
-            name: Zetaris-config
+            name: SafeMask-config
         - secretRef:
-            name: Zetaris-secrets
+            name: SafeMask-secrets
         resources:
           requests:
             memory: "512Mi"
@@ -133,7 +133,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: bridge-watcher-service
-  namespace: Zetaris-prod
+  namespace: SafeMask-prod
 spec:
   selector:
     app: bridge-watcher
@@ -147,7 +147,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mesh-node-service
-  namespace: Zetaris-prod
+  namespace: SafeMask-prod
 spec:
   selector:
     app: mesh-node
@@ -166,12 +166,12 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: bridge-watcher-hpa
-  namespace: Zetaris-prod
+  namespace: SafeMask-prod
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: Zetaris-bridge-watcher
+    name: SafeMask-bridge-watcher
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -192,12 +192,12 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: mesh-node-hpa
-  namespace: Zetaris-prod
+  namespace: SafeMask-prod
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: Zetaris-mesh-node
+    name: SafeMask-mesh-node
   minReplicas: 5
   maxReplicas: 20
   metrics:

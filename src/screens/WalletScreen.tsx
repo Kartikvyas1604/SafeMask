@@ -1,7 +1,7 @@
 /**
  * Enhanced Wallet Screen
  * 
- * Integrates all Zetaris features:
+ * Integrates all SafeMask features:
  * - Multi-chain balances (Ethereum, Zcash, Polygon)
  * - Confidential transactions
  * - NFC tap-to-pay

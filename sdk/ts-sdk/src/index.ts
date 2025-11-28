@@ -1,5 +1,5 @@
 /**
- * Zetaris TypeScript SDK
+ * SafeMask TypeScript SDK
  * 
  * Privacy-preserving wallet SDK with ZK-SNARKs, stealth addresses,
  * and confidential transactions.
@@ -7,11 +7,11 @@
 
 import { NativeModules, Platform } from 'react-native';
 
-const { ZetarisFFI } = NativeModules;
+const { SafeMaskFFI } = NativeModules;
 
-if (!ZetarisFFI) {
+if (!SafeMaskFFI) {
   throw new Error(
-    'ZetarisFFI native module not found. Make sure the native bindings are properly installed.'
+    'SafeMaskFFI native module not found. Make sure the native bindings are properly installed.'
   );
 }
 
@@ -66,7 +66,7 @@ export interface ZkProof {
   proofType: string;
 }
 
-export class ZetarisError extends Error {
+export class SafeMaskError extends Error {
   constructor(
     message: string,
     public code:
@@ -81,22 +81,22 @@ export class ZetarisError extends Error {
       | 'KeyDerivationFailed'
   ) {
     super(message);
-    this.name = 'ZetarisError';
+    this.name = 'SafeMaskError';
   }
 }
 
 /**
- * Main SDK class for Zetaris wallet operations
+ * Main SDK class for SafeMask wallet operations
  */
-export class ZetarisSDK {
+export class SafeMaskSDK {
   /**
    * Generate a new BIP39 mnemonic phrase
    */
   static async generateMnemonic(): Promise<string> {
     try {
-      return await ZetarisFFI.generateMnemonic();
+      return await SafeMaskFFI.generateMnemonic();
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to generate mnemonic',
         'InvalidMnemonic'
       );
@@ -111,10 +111,10 @@ export class ZetarisSDK {
     password: string
   ): Promise<WalletHandle> {
     try {
-      const handle = await ZetarisFFI.createWallet(mnemonic, password);
+      const handle = await SafeMaskFFI.createWallet(mnemonic, password);
       return handle;
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to create wallet',
         'InvalidMnemonic'
       );
@@ -126,10 +126,10 @@ export class ZetarisSDK {
    */
   static async getWalletInfo(handle: WalletHandle): Promise<WalletInfo> {
     try {
-      const info = await ZetarisFFI.getWalletInfo(handle);
+      const info = await SafeMaskFFI.getWalletInfo(handle);
       return info;
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to get wallet info',
         'WalletNotFound'
       );
@@ -145,14 +145,14 @@ export class ZetarisSDK {
     amount: number
   ): Promise<Transaction> {
     try {
-      const tx = await ZetarisFFI.createTransaction(
+      const tx = await SafeMaskFFI.createTransaction(
         handle,
         toAddress,
         amount
       );
       return tx;
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to create transaction',
         'InsufficientFunds'
       );
@@ -167,10 +167,10 @@ export class ZetarisSDK {
     tx: Transaction
   ): Promise<string> {
     try {
-      const signature = await ZetarisFFI.signTransaction(handle, tx);
+      const signature = await SafeMaskFFI.signTransaction(handle, tx);
       return signature;
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to sign transaction',
         'InvalidSignature'
       );
@@ -182,7 +182,7 @@ export class ZetarisSDK {
    */
   static async verifyTransaction(tx: Transaction): Promise<boolean> {
     try {
-      return await ZetarisFFI.verifyTransaction(tx);
+      return await SafeMaskFFI.verifyTransaction(tx);
     } catch (error) {
       return false;
     }
@@ -195,10 +195,10 @@ export class ZetarisSDK {
     handle: WalletHandle
   ): Promise<StealthAddress> {
     try {
-      const address = await ZetarisFFI.generateStealthAddress(handle);
+      const address = await SafeMaskFFI.generateStealthAddress(handle);
       return address;
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to generate stealth address',
         'KeyDerivationFailed'
       );
@@ -213,13 +213,13 @@ export class ZetarisSDK {
     blindingFactor: Uint8Array
   ): Promise<Commitment> {
     try {
-      const commitment = await ZetarisFFI.createCommitment(
+      const commitment = await SafeMaskFFI.createCommitment(
         value,
         Array.from(blindingFactor)
       );
       return commitment;
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to create commitment',
         'ProofGenerationFailed'
       );
@@ -235,14 +235,14 @@ export class ZetarisSDK {
     blinding: Uint8Array
   ): Promise<RangeProof> {
     try {
-      const proof = await ZetarisFFI.createRangeProof(
+      const proof = await SafeMaskFFI.createRangeProof(
         commitment,
         value,
         Array.from(blinding)
       );
       return proof;
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to create range proof',
         'ProofGenerationFailed'
       );
@@ -257,7 +257,7 @@ export class ZetarisSDK {
     commitment: Commitment
   ): Promise<boolean> {
     try {
-      return await ZetarisFFI.verifyRangeProof(proof, commitment);
+      return await SafeMaskFFI.verifyRangeProof(proof, commitment);
     } catch (error) {
       return false;
     }
@@ -272,14 +272,14 @@ export class ZetarisSDK {
     circuitType: string;
   }): Promise<ZkProof> {
     try {
-      const proof = await ZetarisFFI.generateZkProof({
+      const proof = await SafeMaskFFI.generateZkProof({
         publicInputs: Array.from(input.publicInputs),
         privateInputs: Array.from(input.privateInputs),
         circuitType: input.circuitType,
       });
       return proof;
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to generate ZK proof',
         'ProofGenerationFailed'
       );
@@ -294,7 +294,7 @@ export class ZetarisSDK {
     publicInputs: Uint8Array
   ): Promise<boolean> {
     try {
-      return await ZetarisFFI.verifyZkProof(
+      return await SafeMaskFFI.verifyZkProof(
         proof,
         Array.from(publicInputs)
       );
@@ -311,9 +311,9 @@ export class ZetarisSDK {
     accountIndex: number
   ): Promise<string> {
     try {
-      return await ZetarisFFI.exportPrivateKey(handle, accountIndex);
+      return await SafeMaskFFI.exportPrivateKey(handle, accountIndex);
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to export private key',
         'KeyDerivationFailed'
       );
@@ -325,9 +325,9 @@ export class ZetarisSDK {
    */
   static async exportViewKey(handle: WalletHandle): Promise<string> {
     try {
-      return await ZetarisFFI.exportViewKey(handle);
+      return await SafeMaskFFI.exportViewKey(handle);
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to export view key',
         'KeyDerivationFailed'
       );
@@ -342,9 +342,9 @@ export class ZetarisSDK {
     password: string
   ): Promise<WalletHandle> {
     try {
-      return await ZetarisFFI.importPrivateKey(privateKey, password);
+      return await SafeMaskFFI.importPrivateKey(privateKey, password);
     } catch (error) {
-      throw new ZetarisError(
+      throw new SafeMaskError(
         'Failed to import private key',
         'InvalidPassword'
       );
@@ -355,7 +355,7 @@ export class ZetarisSDK {
 /**
  * Utility functions
  */
-export class ZetarisUtils {
+export class SafeMaskUtils {
   /**
    * Generate random blinding factor for commitments
    */
@@ -403,4 +403,4 @@ export class ZetarisUtils {
   }
 }
 
-export default ZetarisSDK;
+export default SafeMaskSDK;

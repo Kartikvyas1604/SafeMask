@@ -19,7 +19,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 import RealBlockchainService from '../blockchain/RealBlockchainService';
-import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore, ChainType } from '../core/SafeMaskWalletCore';
 import ChainIcon from '../components/ChainIcon';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
@@ -114,14 +114,14 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const loadWalletData = async () => {
     const result = await withErrorHandling(async () => {
-      const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
-                            await AsyncStorage.getItem('Zetaris_wallet');
+      const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
+                            await AsyncStorage.getItem('SafeMask_wallet');
       if (!walletDataStr) {
         throw new Error('No wallet found');
       }
 
       const walletData = JSON.parse(walletDataStr);
-      const tempWallet = new ZetarisWalletCore();
+      const tempWallet = new SafeMaskWalletCore();
       await tempWallet.importWallet(walletData.seedPhrase);
       
       // Get Ethereum account with its private key
@@ -144,8 +144,8 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
     setIsLoadingBalance(true);
     await withErrorHandling(async () => {
       // Get wallet data and initialize HD wallet
-      const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
-                            await AsyncStorage.getItem('Zetaris_wallet');
+      const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
+                            await AsyncStorage.getItem('SafeMask_wallet');
       
       if (!walletDataStr) {
         logger.warn('No wallet found in storage');
@@ -154,7 +154,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
       }
 
       const walletData = JSON.parse(walletDataStr);
-      const tempWallet = new ZetarisWalletCore();
+      const tempWallet = new SafeMaskWalletCore();
       
       // Import wallet to get addresses
       await tempWallet.importWallet(walletData.seedPhrase);
@@ -275,15 +275,15 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       // Get the wallet and correct account for the selected chain
-      const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
-                            await AsyncStorage.getItem('Zetaris_wallet');
+      const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
+                            await AsyncStorage.getItem('SafeMask_wallet');
       
       if (!walletDataStr) {
         throw new Error('No wallet found');
       }
 
       const walletData = JSON.parse(walletDataStr);
-      const tempWallet = new ZetarisWalletCore();
+      const tempWallet = new SafeMaskWalletCore();
       await tempWallet.importWallet(walletData.seedPhrase);
 
       let txHash = '';

@@ -6,7 +6,7 @@
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { ZetarisWallet } from '../wallet';
+import { SafeMaskWallet } from '../wallet';
 import { CrossChainBridge } from '../bridge/CrossChainBridge';
 import { TransactionRequest, Balance } from '../types';
 
@@ -38,10 +38,10 @@ export interface AddressInfo {
 }
 
 export class WalletIntegration {
-  private wallet: ZetarisWallet;
+  private wallet: SafeMaskWallet;
   private bridge: CrossChainBridge;
 
-  constructor(wallet: ZetarisWallet, bridge: CrossChainBridge) {
+  constructor(wallet: SafeMaskWallet, bridge: CrossChainBridge) {
     this.wallet = wallet;
     this.bridge = bridge;
   }

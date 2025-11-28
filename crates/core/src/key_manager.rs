@@ -321,7 +321,7 @@ mod tests {
         let km = KeyManager::new_from_mnemonic(TEST_MNEMONIC).unwrap();
         let account = km.derive_account(0).unwrap();
         
-        let message = b"Hello, Zetaris!";
+        let message = b"Hello, SafeMask!";
         let signature = km.sign_message(message, &account, CoinType::Ethereum).unwrap();
         
         assert_eq!(signature.len(), 64); // Compact ECDSA signature

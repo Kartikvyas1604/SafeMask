@@ -151,7 +151,7 @@ export class FusionPlusClient {
         maker: params.walletAddress,
         receiver: params.receiver || params.walletAddress,
         permit: params.permit,
-        source: 'Zetaris',
+        source: 'SafeMask',
       };
 
       const response = await this.apiClient.post('/v1.0/order/build', orderData);

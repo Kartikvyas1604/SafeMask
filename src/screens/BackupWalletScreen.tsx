@@ -18,7 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ZetarisWalletCore } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore } from '../core/SafeMaskWalletCore';
 import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
@@ -47,11 +47,11 @@ export default function BackupWalletScreen({ navigation }: BackupWalletScreenPro
   const loadSeedPhrase = async () => {
     try {
       // Try to load wallet data from AsyncStorage
-      let walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data');
+      let walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data');
       
       if (!walletDataStr) {
         // Try old key
-        walletDataStr = await AsyncStorage.getItem('Zetaris_wallet');
+        walletDataStr = await AsyncStorage.getItem('SafeMask_wallet');
       }
       
       if (!walletDataStr) {
@@ -67,7 +67,7 @@ export default function BackupWalletScreen({ navigation }: BackupWalletScreenPro
         setWords(walletData.seedPhrase.split(' '));
       } else {
         // Try to get from wallet core if seedPhrase not directly in walletData
-        const hdWallet = new ZetarisWalletCore();
+        const hdWallet = new SafeMaskWalletCore();
         // Try to import with any available data
         try {
           const seed = walletData.seedPhrase || '';

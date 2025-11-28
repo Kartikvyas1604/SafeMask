@@ -1,11 +1,11 @@
-import { ZetarisWallet } from './wallet';
+import { SafeMaskWallet } from './wallet';
 import { WalletAPI } from './api/server';
 
 async function main() {
-  console.log('Zetaris Wallet - Privacy-focused cryptocurrency wallet');
+  console.log('SafeMask Wallet - Privacy-focused cryptocurrency wallet');
   console.log('========================================================\n');
 
-  const wallet = new ZetarisWallet({
+  const wallet = new SafeMaskWallet({
     network: 'testnet',
     enableMesh: true,
     enableNFC: false,

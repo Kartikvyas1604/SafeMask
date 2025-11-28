@@ -191,7 +191,7 @@ export class CrossChainFusionEngine {
       const solution: Solution = {
         id: this.generateSolutionId(),
         intentId: intent.id,
-        solver: 'Zetaris-solver',
+        solver: 'SafeMask-solver',
         steps,
         estimatedOutput: quote.toTokenAmount,
         totalGasCost: quote.estimatedGas.toString(),
@@ -243,7 +243,7 @@ export class CrossChainFusionEngine {
       const solution: Solution = {
         id: this.generateSolutionId(),
         intentId: intent.id,
-        solver: 'Zetaris-solver',
+        solver: 'SafeMask-solver',
         steps,
         estimatedOutput: intent.inputAmount,
         totalGasCost: '200000',
@@ -337,7 +337,7 @@ export class CrossChainFusionEngine {
       const solution: Solution = {
         id: this.generateSolutionId(),
         intentId: intent.id,
-        solver: 'Zetaris-solver',
+        solver: 'SafeMask-solver',
         steps,
         estimatedOutput: swapFromStable.toTokenAmount,
         totalGasCost: totalGas.toString(),

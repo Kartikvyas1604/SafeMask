@@ -1,11 +1,11 @@
-// Integration tests for Zetaris wallet
+// Integration tests for SafeMask wallet
 // Tests the full flow: Rust core -> Circuits -> Contracts
 
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const ZetarisSDK = require("@Zetaris/sdk");
+const SafeMaskSDK = require("@SafeMask/sdk");
 
-describe("Zetaris Integration Tests", function () {
+describe("SafeMask Integration Tests", function () {
   this.timeout(60000); // 60 seconds for ZK proof generation
 
   let wallet;
@@ -56,27 +56,27 @@ describe("Zetaris Integration Tests", function () {
 
     // Create wallet using Rust FFI
     console.log("🔑 Creating wallet...");
-    const mnemonic = await ZetarisSDK.generateMnemonic();
-    wallet = await ZetarisSDK.createWallet(mnemonic, "testpassword123");
+    const mnemonic = await SafeMaskSDK.generateMnemonic();
+    wallet = await SafeMaskSDK.createWallet(mnemonic, "testpassword123");
     console.log("✅ Wallet created");
   });
 
   describe("End-to-End Private Transaction Flow", function () {
     it("Should complete a private transaction with commitments", async function () {
       // 1. Generate stealth address
-      const stealthAddr = await ZetarisSDK.generateStealthAddress(wallet);
+      const stealthAddr = await SafeMaskSDK.generateStealthAddress(wallet);
       expect(stealthAddr.address).to.be.a("string");
       console.log("✅ Stealth address generated");
 
       // 2. Create commitment for amount
       const amount = 1000000; // 1 million units
-      const blinding = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
-      const commitment = await ZetarisSDK.createCommitment(amount, blinding);
+      const blinding = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
+      const commitment = await SafeMaskSDK.createCommitment(amount, blinding);
       expect(commitment.commitment).to.be.instanceof(Uint8Array);
       console.log("✅ Commitment created");
 
       // 3. Create range proof
-      const rangeProof = await ZetarisSDK.createRangeProof(
+      const rangeProof = await SafeMaskSDK.createRangeProof(
         commitment,
         amount,
         blinding
@@ -85,12 +85,12 @@ describe("Zetaris Integration Tests", function () {
       console.log("✅ Range proof generated");
 
       // 4. Verify range proof
-      const isValid = await ZetarisSDK.verifyRangeProof(rangeProof, commitment);
+      const isValid = await SafeMaskSDK.verifyRangeProof(rangeProof, commitment);
       expect(isValid).to.be.true;
       console.log("✅ Range proof verified");
 
       // 5. Create transaction
-      const tx = await ZetarisSDK.createTransaction(
+      const tx = await SafeMaskSDK.createTransaction(
         wallet,
         stealthAddr.address,
         amount
@@ -99,31 +99,31 @@ describe("Zetaris Integration Tests", function () {
       console.log("✅ Transaction created");
 
       // 6. Sign transaction
-      const signature = await ZetarisSDK.signTransaction(wallet, tx);
+      const signature = await SafeMaskSDK.signTransaction(wallet, tx);
       expect(signature).to.be.a("string");
       console.log("✅ Transaction signed");
     });
 
     it("Should verify privacy guarantees", async function () {
       const amount = 5000000;
-      const blinding = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
+      const blinding = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
       
       // Create two commitments with same amount but different blindings
-      const commitment1 = await ZetarisSDK.createCommitment(amount, blinding);
+      const commitment1 = await SafeMaskSDK.createCommitment(amount, blinding);
       
-      const blinding2 = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
-      const commitment2 = await ZetarisSDK.createCommitment(amount, blinding2);
+      const blinding2 = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
+      const commitment2 = await SafeMaskSDK.createCommitment(amount, blinding2);
 
       // Commitments should be different (hiding property)
       expect(commitment1.commitment).to.not.deep.equal(commitment2.commitment);
       console.log("✅ Hiding property verified");
 
       // Both should have valid range proofs
-      const proof1 = await ZetarisSDK.createRangeProof(commitment1, amount, blinding);
-      const proof2 = await ZetarisSDK.createRangeProof(commitment2, amount, blinding2);
+      const proof1 = await SafeMaskSDK.createRangeProof(commitment1, amount, blinding);
+      const proof2 = await SafeMaskSDK.createRangeProof(commitment2, amount, blinding2);
 
-      expect(await ZetarisSDK.verifyRangeProof(proof1, commitment1)).to.be.true;
-      expect(await ZetarisSDK.verifyRangeProof(proof2, commitment2)).to.be.true;
+      expect(await SafeMaskSDK.verifyRangeProof(proof1, commitment1)).to.be.true;
+      expect(await SafeMaskSDK.verifyRangeProof(proof2, commitment2)).to.be.true;
       console.log("✅ Binding property verified");
     });
   });
@@ -141,14 +141,14 @@ describe("Zetaris Integration Tests", function () {
       const amountA = 10000000;
       const amountB = 5000000;
       
-      const blindingA = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
-      const blindingB = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
+      const blindingA = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
+      const blindingB = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
       
-      const commitmentA = await ZetarisSDK.createCommitment(amountA, blindingA);
-      const commitmentB = await ZetarisSDK.createCommitment(amountB, blindingB);
+      const commitmentA = await SafeMaskSDK.createCommitment(amountA, blindingA);
+      const commitmentB = await SafeMaskSDK.createCommitment(amountB, blindingB);
       
-      const proofA = await ZetarisSDK.createRangeProof(commitmentA, amountA, blindingA);
-      const proofB = await ZetarisSDK.createRangeProof(commitmentB, amountB, blindingB);
+      const proofA = await SafeMaskSDK.createRangeProof(commitmentA, amountA, blindingA);
+      const proofB = await SafeMaskSDK.createRangeProof(commitmentB, amountB, blindingB);
 
       await confidentialSwap.addLiquidity(
         poolId,
@@ -171,9 +171,9 @@ describe("Zetaris Integration Tests", function () {
       // 5. Execute swap
       const swapAmount = 1000000;
       const outputAmount = 500000;
-      const swapBlinding = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
-      const swapProof = await ZetarisSDK.createRangeProof(
-        await ZetarisSDK.createCommitment(swapAmount, swapBlinding),
+      const swapBlinding = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
+      const swapProof = await SafeMaskSDK.createRangeProof(
+        await SafeMaskSDK.createCommitment(swapAmount, swapBlinding),
         swapAmount,
         swapBlinding
       );
@@ -192,9 +192,9 @@ describe("Zetaris Integration Tests", function () {
     it("Should open, update, and close a private payment channel", async function () {
       // 1. Open channel
       const deposit = ethers.parseEther("1.0");
-      const commitment = (await ZetarisSDK.createCommitment(
+      const commitment = (await SafeMaskSDK.createCommitment(
         Number(ethers.formatEther(deposit)),
-        ZetarisSDK.ZetarisUtils.generateBlindingFactor()
+        SafeMaskSDK.SafeMaskUtils.generateBlindingFactor()
       )).commitment;
 
       const tx = await paymentChannel.connect(alice).openChannel(
@@ -239,20 +239,20 @@ describe("Zetaris Integration Tests", function () {
       const amount = ethers.parseEther("0.5");
       const destinationChain = 137; // Polygon
       
-      const blinding = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
-      const commitment = (await ZetarisSDK.createCommitment(
+      const blinding = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
+      const commitment = (await SafeMaskSDK.createCommitment(
         Number(ethers.formatEther(amount)),
         blinding
       )).commitment;
 
-      const rangeProof = (await ZetarisSDK.createRangeProof(
+      const rangeProof = (await SafeMaskSDK.createRangeProof(
         { commitment, blindingFactor: blinding },
         Number(ethers.formatEther(amount)),
         blinding
       )).proof;
 
       // Generate ZK proof for bridge
-      const zkProof = await ZetarisSDK.generateZkProof({
+      const zkProof = await SafeMaskSDK.generateZkProof({
         publicInputs: commitment,
         privateInputs: blinding,
         circuitType: "confidential_transfer",
@@ -286,8 +286,8 @@ describe("Zetaris Integration Tests", function () {
       const start = Date.now();
 
       for (let i = 0; i < iterations; i++) {
-        const blinding = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
-        await ZetarisSDK.createCommitment(1000000, blinding);
+        const blinding = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
+        await SafeMaskSDK.createCommitment(1000000, blinding);
       }
 
       const duration = Date.now() - start;
@@ -302,9 +302,9 @@ describe("Zetaris Integration Tests", function () {
       const start = Date.now();
 
       for (let i = 0; i < iterations; i++) {
-        const blinding = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
-        const commitment = await ZetarisSDK.createCommitment(1000000, blinding);
-        await ZetarisSDK.createRangeProof(commitment, 1000000, blinding);
+        const blinding = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
+        const commitment = await SafeMaskSDK.createCommitment(1000000, blinding);
+        await SafeMaskSDK.createRangeProof(commitment, 1000000, blinding);
       }
 
       const duration = Date.now() - start;
@@ -319,7 +319,7 @@ describe("Zetaris Integration Tests", function () {
       const start = Date.now();
 
       for (let i = 0; i < iterations; i++) {
-        await ZetarisSDK.generateZkProof({
+        await SafeMaskSDK.generateZkProof({
           publicInputs: new Uint8Array(32),
           privateInputs: new Uint8Array(32),
           circuitType: "confidential_transfer",
@@ -337,18 +337,18 @@ describe("Zetaris Integration Tests", function () {
   describe("Security Tests", function () {
     it("Should reject invalid range proofs", async function () {
       const amount = 1000000;
-      const blinding = ZetarisSDK.ZetarisUtils.generateBlindingFactor();
-      const commitment = await ZetarisSDK.createCommitment(amount, blinding);
+      const blinding = SafeMaskSDK.SafeMaskUtils.generateBlindingFactor();
+      const commitment = await SafeMaskSDK.createCommitment(amount, blinding);
       
       // Create proof for different amount
-      const wrongProof = await ZetarisSDK.createRangeProof(
+      const wrongProof = await SafeMaskSDK.createRangeProof(
         commitment,
         2000000,
         blinding
       );
 
       // Verification should fail
-      const isValid = await ZetarisSDK.verifyRangeProof(wrongProof, commitment);
+      const isValid = await SafeMaskSDK.verifyRangeProof(wrongProof, commitment);
       expect(isValid).to.be.false;
       console.log("✅ Invalid proof correctly rejected");
     });

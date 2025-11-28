@@ -1,4 +1,4 @@
-# Zetaris - Privacy-First Multi-Chain Wallet
+# SafeMask - Privacy-First Multi-Chain Wallet
 
 <div align="center">
 
@@ -84,8 +84,8 @@
 
 ```bash
 # Clone repository
-git clone https://github.com/Kartikvyas1604/Zetaris.git
-cd Zetaris
+git clone https://github.com/Kartikvyas1604/SafeMask.git
+cd SafeMask
 
 # Install dependencies
 npm install
@@ -127,7 +127,7 @@ chmod +x infra/scripts/compile-circuits.sh
 ### Project Structure
 
 ```
-Zetaris/
+SafeMask/
 ├── src/
 │   ├── screens/          # 15 React Native screens
 │   │   ├── EnhancedWalletScreen.tsx
@@ -438,7 +438,7 @@ This project is **private** and proprietary. All rights reserved.
 - [Solana Foundation](https://solana.com)
 - [Expo Team](https://expo.dev)
 - [React Native Community](https://reactnative.dev)
-- [Open Source Contributors](https://github.com/Kartikvyas1604/Zetaris/graphs/contributors)
+- [Open Source Contributors](https://github.com/Kartikvyas1604/SafeMask/graphs/contributors)
 
 ---
 
@@ -446,15 +446,15 @@ This project is **private** and proprietary. All rights reserved.
 
 For questions, issues, or feature requests:
 
-- **Issues**: [GitHub Issues](https://github.com/Kartikvyas1604/Zetaris/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Kartikvyas1604/Zetaris/discussions)
+- **Issues**: [GitHub Issues](https://github.com/Kartikvyas1604/SafeMask/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Kartikvyas1604/SafeMask/discussions)
 - **Email**: kartikvyas1604@gmail.com
 
 ---
 
 ## ⚠️ Disclaimer
 
-**Zetaris is experimental software under active development.**
+**SafeMask is experimental software under active development.**
 
 - ⚠️ Use at your own risk
 - 💰 Only use with test funds

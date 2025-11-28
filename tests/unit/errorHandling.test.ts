@@ -4,7 +4,7 @@
 
 import {
   ErrorCode,
-  ZetarisError,
+  SafeMaskError,
   NetworkError,
   RpcError,
   TransactionError,
@@ -27,11 +27,11 @@ import {
 } from '../../src/utils/circuitBreaker';
 
 describe('Error Handling', () => {
-  describe('ZetarisError', () => {
+  describe('SafeMaskError', () => {
     it('should create error with all properties', () => {
       const context = { txHash: '0x123' };
       const originalError = new Error('Original');
-      const error = new ZetarisError(
+      const error = new SafeMaskError(
         'Test error',
         ErrorCode.TX_FAILED,
         true,
@@ -48,10 +48,10 @@ describe('Error Handling', () => {
     });
 
     it('should serialize to JSON', () => {
-      const error = new ZetarisError('Test', ErrorCode.NETWORK_TIMEOUT);
+      const error = new SafeMaskError('Test', ErrorCode.NETWORK_TIMEOUT);
       const json = error.toJSON();
 
-      expect(json.name).toBe('ZetarisError');
+      expect(json.name).toBe('SafeMaskError');
       expect(json.message).toBe('Test');
       expect(json.code).toBe(ErrorCode.NETWORK_TIMEOUT);
     });
@@ -61,7 +61,7 @@ describe('Error Handling', () => {
     it('should create NetworkError', () => {
       const error = new NetworkError('Network down');
       expect(error).toBeInstanceOf(NetworkError);
-      expect(error).toBeInstanceOf(ZetarisError);
+      expect(error).toBeInstanceOf(SafeMaskError);
       expect(error.retryable).toBe(true);
     });
 
@@ -86,7 +86,7 @@ describe('Error Handling', () => {
   });
 
   describe('isRetryableError', () => {
-    it('should identify retryable ZetarisError', () => {
+    it('should identify retryable SafeMaskError', () => {
       const retryable = new NetworkError('Timeout');
       expect(isRetryableError(retryable)).toBe(true);
 

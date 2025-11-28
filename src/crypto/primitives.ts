@@ -13,7 +13,7 @@ export class CommitmentScheme {
     
     // H is a "nothing-up-my-sleeve" point derived by hashing and multiplying G
     // This ensures nobody knows the discrete log relationship between G and H
-    const hSeed = sha256('Zetaris commitment H generator');
+    const hSeed = sha256('SafeMask commitment H generator');
     const hScalar = BigInt('0x' + CryptoUtils.bytesToHex(hSeed)) % secp256k1.CURVE.n;
     const hPoint = secp256k1.ProjectivePoint.BASE.multiply(hScalar);
     this.H = hPoint.toRawBytes();

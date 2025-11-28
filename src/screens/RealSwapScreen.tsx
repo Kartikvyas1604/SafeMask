@@ -17,7 +17,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RealDEXSwapService, { SwapQuote } from '../blockchain/RealDEXSwapService';
 import { KNOWN_TOKENS } from '../blockchain/TokenService';
-import { ZetarisWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore, ChainType } from '../core/SafeMaskWalletCore';
 import ChainIcon from '../components/ChainIcon';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
@@ -53,7 +53,7 @@ export default function RealSwapScreen() {
   const [showInputTokenPicker, setShowInputTokenPicker] = useState(false);
   
   const dexService = RealDEXSwapService;
-  const hdWallet = new ZetarisWalletCore();
+  const hdWallet = new SafeMaskWalletCore();
   const hasLoadedWallet = useRef(false);
   
   // Load wallet data once when component mounts if not provided via params
@@ -80,8 +80,8 @@ export default function RealSwapScreen() {
   
   const loadWalletData = async () => {
     try {
-      const walletDataStr = await AsyncStorage.getItem('Zetaris_wallet_data') || 
-                           await AsyncStorage.getItem('Zetaris_wallet');
+      const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
+                           await AsyncStorage.getItem('SafeMask_wallet');
       
       if (walletDataStr) {
         const walletData = JSON.parse(walletDataStr);

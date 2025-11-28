@@ -1,5 +1,5 @@
 /**
- * Zetaris Wallet SDK
+ * SafeMask Wallet SDK
  * 
  * Complete developer SDK for integrating privacy-preserving
  * cryptocurrency functionality into applications.
@@ -12,7 +12,7 @@
  * - NFC payments
  * - Analytics queries
  * 
- * Based on Zetaris specification Layer 7
+ * Based on SafeMask specification Layer 7
  */
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -169,12 +169,12 @@ export interface WalletInfo {
 }
 
 /**
- * Zetaris SDK
+ * SafeMask SDK
  * 
  * Main entry point for developers to integrate privacy-preserving
  * wallet functionality
  */
-export class ZetarisSDK {
+export class SafeMaskSDK {
   private wallet: Wallet;
   private bridge?: CrossChainBridgeType;
   private analytics?: PrivacyAnalyticsEngine;
@@ -529,7 +529,7 @@ export class ZetarisSDK {
 /**
  * Create SDK instance with default configuration
  */
-export function createZetarisSDK(config?: Partial<SDKConfig>): ZetarisSDK {
+export function createSafeMaskSDK(config?: Partial<SDKConfig>): SafeMaskSDK {
   const defaultConfig: SDKConfig = {
     network: 'mainnet',
     enableMeshNetwork: true,
@@ -538,14 +538,14 @@ export function createZetarisSDK(config?: Partial<SDKConfig>): ZetarisSDK {
     privacyLevel: 'high',
   };
 
-  return new ZetarisSDK({ ...defaultConfig, ...config });
+  return new SafeMaskSDK({ ...defaultConfig, ...config });
 }
 
 /**
  * Create SDK instance for testing
  */
-export function createTestnetSDK(): ZetarisSDK {
-  return createZetarisSDK({
+export function createTestnetSDK(): SafeMaskSDK {
+  return createSafeMaskSDK({
     network: 'testnet',
     privacyLevel: 'medium',
   });

@@ -44,7 +44,7 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
       setIsLoading(true);
 
       // Check if wallet exists
-      const encryptedWallet = await AsyncStorage.getItem('Zetaris_wallet');
+      const encryptedWallet = await AsyncStorage.getItem('SafeMask_wallet');
       if (!encryptedWallet) {
         navigation.replace('WalletSetup');
         return;

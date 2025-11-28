@@ -1,6 +1,6 @@
-# Zetaris Deployment Guide
+# SafeMask Deployment Guide
 
-Complete guide for deploying Zetaris privacy wallet components to production.
+Complete guide for deploying SafeMask privacy wallet components to production.
 
 ## Table of Contents
 1. [Prerequisites](#prerequisites)
@@ -28,7 +28,7 @@ cargo install cargo-make
 ```
 
 ### Domain & SSL
-- Register domain (e.g., `Zetaris.io`)
+- Register domain (e.g., `SafeMask.io`)
 - Obtain SSL certificates (Let's Encrypt)
 - Configure DNS records
 
@@ -99,18 +99,18 @@ go build -o bin/bridge-watcher \
   main.go
 
 # Or build Docker image
-docker build -t Zetaris/bridge-watcher:latest .
-docker push Zetaris/bridge-watcher:latest
+docker build -t SafeMask/bridge-watcher:latest .
+docker push SafeMask/bridge-watcher:latest
 ```
 
 ### 2. Kubernetes Deployment
 ```bash
 # Create namespace
-kubectl create namespace Zetaris
+kubectl create namespace SafeMask
 
 # Create secrets
-kubectl create secret generic Zetaris-secrets \
-  --namespace=Zetaris \
+kubectl create secret generic SafeMask-secrets \
+  --namespace=SafeMask \
   --from-literal=relayer-private-key=$RELAYER_PRIVATE_KEY \
   --from-literal=database-url=$DATABASE_URL \
   --from-literal=redis-url=$REDIS_URL
@@ -121,20 +121,20 @@ kubectl apply -f infra/k8s/service.yaml
 kubectl apply -f infra/k8s/ingress.yaml
 
 # Check status
-kubectl get pods -n Zetaris
-kubectl logs -f deployment/bridge-watcher -n Zetaris
+kubectl get pods -n SafeMask
+kubectl logs -f deployment/bridge-watcher -n SafeMask
 ```
 
 ### 3. Database Setup
 ```bash
 # Create PostgreSQL database
-psql -U postgres -c "CREATE DATABASE Zetaris;"
+psql -U postgres -c "CREATE DATABASE SafeMask;"
 
 # Run migrations
-psql -U postgres -d Zetaris -f infra/db/schema.sql
+psql -U postgres -d SafeMask -f infra/db/schema.sql
 
 # Create indexes
-psql -U postgres -d Zetaris -f infra/db/indexes.sql
+psql -U postgres -d SafeMask -f infra/db/indexes.sql
 ```
 
 ### 4. Redis Configuration
@@ -176,16 +176,16 @@ cd ..
 npx react-native run-ios
 
 # Build for device (requires Apple Developer account)
-xcodebuild -workspace ios/Zetaris.xcworkspace \
-  -scheme Zetaris \
+xcodebuild -workspace ios/SafeMask.xcworkspace \
+  -scheme SafeMask \
   -configuration Release \
-  -archivePath build/Zetaris.xcarchive \
+  -archivePath build/SafeMask.xcarchive \
   archive
 
 # Create IPA
 xcodebuild -exportArchive \
-  -archivePath build/Zetaris.xcarchive \
-  -exportPath build/Zetaris.ipa \
+  -archivePath build/SafeMask.xcarchive \
+  -exportPath build/SafeMask.ipa \
   -exportOptionsPlist exportOptions.plist
 ```
 
@@ -202,9 +202,9 @@ cd android
 # Sign release build
 jarsigner -verbose -sigalg SHA256withRSA \
   -digestalg SHA-256 \
-  -keystore Zetaris.keystore \
+  -keystore SafeMask.keystore \
   app/build/outputs/bundle/release/app-release.aab \
-  Zetaris-key
+  SafeMask-key
 ```
 
 ### 3. App Store Submission
@@ -255,7 +255,7 @@ receivers:
   - name: 'slack'
     slack_configs:
       - api_url: 'YOUR_SLACK_WEBHOOK'
-        channel: '#Zetaris-alerts'
+        channel: '#SafeMask-alerts'
 ```
 
 ### 4. Log Aggregation
@@ -331,12 +331,12 @@ npx hardhat run scripts/rollback.js --network mainnet
 ### Backend
 ```bash
 # Kubernetes rollback
-kubectl rollout undo deployment/bridge-watcher -n Zetaris
+kubectl rollout undo deployment/bridge-watcher -n SafeMask
 
 # Or roll back to specific revision
 kubectl rollout undo deployment/bridge-watcher \
   --to-revision=2 \
-  -n Zetaris
+  -n SafeMask
 ```
 
 ### Mobile App
@@ -347,17 +347,17 @@ kubectl rollout undo deployment/bridge-watcher \
 
 After deployment, services will be available at:
 
-- **API**: `https://api.Zetaris.io`
-- **WebSocket**: `wss://ws.Zetaris.io`
-- **Grafana**: `https://grafana.Zetaris.io`
+- **API**: `https://api.SafeMask.io`
+- **WebSocket**: `wss://ws.SafeMask.io`
+- **Grafana**: `https://grafana.SafeMask.io`
 - **Smart Contracts**: See `deployments/mainnet.json`
 
 ## Support
 
 - Emergency hotline: +1-XXX-XXX-XXXX
-- Email: ops@Zetaris.io
+- Email: ops@SafeMask.io
 - On-call rotation: PagerDuty
-- Status page: https://status.Zetaris.io
+- Status page: https://status.SafeMask.io
 
 ## Post-Deployment
 

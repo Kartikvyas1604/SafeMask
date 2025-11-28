@@ -55,7 +55,7 @@ impl PedersenCommitment {
         
         // Generate H using hash-to-curve (nothing-up-my-sleeve)
         let mut hasher = Sha512::new();
-        hasher.update(b"Zetaris-Pedersen-H-Generator-v1");
+        hasher.update(b"SafeMask-Pedersen-H-Generator-v1");
         let h_bytes = hasher.finalize();
         let h = RistrettoPoint::from_uniform_bytes(&h_bytes.into());
         

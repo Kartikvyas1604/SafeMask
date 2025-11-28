@@ -1,7 +1,7 @@
 {
-  "name": "Zetaris-contracts",
+  "name": "SafeMask-contracts",
   "version": "1.0.0",
-  "description": "Smart contracts for Zetaris privacy wallet",
+  "description": "Smart contracts for SafeMask privacy wallet",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
@@ -23,7 +23,7 @@
     "privacy",
     "defi"
   ],
-  "author": "Zetaris Team",
+  "author": "SafeMask Team",
   "license": "MIT",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",

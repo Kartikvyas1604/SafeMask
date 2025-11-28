@@ -1,6 +1,6 @@
 # Integration Tests
 
-Comprehensive end-to-end tests for the Zetaris privacy wallet.
+Comprehensive end-to-end tests for the SafeMask privacy wallet.
 
 ## Test Coverage
 
@@ -266,6 +266,6 @@ Opens `test-report.html` with:
 
 ## Support
 
-- Issues: https://github.com/Zetaris/Zetaris/issues
-- Docs: https://docs.Zetaris.io/testing
-- Discord: https://discord.gg/Zetaris
+- Issues: https://github.com/SafeMask/SafeMask/issues
+- Docs: https://docs.SafeMask.io/testing
+- Discord: https://discord.gg/SafeMask

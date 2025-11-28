@@ -159,7 +159,7 @@ async function testConfidentialTransactions() {
     console.log('  • Transaction graph: ❌ FULLY TRACEABLE');
     console.log('  • Privacy score: ~20/100\n');
     
-    console.log('Zetaris Confidential Transaction:');
+    console.log('SafeMask Confidential Transaction:');
     console.log('  • Amounts: ✅ HIDDEN (Pedersen + Bulletproofs)');
     console.log('  • Recipients: ✅ HIDDEN (Stealth addresses)');
     console.log('  • Transaction graph: ✅ OBSCURED');

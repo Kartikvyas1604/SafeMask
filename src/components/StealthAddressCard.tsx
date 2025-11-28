@@ -55,7 +55,7 @@ export const StealthAddressCard: React.FC<StealthAddressCardProps> = ({
     
     try {
       await Share.share({
-        message: `Zetaris Stealth Address:\n${stealthAddress}\n\nScan Key:\n${scanKey}`,
+        message: `SafeMask Stealth Address:\n${stealthAddress}\n\nScan Key:\n${scanKey}`,
         title: 'Share Stealth Address',
       });
     } catch (error) {

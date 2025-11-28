@@ -1,44 +1,44 @@
-# Zetaris TypeScript SDK
+# SafeMask TypeScript SDK
 
 Privacy-preserving wallet SDK for React Native with ZK-SNARKs, stealth addresses, and confidential transactions.
 
 ## Installation
 
 ```bash
-npm install @Zetaris/sdk
+npm install @SafeMask/sdk
 # or
-yarn add @Zetaris/sdk
+yarn add @SafeMask/sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { ZetarisSDK, ZetarisUtils } from '@Zetaris/sdk';
+import { SafeMaskSDK, SafeMaskUtils } from '@SafeMask/sdk';
 
 // Generate mnemonic
-const mnemonic = await ZetarisSDK.generateMnemonic();
+const mnemonic = await SafeMaskSDK.generateMnemonic();
 
 // Create wallet
-const wallet = await ZetarisSDK.createWallet(mnemonic, 'password123');
+const wallet = await SafeMaskSDK.createWallet(mnemonic, 'password123');
 
 // Get wallet info
-const info = await ZetarisSDK.getWalletInfo(wallet);
+const info = await SafeMaskSDK.getWalletInfo(wallet);
 console.log('Address:', info.address);
 console.log('Balance:', info.balance);
 
 // Generate stealth address for receiving
-const stealthAddress = await ZetarisSDK.generateStealthAddress(wallet);
+const stealthAddress = await SafeMaskSDK.generateStealthAddress(wallet);
 console.log('Stealth address:', stealthAddress.address);
 
 // Create confidential transaction
-const tx = await ZetarisSDK.createTransaction(
+const tx = await SafeMaskSDK.createTransaction(
   wallet,
   '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
   1000000000 // 1 ETH in wei
 );
 
 // Sign transaction
-const signature = await ZetarisSDK.signTransaction(wallet, tx);
+const signature = await SafeMaskSDK.signTransaction(wallet, tx);
 console.log('Signature:', signature);
 ```
 
@@ -48,52 +48,52 @@ console.log('Signature:', signature);
 
 ```typescript
 // Generate mnemonic
-const mnemonic = await ZetarisSDK.generateMnemonic();
+const mnemonic = await SafeMaskSDK.generateMnemonic();
 
 // Create wallet
-const wallet = await ZetarisSDK.createWallet(mnemonic, 'password');
+const wallet = await SafeMaskSDK.createWallet(mnemonic, 'password');
 
 // Import from private key
-const imported = await ZetarisSDK.importPrivateKey(privateKey, 'password');
+const imported = await SafeMaskSDK.importPrivateKey(privateKey, 'password');
 
 // Export keys
-const privateKey = await ZetarisSDK.exportPrivateKey(wallet, 0);
-const viewKey = await ZetarisSDK.exportViewKey(wallet);
+const privateKey = await SafeMaskSDK.exportPrivateKey(wallet, 0);
+const viewKey = await SafeMaskSDK.exportViewKey(wallet);
 ```
 
 ### Privacy Features
 
 ```typescript
 // Generate stealth address
-const stealthAddress = await ZetarisSDK.generateStealthAddress(wallet);
+const stealthAddress = await SafeMaskSDK.generateStealthAddress(wallet);
 
 // Create Pedersen commitment
-const blinding = ZetarisUtils.generateBlindingFactor();
-const commitment = await ZetarisSDK.createCommitment(1000, blinding);
+const blinding = SafeMaskUtils.generateBlindingFactor();
+const commitment = await SafeMaskSDK.createCommitment(1000, blinding);
 
 // Create range proof
-const rangeProof = await ZetarisSDK.createRangeProof(
+const rangeProof = await SafeMaskSDK.createRangeProof(
   commitment,
   1000,
   blinding
 );
 
 // Verify range proof
-const isValid = await ZetarisSDK.verifyRangeProof(rangeProof, commitment);
+const isValid = await SafeMaskSDK.verifyRangeProof(rangeProof, commitment);
 ```
 
 ### ZK-SNARK Proofs
 
 ```typescript
 // Generate ZK proof
-const proof = await ZetarisSDK.generateZkProof({
+const proof = await SafeMaskSDK.generateZkProof({
   publicInputs: new Uint8Array([1, 2, 3]),
   privateInputs: new Uint8Array([4, 5, 6]),
   circuitType: 'confidential_transfer',
 });
 
 // Verify ZK proof
-const isValid = await ZetarisSDK.verifyZkProof(
+const isValid = await SafeMaskSDK.verifyZkProof(
   proof,
   new Uint8Array([1, 2, 3])
 );
@@ -103,22 +103,22 @@ const isValid = await ZetarisSDK.verifyZkProof(
 
 ```typescript
 // Create transaction
-const tx = await ZetarisSDK.createTransaction(
+const tx = await SafeMaskSDK.createTransaction(
   wallet,
   recipientAddress,
   amount
 );
 
 // Sign transaction
-const signature = await ZetarisSDK.signTransaction(wallet, tx);
+const signature = await SafeMaskSDK.signTransaction(wallet, tx);
 
 // Verify transaction
-const isValid = await ZetarisSDK.verifyTransaction(tx);
+const isValid = await SafeMaskSDK.verifyTransaction(tx);
 ```
 
 ## API Reference
 
-### ZetarisSDK
+### SafeMaskSDK
 
 #### Static Methods
 
@@ -138,7 +138,7 @@ const isValid = await ZetarisSDK.verifyTransaction(tx);
 - `exportViewKey(handle: WalletHandle): Promise<string>` - Export view key
 - `importPrivateKey(privateKey: string, password: string): Promise<WalletHandle>` - Import from private key
 
-### ZetarisUtils
+### SafeMaskUtils
 
 #### Static Methods
 
@@ -206,12 +206,12 @@ interface ZkProof {
 ## Error Handling
 
 ```typescript
-import { ZetarisError } from '@Zetaris/sdk';
+import { SafeMaskError } from '@SafeMask/sdk';
 
 try {
-  const wallet = await ZetarisSDK.createWallet(mnemonic, password);
+  const wallet = await SafeMaskSDK.createWallet(mnemonic, password);
 } catch (error) {
-  if (error instanceof ZetarisError) {
+  if (error instanceof SafeMaskError) {
     console.error('Error code:', error.code);
     console.error('Message:', error.message);
   }
@@ -222,8 +222,8 @@ try {
 
 ```bash
 # Clone repository
-git clone https://github.com/Zetaris/Zetaris.git
-cd Zetaris/sdk/ts-sdk
+git clone https://github.com/SafeMask/SafeMask.git
+cd SafeMask/sdk/ts-sdk
 
 # Install dependencies
 npm install
@@ -249,7 +249,7 @@ Add to `android/app/build.gradle`:
 
 ```gradle
 dependencies {
-    implementation project(':Zetaris-ffi')
+    implementation project(':SafeMask-ffi')
 }
 ```
 
@@ -263,4 +263,4 @@ Contributions welcome! Please see CONTRIBUTING.md
 
 ## Security
 
-Report security issues to security@Zetaris.io
+Report security issues to security@SafeMask.io
