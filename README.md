@@ -1,6 +1,8 @@
-# SafeMask - Privacy-First Multi-Chain Wallet
-
 <div align="center">
+
+<img src="assets/icon.jpeg" alt="SafeMask Logo" width="200" height="200" style="border-radius: 20px; margin-bottom: 20px;">
+
+# SafeMask - Privacy-First Multi-Chain Wallet
 
 **Private. Secure. Production-Ready.**
 
