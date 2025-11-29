@@ -66,10 +66,9 @@ function MainTabs() {
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        // Faster tab switching - tabs are already mounted, just show/hide
-        animationEnabled: false, // Instant tab switching since tabs are pre-mounted
       }}
     >
+      {/* Tabs are pre-mounted for instant switching */}
       <Tab.Screen name="Wallet" component={ProductionWalletScreen} />
       <Tab.Screen name="RealSend" component={RealSendScreen} />
       <Tab.Screen name="RealReceive" component={RealReceiveScreen} />
@@ -118,41 +117,37 @@ export default function AppNavigator() {
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: '#0a0a0a' },
-        // Faster transitions
-        animationEnabled: true,
+        ...TransitionPresets.SlideFromRightIOS,
         transitionSpec: {
           open: {
             animation: 'timing',
             config: {
-              duration: 200, // Reduced from default 350ms
+              duration: 200,
             },
           },
           close: {
             animation: 'timing',
             config: {
-              duration: 200, // Reduced from default 350ms
+              duration: 200,
             },
           },
-        },
-        cardStyleInterpolator: ({ current, next, layouts }) => {
-          return {
-            cardStyle: {
-              transform: [
-                {
-                  translateX: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [layouts.screen.width, 0],
-                  }),
-                },
-              ],
-            },
-          };
         },
       }}
     >
       {/* Calculator disguise mode - privacy feature */}
       <Stack.Screen name="CalculatorMode" component={CalculatorModeScreen} />
-      <Stack.Screen name="LockScreen" component={LockScreen} />
+      <Stack.Screen name="LockScreen">
+        {(props) => (
+          <LockScreen
+            {...props}
+            onUnlock={() => {
+              // Disable calculator mode and navigate to wallet
+              AsyncStorage.setItem('SafeMask_calculator_unlock', 'false');
+              props.navigation.replace('MainTabs');
+            }}
+          />
+        )}
+      </Stack.Screen>
       
       {/* Wallet Setup Flow */}
       <Stack.Screen name="WalletSetup" component={WalletSetupScreen} />
