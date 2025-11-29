@@ -27,8 +27,12 @@ import BottomTabBar from '../components/BottomTabBar';
 import RecentTransactionsScreen from '../screens/RecentTransactionsScreen';
 import TokenChartScreen from '../screens/TokenChartScreen';
 import TransactionDetailScreen from '../screens/TransactionDetailScreen';
+import CalculatorModeScreen from '../screens/CalculatorModeScreen';
+import LockScreen from '../screens/LockScreen';
 
 export type RootStackParamList = {
+  CalculatorMode: undefined;
+  LockScreen: undefined;
   WalletSetup: undefined;
   CreateWallet: undefined;
   VerifySeedPhrase: { seedPhrase: string };
@@ -77,9 +81,11 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
+  const [calculatorMode, setCalculatorMode] = useState<boolean>(true);
 
   useEffect(() => {
     checkWallet();
+    checkCalculatorMode();
   }, []);
 
   const checkWallet = async () => {
@@ -91,13 +97,24 @@ export default function AppNavigator() {
     }
   };
 
+  const checkCalculatorMode = async () => {
+    try {
+      const mode = await AsyncStorage.getItem('SafeMask_calculator_unlock');
+      setCalculatorMode(mode !== 'false');
+    } catch {
+      setCalculatorMode(true);
+    }
+  };
+
   if (hasWallet === null) {
     return null; // Loading
   }
 
+  const initialRoute = calculatorMode && hasWallet ? 'CalculatorMode' : (hasWallet ? 'MainTabs' : 'WalletSetup');
+
   return (
     <Stack.Navigator
-      initialRouteName={hasWallet ? 'MainTabs' : 'WalletSetup'}
+      initialRouteName={initialRoute}
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: '#0a0a0a' },
@@ -133,6 +150,10 @@ export default function AppNavigator() {
         },
       }}
     >
+      {/* Calculator disguise mode - privacy feature */}
+      <Stack.Screen name="CalculatorMode" component={CalculatorModeScreen} />
+      <Stack.Screen name="LockScreen" component={LockScreen} />
+      
       {/* Wallet Setup Flow */}
       <Stack.Screen name="WalletSetup" component={WalletSetupScreen} />
       <Stack.Screen name="CreateWallet" component={CreateWalletScreen} />
