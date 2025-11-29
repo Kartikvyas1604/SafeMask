@@ -66,10 +66,19 @@ function MainTabs() {
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        lazy: false, // Pre-mount all tabs
+        unmountOnBlur: false, // Keep screens mounted when switching tabs
       }}
+      detachInactiveScreens={false} // Keep inactive screens in memory
     >
       {/* Tabs are pre-mounted for instant switching */}
-      <Tab.Screen name="Wallet" component={ProductionWalletScreen} />
+      <Tab.Screen 
+        name="Wallet" 
+        component={ProductionWalletScreen}
+        options={{
+          unmountOnBlur: false,
+        }}
+      />
       <Tab.Screen name="RealSend" component={RealSendScreen} />
       <Tab.Screen name="RealReceive" component={RealReceiveScreen} />
       <Tab.Screen name="RealSwap" component={RealSwapScreen} />
@@ -80,11 +89,9 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
-  const [calculatorMode, setCalculatorMode] = useState<boolean>(true);
 
   useEffect(() => {
     checkWallet();
-    checkCalculatorMode();
   }, []);
 
   const checkWallet = async () => {
@@ -96,20 +103,11 @@ export default function AppNavigator() {
     }
   };
 
-  const checkCalculatorMode = async () => {
-    try {
-      const mode = await AsyncStorage.getItem('SafeMask_calculator_unlock');
-      setCalculatorMode(mode !== 'false');
-    } catch {
-      setCalculatorMode(true);
-    }
-  };
-
   if (hasWallet === null) {
     return null; // Loading
   }
 
-  const initialRoute = calculatorMode && hasWallet ? 'CalculatorMode' : (hasWallet ? 'MainTabs' : 'WalletSetup');
+  const initialRoute = hasWallet ? 'MainTabs' : 'WalletSetup';
 
   return (
     <Stack.Navigator

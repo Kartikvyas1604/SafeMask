@@ -270,9 +270,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={20} color={Colors.white} />
-            </TouchableOpacity>
             <Text style={styles.headerTitle}>Settings</Text>
           </View>
           

@@ -148,8 +148,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
   
   const blockchainService = RealBlockchainService;
   
-  // Use ref to track if wallet has been loaded (persists across re-renders)
+  // Use ref to track if wallet has been loaded (persists across re-renders and re-mounts)
   const hasLoadedWallet = useRef(false);
+  const isInitializing = useRef(false);
   
   // Animation values for scroll-based animations
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -184,8 +185,12 @@ export default function ProductionWalletScreen({ navigation }: any) {
    * Tab Navigator keeps this screen mounted, so useEffect only runs once
    */
   useEffect(() => {
-    if (!hasLoadedWallet.current) {
-      initializeWallet();
+    // Prevent multiple simultaneous initializations
+    if (!hasLoadedWallet.current && !isInitializing.current) {
+      isInitializing.current = true;
+      initializeWallet().finally(() => {
+        isInitializing.current = false;
+      });
       hasLoadedWallet.current = true;
       
       // Animate items in on mount

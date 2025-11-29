@@ -51,36 +51,26 @@ export default function App() {
   };
 
   const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    console.log('[App] AppState changed to:', nextAppState);
+    
     if (nextAppState === 'background' || nextAppState === 'inactive') {
-      // App going to background
+      // App going to background - lock immediately
       const wallet = await AsyncStorage.getItem('SafeMask_has_wallet');
-      if (wallet === 'true') {
-        // Save the time when app went to background
-        await AsyncStorage.setItem('SafeMask_background_time', Date.now().toString());
-      }
-    } else if (nextAppState === 'active') {
-      // App coming to foreground
-      const wallet = await AsyncStorage.getItem('SafeMask_has_wallet');
+      console.log('[App] Has wallet:', wallet);
+      
       if (wallet === 'true') {
         const autoLockEnabled = await AsyncStorage.getItem('SafeMask_autoLock');
+        console.log('[App] Auto-lock enabled:', autoLockEnabled);
         
         if (autoLockEnabled !== 'false') {
-          const backgroundTime = await AsyncStorage.getItem('SafeMask_background_time');
-          
-          if (backgroundTime) {
-            const timeInBackground = Date.now() - parseInt(backgroundTime);
-            const fiveMinutes = 5 * 60 * 1000;
-            
-            // Lock if app was in background for more than 5 minutes
-            if (timeInBackground > fiveMinutes) {
-              setIsLocked(true);
-            }
-          } else {
-            // No background time recorded, lock to be safe
-            setIsLocked(true);
-          }
+          // Lock the app when it goes to background
+          console.log('[App] Locking app...');
+          setIsLocked(true);
         }
       }
+    } else if (nextAppState === 'active') {
+      // App coming to foreground - stay locked if it was locked
+      console.log('[App] App is active, isLocked:', isLocked);
     }
   };
 
