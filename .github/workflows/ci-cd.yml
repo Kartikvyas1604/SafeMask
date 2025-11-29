@@ -189,7 +189,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docker-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-    environment: staging
     
     steps:
       - name: Checkout code
@@ -217,7 +216,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docker-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    environment: production
     
     steps:
       - name: Checkout code

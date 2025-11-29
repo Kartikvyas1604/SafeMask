@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,19 @@ import {
   StyleSheet,
   Vibration,
   StatusBar,
+  ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 
 interface CalculatorModeScreenProps {
-  navigation: any;
+  navigation: {
+    replace: (screen: string) => void;
+  };
 }
 
 const UNLOCK_SEQUENCE = '1337';
-const UNLOCK_KEY = 'SafeMask_calculator_unlock';
 
 export default function CalculatorModeScreen({ navigation }: CalculatorModeScreenProps) {
   const insets = useSafeAreaInsets();
@@ -94,9 +95,9 @@ export default function CalculatorModeScreen({ navigation }: CalculatorModeScree
     setOperation(null);
   };
 
-  const renderButton = (label: string, onPress: () => void, style?: any) => (
+  const renderButton = (label: string, onPress: () => void, style?: ViewStyle) => (
     <TouchableOpacity style={[styles.button, style]} onPress={onPress} activeOpacity={0.7}>
-      <Text style={[styles.buttonText, style?.color && { color: style.color }]}>{label}</Text>
+      <Text style={[styles.buttonText, (style as { color?: string })?.color && { color: (style as { color?: string }).color }]}>{label}</Text>
     </TouchableOpacity>
   );
 
@@ -159,23 +160,23 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     padding: 24,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.card,
   },
   displayText: {
     fontSize: 56,
-    fontFamily: Typography.fontFamily.regular,
-    color: Colors.text,
+    fontFamily: Typography.fontFamily.primary,
+    color: Colors.textPrimary,
     fontWeight: '300',
   },
   operationText: {
     fontSize: 20,
-    fontFamily: Typography.fontFamily.regular,
+    fontFamily: Typography.fontFamily.primary,
     color: Colors.textSecondary,
     marginTop: 8,
   },
   hintText: {
     fontSize: 12,
-    fontFamily: Typography.fontFamily.regular,
+    fontFamily: Typography.fontFamily.primary,
     color: Colors.textSecondary,
     textAlign: 'center',
     paddingVertical: 8,
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     aspectRatio: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.card,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -199,11 +200,11 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 28,
-    fontFamily: Typography.fontFamily.medium,
-    color: Colors.text,
+    fontFamily: Typography.fontFamily.primary,
+    color: Colors.textPrimary,
   },
-  functionButton: { backgroundColor: Colors.surfaceVariant, color: Colors.primary },
-  operatorButton: { backgroundColor: Colors.primary, color: Colors.background },
-  equalsButton: { backgroundColor: Colors.accent, color: Colors.background },
+  functionButton: { backgroundColor: Colors.cardHover, color: Colors.accent },
+  operatorButton: { backgroundColor: Colors.accent, color: Colors.background },
+  equalsButton: { backgroundColor: Colors.accentSecondary, color: Colors.background },
   zeroButton: { flex: 2 },
 });

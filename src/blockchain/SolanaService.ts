@@ -57,7 +57,8 @@ export class SolanaService {
     // 1. Wrap ZEC to Solana
     // 2. Create token via Pump.fun program
     // 3. Add ZEC as initial liquidity
-    return `token_${Buffer.from(symbol).toString('base58')}`;
+    const bs58 = require('bs58');
+    return `token_${bs58.encode(Buffer.from(symbol))}`;
   }
 
   // Helius Enhanced API for $10k prize
