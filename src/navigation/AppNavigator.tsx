@@ -83,7 +83,6 @@ function MainTabs() {
       screenOptions={{
         headerShown: false,
         lazy: false, // Pre-mount all tabs
-        unmountOnBlur: false, // Keep screens mounted when switching tabs
       }}
       detachInactiveScreens={false} // Keep inactive screens in memory
     >
@@ -92,7 +91,7 @@ function MainTabs() {
         name="Wallet" 
         component={ProductionWalletScreen}
         options={{
-          unmountOnBlur: false,
+          // Keep wallet mounted to preserve state
         }}
       />
       <Tab.Screen name="RealSend" component={RealSendScreen} />

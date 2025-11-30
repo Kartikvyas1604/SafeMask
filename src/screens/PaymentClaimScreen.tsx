@@ -105,7 +105,7 @@ export default function PaymentClaimScreen() {
           onPress: () => {
             // Navigate to receive screen to show the address
             // The actual payment will be sent by the sender
-            navigation.navigate('MainTabs' as any, {
+            (navigation as any).navigate('MainTabs', {
               screen: 'RealReceive',
             });
             Alert.alert(
@@ -122,7 +122,7 @@ export default function PaymentClaimScreen() {
   const handleSendToMe = () => {
     // Navigate to send screen with pre-filled details to send to self
     // This is for testing - in production, the sender would send the payment
-    navigation.navigate('MainTabs' as any, {
+    (navigation as any).navigate('MainTabs', {
       screen: 'RealSend',
       params: {
         initialRecipientAddress: params.recipientAddress,

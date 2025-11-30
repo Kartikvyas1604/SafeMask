@@ -79,7 +79,7 @@ export default function App() {
     
     // App is going to background or becoming inactive
     if (
-      (appState.current === 'active' || appState.current === 'foreground') &&
+      appState.current === 'active' &&
       (nextAppState === 'background' || nextAppState === 'inactive')
     ) {
       // App is leaving foreground - lock immediately
@@ -270,7 +270,7 @@ export default function App() {
           prefixes: ['safemask://', 'https://safemask.app', 'ethereum:'],
           config: {
             screens: {
-              MainTabs: {
+              MainTabs: ({
                 screens: {
                   RealSend: {
                     path: 'send',
@@ -282,7 +282,7 @@ export default function App() {
                     },
                   },
                 },
-              },
+              }) as any,
               PaymentClaim: {
                 path: 'pay',
                 parse: {
