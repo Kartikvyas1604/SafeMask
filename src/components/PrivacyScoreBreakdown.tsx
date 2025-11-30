@@ -24,25 +24,29 @@ const SemiCircleProgress: React.FC<{
   const normalizedPercentage = Math.min(Math.max(percentage, 0), 100);
   
   // Calculate angle in radians
-  // Semi-circle goes from 180° (left) to 0° (right), opening at bottom
-  const endAngle = Math.PI - (normalizedPercentage / 100) * Math.PI;
+  // Semi-circle goes from 0° (right) to 180° (left), opening at bottom
+  // Fill from right to left counter-clockwise
+  const startAngle = 0; // Start at right (0°)
+  const endAngle = (normalizedPercentage / 100) * Math.PI; // End angle: 0 to π (0° to 180°)
+  
+  // Calculate start point (right side at 0°)
+  const startX = centerX + radius;
+  const startY = centerY;
   
   // Calculate end point
+  // For a semi-circle opening downward, angles are measured from right (0°) going counter-clockwise
+  // endAngle goes from 0 to π, so we use it directly
   const endX = centerX + radius * Math.cos(endAngle);
   const endY = centerY - radius * Math.sin(endAngle);
   
-  // Start point (always at left side)
-  const startX = centerX - radius;
-  const startY = centerY;
-  
-  // Large arc flag: 1 if we're going more than 180 degrees
+  // Large arc flag: 1 if we're going more than 180 degrees (shouldn't happen for semi-circle, but keep for safety)
   const largeArcFlag = normalizedPercentage > 50 ? 1 : 0;
   
-  // Create the arc path
-  const pathData = `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${endX} ${endY}`;
+  // Create the arc path (sweep flag = 1 for counter-clockwise)
+  const pathData = `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
   
-  // Background arc (full semi-circle)
-  const backgroundPath = `M ${startX} ${startY} A ${radius} ${radius} 0 0 1 ${centerX + radius} ${centerY}`;
+  // Background arc (full semi-circle) - goes counter-clockwise from right (0°) to left (π)
+  const backgroundPath = `M ${startX} ${startY} A ${radius} ${radius} 0 0 1 ${centerX - radius} ${centerY}`;
   
   // ViewBox: show only the top half (semi-circle)
   // The semi-circle is centered at bottom, so we show from centerY - radius to centerY

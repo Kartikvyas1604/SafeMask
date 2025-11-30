@@ -200,10 +200,10 @@ export default function TransactionDetailScreen() {
                 style={styles.infoValueContainer}
                 onPress={() => copyToClipboard(transaction.txHash!, 'Transaction hash')}
               >
-                <Text style={styles.infoValue} numberOfLines={1}>
-                  {formatAddress(transaction.txHash)}
+                <Text style={[styles.infoValue, styles.hashValue]} numberOfLines={1}>
+                  {transaction.txHash}
                 </Text>
-                <Ionicons name="copy-outline" size={16} color={Colors.textSecondary} />
+                <Ionicons name="copy-outline" size={18} color={Colors.accent} />
               </TouchableOpacity>
             </View>
           )}
@@ -300,11 +300,31 @@ export default function TransactionDetailScreen() {
 
         {/* Explorer Link */}
         {transaction.explorerUrl && (
-          <TouchableOpacity style={styles.explorerButton} onPress={openExplorer}>
-            <Ionicons name="open-outline" size={20} color={Colors.accent} />
-            <Text style={styles.explorerButtonText}>View on Explorer</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-          </TouchableOpacity>
+          <View style={styles.explorerSection}>
+            <TouchableOpacity style={styles.explorerButton} onPress={openExplorer}>
+              <View style={styles.explorerButtonLeft}>
+                <Ionicons name="open-outline" size={24} color={Colors.white} />
+                <View style={styles.explorerButtonTextContainer}>
+                  <Text style={styles.explorerButtonText}>View on Explorer</Text>
+                  <Text style={styles.explorerButtonSubtext}>
+                    {transaction.chain === 'Ethereum' ? 'Etherscan' : 
+                     transaction.chain === 'Polygon' ? 'Polygonscan' : 
+                     'Block Explorer'}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.white} />
+            </TouchableOpacity>
+            {transaction.txHash && (
+              <TouchableOpacity
+                style={styles.copyHashButton}
+                onPress={() => copyToClipboard(transaction.txHash!, 'Transaction hash')}
+              >
+                <Ionicons name="copy-outline" size={18} color={Colors.accent} />
+                <Text style={styles.copyHashText}>Copy Hash</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         <View style={{ height: 100 }} />
@@ -459,6 +479,12 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.medium,
     maxWidth: '60%',
   },
+  hashValue: {
+    fontFamily: Typography.fontFamily.mono,
+    fontSize: Typography.fontSize.xs,
+    color: Colors.accent,
+    maxWidth: '75%',
+  },
   infoValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -470,23 +496,53 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.md,
   },
+  explorerSection: {
+    marginBottom: Spacing.lg,
+  },
   explorerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.accent,
     borderRadius: 16,
     padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  explorerButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: Spacing.md,
+  },
+  explorerButtonTextContainer: {
+    flex: 1,
   },
   explorerButtonText: {
-    flex: 1,
     fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.white,
+    marginBottom: 2,
+  },
+  explorerButtonSubtext: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.white,
+    opacity: 0.8,
+  },
+  copyHashButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  copyHashText: {
+    fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.accent,
-    marginLeft: Spacing.md,
   },
   errorContainer: {
     flex: 1,

@@ -21,7 +21,6 @@ import RealBlockchainService, { RealBalance } from '../blockchain/RealBlockchain
 import { SafeMaskWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import ChainIcon from '../components/ChainIcon';
 import BottomTabBar from '../components/BottomTabBar';
-import PrivacyScoreBreakdown from '../components/PrivacyScoreBreakdown';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -632,11 +631,6 @@ export default function ProductionWalletScreen({ navigation }: any) {
           )}
         </Animated.View>
         
-        {/* Privacy Score Breakdown */}
-        <Animated.View style={[styles.privacyScoreSection, getAnimatedStyle(3)]}>
-          <PrivacyScoreBreakdown privacyScore={privacyScore} />
-        </Animated.View>
-        
         {/* Bottom padding for tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -964,9 +958,6 @@ const styles = StyleSheet.create({
   // RECENT ACTIONS Section
   recentActionsSection: {
     paddingHorizontal: Spacing.xl,
-    marginBottom: Spacing['2xl'],
-  },
-  privacyScoreSection: {
     marginBottom: Spacing['2xl'],
   },
   tokenModalBackdrop: {

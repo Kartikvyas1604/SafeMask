@@ -27,6 +27,7 @@ import BottomTabBar from '../components/BottomTabBar';
 import RecentTransactionsScreen from '../screens/RecentTransactionsScreen';
 import TokenChartScreen from '../screens/TokenChartScreen';
 import TransactionDetailScreen from '../screens/TransactionDetailScreen';
+import PaymentClaimScreen from '../screens/PaymentClaimScreen';
 import CalculatorModeScreen from '../screens/CalculatorModeScreen';
 import LockScreen from '../screens/LockScreen';
 
@@ -43,7 +44,14 @@ export type RootStackParamList = {
   Send: { walletAddress: string; balances: any[] };
   Receive: { walletAddress: string };
   Swap: { walletAddress: string; balances: any[] };
-  RealSend: { walletAddress?: string; balances?: any[] };
+  RealSend: { 
+    walletAddress?: string; 
+    balances?: any[];
+    initialChain?: string;
+    initialRecipientAddress?: string;
+    initialAmount?: string;
+    initialMemo?: string;
+  };
   RealReceive: { walletAddress?: string };
   RealSwap: { walletAddress?: string; balances?: any[] };
   TokenChart: { symbol: string; name: string };
@@ -54,6 +62,14 @@ export type RootStackParamList = {
   Browser: undefined;
   RecentTransactions: undefined;
   TransactionDetail: { transaction: any };
+  PaymentClaim: {
+    recipientAddress: string;
+    amount: string;
+    chain: string;
+    symbol: string;
+    memo?: string;
+    senderAddress?: string;
+  };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -166,6 +182,7 @@ export default function AppNavigator() {
       <Stack.Screen name="RecentTransactions" component={RecentTransactionsScreen} />
       <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
       <Stack.Screen name="TokenChart" component={TokenChartScreen} />
+      <Stack.Screen name="PaymentClaim" component={PaymentClaimScreen} />
     </Stack.Navigator>
   );
 }

@@ -14,6 +14,7 @@ import {
   Clipboard,
   ActivityIndicator,
   Modal,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,7 @@ import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
+import { generateSuperLink } from '../utils/superLink';
 
 interface Props {
   navigation: any; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -137,6 +139,54 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
   const shareAddress = (address: string) => {
     logger.info('Sharing address:', address);
     Alert.alert('Share', `Share this address:\n\n${address}`);
+  };
+
+  const getChainId = (chain: string): string => {
+    const chainMap: { [key: string]: string } = {
+      'Sepolia Testnet': 'ethereum',
+      'Polygon Amoy': 'polygon',
+      'Solana Devnet': 'solana',
+      'Bitcoin (Demo)': 'bitcoin',
+      'Zcash (Demo)': 'zcash',
+    };
+    return chainMap[chain] || 'ethereum';
+  };
+
+  const shareSuperLink = async () => {
+    if (!selectedAddress) return;
+    
+    try {
+      // Use universal link format that works with any wallet
+      const superLink = generateSuperLink({
+        address: selectedAddress.address,
+        chain: getChainId(selectedAddress.chain),
+      }, true); // true = use universal link format
+      
+      const result = await Share.share({
+        message: `Send crypto to me:\n${superLink}\n\nClick the link to choose your wallet and send. Or copy this address: ${selectedAddress.address}`,
+        url: superLink,
+      });
+      
+      if (result.action === Share.sharedAction) {
+        logger.info('Super link shared successfully');
+      }
+    } catch (error: any) {
+      logger.error('Failed to share super link:', error);
+      Alert.alert('Error', 'Failed to share super link');
+    }
+  };
+
+  const copySuperLink = () => {
+    if (!selectedAddress) return;
+    
+    // Use universal link format
+    const superLink = generateSuperLink({
+      address: selectedAddress.address,
+      chain: getChainId(selectedAddress.chain),
+    }, true); // true = use universal link format
+    
+    Clipboard.setString(superLink);
+    Alert.alert('Super Link Copied', 'The super link has been copied to your clipboard. Share it with anyone - they can use any wallet to pay you!');
   };
 
   if (loading) {
@@ -259,6 +309,50 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
                   >
                     <Ionicons name="share-outline" size={20} color={Colors.white} />
                     <Text style={styles.actionButtonText}>Share</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* SUPER LINK Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>SUPER LINK</Text>
+              <View style={styles.superLinkCard}>
+                <View style={styles.superLinkHeader}>
+                  <Ionicons name="link" size={20} color={Colors.accent} />
+                  <Text style={styles.superLinkTitle}>Shareable Payment Link</Text>
+                </View>
+                <Text style={styles.superLinkDescription}>
+                  Share this universal payment link with anyone. When clicked, they can choose 
+                  any wallet app (MetaMask, Trust Wallet, Coinbase Wallet, SafeMask, etc.) to 
+                  send crypto to your address. The recipient address will be pre-filled automatically.
+                </Text>
+                
+                <View style={styles.superLinkBox}>
+                  <Text style={styles.superLinkText} numberOfLines={2}>
+                    {selectedAddress && generateSuperLink({
+                      address: selectedAddress.address,
+                      chain: getChainId(selectedAddress.chain),
+                    }, true)}
+                  </Text>
+                </View>
+
+                {/* Super Link Action Buttons */}
+                <View style={styles.actionButtonsRow}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={copySuperLink}
+                  >
+                    <Ionicons name="copy-outline" size={20} color={Colors.white} />
+                    <Text style={styles.actionButtonText}>Copy Link</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={shareSuperLink}
+                  >
+                    <Ionicons name="share-outline" size={20} color={Colors.white} />
+                    <Text style={styles.actionButtonText}>Share Link</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -782,6 +876,46 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     color: Colors.textSecondary,
     lineHeight: 20,
+  },
+  
+  // Super Link Card
+  superLinkCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    padding: Spacing.lg,
+  },
+  superLinkHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  superLinkTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  superLinkDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+  },
+  superLinkBox: {
+    backgroundColor: Colors.cardHover,
+    borderRadius: 12,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  superLinkText: {
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.mono,
+    textAlign: 'center',
   },
 });
 

@@ -11,6 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Share,
+  Clipboard,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +30,7 @@ import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
 import { ErrorHandler, withErrorHandling } from '../utils/errorHandler';
 import { LoadingOverlay } from '../components/LoadingOverlay';
+import { generatePaymentLink } from '../utils/paymentLink';
 
 type SendScreenNavigationProp = StackNavigationProp<RootStackParamList, 'RealSend'>;
 
@@ -35,6 +39,9 @@ interface Props {
   route?: {
     params?: {
       initialChain?: string;
+      initialRecipientAddress?: string;
+      initialAmount?: string;
+      initialMemo?: string;
     };
   };
 }
@@ -67,6 +74,8 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
   const [walletAddress, setWalletAddress] = useState('');
   const [showNFC, setShowNFC] = useState(false);
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
+  const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false);
+  const [paymentLink, setPaymentLink] = useState('');
 
   // Prevent unnecessary reloads by memoizing loaded state
   const isInitialMount = useRef(true);
@@ -83,7 +92,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, []);
 
-  // If an initialChain param is provided (e.g. from chart screen), preselect it
+  // If an initialChain param is provided (e.g. from chart screen or super link), preselect it
   useEffect(() => {
     const initialChainId = route?.params?.initialChain;
     if (initialChainId) {
@@ -93,6 +102,30 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
       }
     }
   }, [route?.params?.initialChain]);
+
+  // Handle initial recipient address from super link
+  useEffect(() => {
+    const initialAddress = route?.params?.initialRecipientAddress;
+    if (initialAddress) {
+      setRecipientAddress(initialAddress);
+    }
+  }, [route?.params?.initialRecipientAddress]);
+
+  // Handle initial amount from super link
+  useEffect(() => {
+    const initialAmount = route?.params?.initialAmount;
+    if (initialAmount) {
+      setAmount(initialAmount);
+    }
+  }, [route?.params?.initialAmount]);
+
+  // Handle initial memo from super link
+  useEffect(() => {
+    const initialMemo = route?.params?.initialMemo;
+    if (initialMemo) {
+      setMemo(initialMemo);
+    }
+  }, [route?.params?.initialMemo]);
 
   useEffect(() => {
     // Only reload balance if chain actually changed
@@ -294,7 +327,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
       const tempWallet = new SafeMaskWalletCore();
       await tempWallet.importWallet(walletData.seedPhrase);
 
-      let txHash = '';
+      let txResult: any = null;
       let currentPrivateKey = '';
       let currentAddress = '';
 
@@ -307,14 +340,13 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
           currentPrivateKey = ethAccount.privateKey;
           currentAddress = ethAccount.address;
           
-          const txResult = await RealBlockchainService.sendRealTransaction(
+          txResult = await RealBlockchainService.sendRealTransaction(
             'ethereum',
             currentAddress,
             recipientAddress,
             amount,
             currentPrivateKey
           );
-          txHash = txResult.hash;
           break;
         }
         case 'polygon': {
@@ -325,14 +357,13 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
           currentPrivateKey = polyAccount.privateKey;
           currentAddress = polyAccount.address;
           
-          const txResult = await RealBlockchainService.sendRealTransaction(
+          txResult = await RealBlockchainService.sendRealTransaction(
             'polygon',
             currentAddress,
             recipientAddress,
             amount,
             currentPrivateKey
           );
-          txHash = txResult.hash;
           break;
         }
 
@@ -354,7 +385,76 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
 
       setIsSending(false);
 
-      ErrorHandler.success(`Transaction sent! Hash: ${txHash.substring(0, 10)}...`);
+      if (txResult) {
+        // Save transaction to AsyncStorage for history
+        try {
+          const transactionsStr = await AsyncStorage.getItem('SafeMask_transactions');
+          const transactions = transactionsStr ? JSON.parse(transactionsStr) : [];
+          
+          const transactionRecord = {
+            id: txResult.hash,
+            type: 'send' as const,
+            token: selectedChain.symbol,
+            amount: `-${amount}`,
+            time: 'Just now',
+            color: Colors.error,
+            isPrivate: false,
+            txHash: txResult.hash,
+            fromAddress: currentAddress,
+            toAddress: recipientAddress,
+            chain: selectedChain.name,
+            blockNumber: txResult.blockNumber,
+            confirmations: txResult.confirmations || 0,
+            gasUsed: txResult.gas || '0',
+            gasPrice: txResult.gasPrice || '0',
+            fee: `${parseFloat(txResult.gas || '0') * parseFloat(txResult.gasPrice || '0') / 1e18} ${selectedChain.symbol}`,
+            status: txResult.status || 'pending' as const,
+            timestamp: txResult.timestamp || Date.now(),
+            explorerUrl: txResult.explorerUrl,
+            nonce: txResult.nonce,
+          };
+          
+          transactions.unshift(transactionRecord);
+          // Keep only last 100 transactions
+          if (transactions.length > 100) {
+            transactions.splice(100);
+          }
+          
+          await AsyncStorage.setItem('SafeMask_transactions', JSON.stringify(transactions));
+        } catch (error) {
+          logger.error('Failed to save transaction:', error);
+        }
+
+        // Show success alert with hash and Etherscan link
+        const explorerName = selectedChain.id === 'ethereum' ? 'Etherscan' : 
+                            selectedChain.id === 'polygon' ? 'Polygonscan' : 'Explorer';
+        
+        Alert.alert(
+          '✅ Transaction Sent!',
+          `Transaction Hash:\n${txResult.hash}\n\nStatus: ${txResult.status === 'confirmed' ? 'Confirmed' : 'Pending'}\n\nWould you like to view it on ${explorerName}?`,
+          [
+            {
+              text: 'Copy Hash',
+              onPress: () => {
+                Clipboard.setString(txResult.hash);
+                Alert.alert('Copied', 'Transaction hash copied to clipboard');
+              },
+            },
+            {
+              text: 'View on Explorer',
+              onPress: () => {
+                if (txResult.explorerUrl) {
+                  Linking.openURL(txResult.explorerUrl);
+                }
+              },
+            },
+            {
+              text: 'OK',
+              style: 'default',
+            },
+          ]
+        );
+      }
 
       // Clear form
       setRecipientAddress('');
@@ -398,6 +498,54 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
     const gasBuffer = parseFloat(gasEstimate) || 0;
     const maxAmount = Math.max(0, parseFloat(balance) - gasBuffer);
     setAmount(maxAmount.toString());
+  };
+
+  const createPaymentLink = () => {
+    // Validate inputs
+    if (!recipientAddress.trim()) {
+      ErrorHandler.error('Please enter recipient address');
+      return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      ErrorHandler.error('Please enter a valid amount');
+      return;
+    }
+
+    // Generate payment link
+    const link = generatePaymentLink({
+      recipientAddress: recipientAddress.trim(),
+      amount,
+      chain: selectedChain.id,
+      symbol: selectedChain.symbol,
+      memo: memo || undefined,
+      senderAddress: walletAddress || undefined,
+    });
+
+    setPaymentLink(link);
+    setShowPaymentLinkModal(true);
+    logger.info('Payment link created:', link);
+  };
+
+  const copyPaymentLink = () => {
+    Clipboard.setString(paymentLink);
+    Alert.alert('Link Copied', 'Payment link has been copied to clipboard');
+  };
+
+  const sharePaymentLink = async () => {
+    try {
+      const result = await Share.share({
+        message: `Collect ${amount} ${selectedChain.symbol} from me:\n${paymentLink}\n\nClick the link to claim your payment!`,
+        url: paymentLink,
+      });
+      
+      if (result.action === Share.sharedAction) {
+        logger.info('Payment link shared successfully');
+      }
+    } catch (error: any) {
+      logger.error('Failed to share payment link:', error);
+      Alert.alert('Error', 'Failed to share payment link');
+    }
   };
   
   const handleNFCSend = async () => {
@@ -644,6 +792,29 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         )}
 
+        {/* Create Payment Link Section */}
+        {(recipientAddress && amount && parseFloat(amount) > 0) && (
+          <View style={styles.section}>
+            <View style={styles.paymentLinkCard}>
+              <View style={styles.paymentLinkHeader}>
+                <Ionicons name="link" size={20} color={Colors.accent} />
+                <Text style={styles.paymentLinkTitle}>Create Payment Link</Text>
+              </View>
+              <Text style={styles.paymentLinkDescription}>
+                Generate a shareable link that allows the recipient to collect {amount} {selectedChain.symbol}. 
+                Share this link and they can claim the payment.
+              </Text>
+              <TouchableOpacity
+                style={styles.createLinkButton}
+                onPress={createPaymentLink}
+              >
+                <Ionicons name="link-outline" size={20} color={Colors.white} />
+                <Text style={styles.createLinkButtonText}>Create Payment Link</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Send Button */}
         <TouchableOpacity
           style={[styles.sendButton, isSending && styles.sendButtonDisabled]}
@@ -712,6 +883,71 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
             ))}
           </View>
         </TouchableOpacity>
+      </Modal>
+      
+      {/* Payment Link Modal */}
+      <Modal
+        visible={showPaymentLinkModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPaymentLinkModal(false)}
+      >
+        <View style={styles.paymentLinkModalOverlay}>
+          <TouchableOpacity
+            style={styles.paymentLinkModalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowPaymentLinkModal(false)}
+          />
+          <View style={styles.paymentLinkModalContent}>
+            <View style={styles.paymentLinkModalHeader}>
+              <View style={styles.paymentLinkModalHeaderLeft}>
+                <Ionicons name="link" size={24} color={Colors.accent} />
+                <Text style={styles.paymentLinkModalTitle}>Payment Link</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowPaymentLinkModal(false)}
+                style={styles.paymentLinkModalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.paymentLinkModalDescription}>
+              Share this link with the recipient. When they click it, they can collect {amount} {selectedChain.symbol}.
+            </Text>
+
+            <View style={styles.paymentLinkBox}>
+              <Text style={styles.paymentLinkText} numberOfLines={3}>
+                {paymentLink}
+              </Text>
+            </View>
+
+            <View style={styles.paymentLinkActions}>
+              <TouchableOpacity
+                style={styles.paymentLinkActionButton}
+                onPress={copyPaymentLink}
+              >
+                <Ionicons name="copy-outline" size={20} color={Colors.white} />
+                <Text style={styles.paymentLinkActionText}>Copy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.paymentLinkActionButton, styles.paymentLinkActionButtonPrimary]}
+                onPress={sharePaymentLink}
+              >
+                <Ionicons name="share-outline" size={20} color={Colors.white} />
+                <Text style={styles.paymentLinkActionText}>Share</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.paymentLinkInfo}>
+              <Ionicons name="information-circle" size={16} color={Colors.textSecondary} />
+              <Text style={styles.paymentLinkInfoText}>
+                The recipient can use any wallet to claim this payment when they click the link.
+              </Text>
+            </View>
+          </View>
+        </View>
       </Modal>
       
       {/* Loading Overlay */}
@@ -1052,6 +1288,152 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+  
+  // Payment Link Card
+  paymentLinkCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    padding: Spacing.lg,
+  },
+  paymentLinkHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  paymentLinkTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  paymentLinkDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+  },
+  createLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.accent,
+    paddingVertical: Spacing.lg,
+    borderRadius: 12,
+  },
+  createLinkButtonText: {
+    color: Colors.white,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  
+  // Payment Link Modal
+  paymentLinkModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  paymentLinkModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  paymentLinkModalContent: {
+    backgroundColor: Colors.background,
+    borderRadius: 24,
+    padding: Spacing.xl,
+    width: '90%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  paymentLinkModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  paymentLinkModalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  paymentLinkModalTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  paymentLinkModalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  paymentLinkModalDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+  },
+  paymentLinkBox: {
+    backgroundColor: Colors.cardHover,
+    borderRadius: 12,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  paymentLinkText: {
+    color: Colors.textPrimary,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.mono,
+    textAlign: 'center',
+  },
+  paymentLinkActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  paymentLinkActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.card,
+    paddingVertical: Spacing.lg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  paymentLinkActionButtonPrimary: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  paymentLinkActionText: {
+    color: Colors.white,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  paymentLinkInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+  },
+  paymentLinkInfoText: {
+    flex: 1,
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textSecondary,
+    lineHeight: 16,
   },
 });
 

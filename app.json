@@ -4,8 +4,9 @@
     "slug": "SafeMask",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.jpeg",
+    "icon": "./assets/appicon.png",
     "userInterfaceStyle": "light",
+    "scheme": "safemask",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -14,6 +15,7 @@
     "ios": {
       "bundleIdentifier": "com.kartikvyas.SafeMask",
       "supportsTablet": true,
+      "associatedDomains": ["applinks:safemask.app"],
       "infoPlist": {
         "NSCameraUsageDescription": "Allow SafeMask to use the camera for QR code scanning",
         "NSLocationWhenInUseUsageDescription": "Allow SafeMask to access your location for mesh network features"
@@ -21,8 +23,33 @@
     },
     "android": {
       "package": "com.kartikvyas.SafeMask",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "safemask"
+            },
+            {
+              "scheme": "https",
+              "host": "safemask.app",
+              "pathPrefix": "/send"
+            },
+            {
+              "scheme": "https",
+              "host": "safemask.app",
+              "pathPrefix": "/pay"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.jpeg",
+        "foregroundImage": "./assets/appicon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
