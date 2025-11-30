@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { AppState, AppStateStatus } from 'react-native';
@@ -10,6 +10,7 @@ import LockScreen from './src/screens/LockScreen';
 export default function App() {
   const [isLocked, setIsLocked] = useState(true);
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     checkInitialState();
@@ -51,31 +52,59 @@ export default function App() {
   };
 
   const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-    console.log('[App] AppState changed to:', nextAppState);
+    console.log('[App] AppState changed from', appState.current, 'to', nextAppState);
     
-    if (nextAppState === 'background' || nextAppState === 'inactive') {
-      // App going to background - lock immediately
+    // App is going to background or becoming inactive
+    if (
+      (appState.current === 'active' || appState.current === 'foreground') &&
+      (nextAppState === 'background' || nextAppState === 'inactive')
+    ) {
+      // App is leaving foreground - lock immediately
       const wallet = await AsyncStorage.getItem('SafeMask_has_wallet');
-      console.log('[App] Has wallet:', wallet);
       
       if (wallet === 'true') {
         const autoLockEnabled = await AsyncStorage.getItem('SafeMask_autoLock');
-        console.log('[App] Auto-lock enabled:', autoLockEnabled);
         
         if (autoLockEnabled !== 'false') {
           // Lock the app when it goes to background
-          console.log('[App] Locking app...');
+          console.log('[App] App going to background - locking app...');
           setIsLocked(true);
+          
+          // Store lock state in AsyncStorage for persistence
+          await AsyncStorage.setItem('SafeMask_app_locked', 'true');
         }
       }
-    } else if (nextAppState === 'active') {
-      // App coming to foreground - stay locked if it was locked
-      console.log('[App] App is active, isLocked:', isLocked);
     }
+    
+    // App is coming back to foreground
+    if (
+      (appState.current === 'background' || appState.current === 'inactive') &&
+      nextAppState === 'active'
+    ) {
+      // App is returning to foreground - check if it should be locked
+      const wallet = await AsyncStorage.getItem('SafeMask_has_wallet');
+      
+      if (wallet === 'true') {
+        const autoLockEnabled = await AsyncStorage.getItem('SafeMask_autoLock');
+        const storedLockState = await AsyncStorage.getItem('SafeMask_app_locked');
+        
+        if (autoLockEnabled !== 'false') {
+          // If app was locked (stored in AsyncStorage), keep it locked
+          if (storedLockState === 'true') {
+            console.log('[App] App returning to foreground - keeping app locked');
+            setIsLocked(true);
+          }
+        }
+      }
+    }
+    
+    // Update current app state
+    appState.current = nextAppState;
   };
 
   const handleUnlock = async () => {
     await AsyncStorage.setItem('SafeMask_last_unlock', Date.now().toString());
+    await AsyncStorage.setItem('SafeMask_app_locked', 'false');
     setIsLocked(false);
   };
 

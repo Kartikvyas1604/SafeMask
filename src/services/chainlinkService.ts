@@ -81,6 +81,7 @@ export class ChainlinkService {
 
   /**
    * Get comprehensive price data with 24h change
+   * Uses CoinGecko as primary source (more reliable and supports all tokens)
    */
   async getPriceData(symbol: string): Promise<PriceData> {
     // Check cache
@@ -90,37 +91,46 @@ export class ChainlinkService {
     }
 
     try {
-      // Get current price from Chainlink
-      let currentPrice: number;
-      
-      if (symbol === 'ETH') {
-        currentPrice = await this.getPrice('ETH/USD');
-      } else if (symbol === 'MATIC') {
-        currentPrice = await this.getPrice('MATIC/USD');
-      } else if (symbol === 'BTC') {
-        currentPrice = await this.getPrice('BTC/USD');
-      } else {
-        // For other coins, use fallback
-        currentPrice = await this.getFallbackPrice(symbol);
-      }
-
-      // Get 24h change from CoinGecko API
+      // Map symbol to CoinGecko ID
       const coinGeckoIds: { [key: string]: string } = {
         'ETH': 'ethereum',
         'MATIC': 'matic-network',
         'BTC': 'bitcoin',
         'ZEC': 'zcash',
         'SOL': 'solana',
+        'USDC': 'usd-coin',
+        'USDT': 'tether',
+        'DAI': 'dai',
+        'WBTC': 'wrapped-bitcoin',
+        'WETH': 'weth',
+        'ARB': 'arbitrum',
+        'BNB': 'binancecoin',
+        'AVAX': 'avalanche-2',
+        'FTM': 'fantom',
+        'OP': 'optimism',
+        'BASE': 'base',
       };
 
       const coinId = coinGeckoIds[symbol] || symbol.toLowerCase();
+      
+      // Fetch from CoinGecko (primary source - more reliable)
       const response = await axios.get(
         `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`,
-        { timeout: 5000 }
+        { 
+          timeout: 10000, // Increased timeout
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
       );
 
+      if (!response.data || !response.data[coinId]) {
+        throw new Error(`No price data found for ${symbol} (${coinId})`);
+      }
+
       const data = response.data[coinId];
-      const change24h = data?.usd_24h_change || 0;
+      const currentPrice = data.usd || 0;
+      const change24h = data.usd_24h_change || 0;
 
       const priceData: PriceData = {
         price: currentPrice,
@@ -135,16 +145,64 @@ export class ChainlinkService {
         expiry: Date.now() + this.cacheDuration,
       });
 
+      console.log(`✅ Fetched price for ${symbol}: $${currentPrice.toFixed(2)} (${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%)`);
+      
       return priceData;
-    } catch (error) {
-      console.error(`Failed to fetch price data for ${symbol}:`, error);
+    } catch (error: any) {
+      console.error(`❌ Failed to fetch price data for ${symbol}:`, error.message || error);
+      
+      // Try Chainlink as fallback for supported tokens
+      if (symbol === 'ETH' || symbol === 'MATIC' || symbol === 'BTC') {
+        try {
+          console.log(`🔄 Trying Chainlink fallback for ${symbol}...`);
+          const pair = symbol === 'ETH' ? 'ETH/USD' : symbol === 'MATIC' ? 'MATIC/USD' : 'BTC/USD';
+          const chainlinkPrice = await this.getPrice(pair);
+          
+          // Get 24h change from CoinGecko if possible
+          let change24h = 0;
+          try {
+            const coinGeckoIds: { [key: string]: string } = {
+              'ETH': 'ethereum',
+              'MATIC': 'matic-network',
+              'BTC': 'bitcoin',
+            };
+            const coinId = coinGeckoIds[symbol];
+            const changeResponse = await axios.get(
+              `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`,
+              { timeout: 5000 }
+            );
+            change24h = changeResponse.data[coinId]?.usd_24h_change || 0;
+          } catch {
+            // Ignore change fetch error
+          }
+
+          const priceData: PriceData = {
+            price: chainlinkPrice,
+            timestamp: Date.now(),
+            change24h: (chainlinkPrice * change24h) / 100,
+            changePercent24h: change24h,
+          };
+
+          // Cache the result
+          this.priceCache.set(symbol, {
+            price: priceData,
+            expiry: Date.now() + this.cacheDuration,
+          });
+
+          return priceData;
+        } catch (fallbackError) {
+          console.error(`❌ Chainlink fallback also failed for ${symbol}:`, fallbackError);
+        }
+      }
       
       // Return cached data if available, even if expired
       if (cached) {
+        console.log(`⚠️ Using cached data for ${symbol}`);
         return cached.price;
       }
 
       // Last resort: return default
+      console.warn(`⚠️ Returning default price data for ${symbol}`);
       return {
         price: 0,
         timestamp: Date.now(),

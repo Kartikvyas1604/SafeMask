@@ -136,7 +136,15 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
     }, 'Load Wallet Data');
 
     if (!result) {
-      navigation.goBack();
+      // Check if we can navigate back, otherwise navigate to Wallet screen
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        // If we're in Tab Navigator, navigate to Wallet tab
+        (navigation as any).navigate('MainTabs', {
+          screen: 'Wallet',
+        });
+      }
     }
   };
 
@@ -508,7 +516,19 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity 
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  // If we're in Tab Navigator, navigate to Wallet tab
+                  (navigation as any).navigate('MainTabs', {
+                    screen: 'Wallet',
+                  });
+                }
+              }} 
+              style={styles.backButton}
+            >
               <Ionicons name="chevron-back" size={20} color={Colors.white} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Send</Text>

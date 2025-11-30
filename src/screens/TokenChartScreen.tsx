@@ -125,28 +125,62 @@ const TokenChartScreen: React.FC = () => {
           selectedPeriod === '6M' ? '180' :
           selectedPeriod === 'Y' ? '365' :
           'max';
+        
+        console.log(`📊 Fetching chart data for ${symbol} (${coinId}) - Period: ${selectedPeriod} (${daysParam} days)`);
+        
         const response = await fetch(
-          `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${daysParam}&interval=hourly`
+          `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${daysParam}&interval=${daysParam === '1' ? 'hourly' : 'daily'}`,
+          {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            },
+          }
         );
 
         if (!response.ok) {
-          throw new Error('Failed to load chart data');
+          const errorText = await response.text();
+          console.error(`❌ CoinGecko API error (${response.status}):`, errorText);
+          throw new Error(`Failed to load chart data: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
+        
+        if (!data.prices || !Array.isArray(data.prices) || data.prices.length === 0) {
+          console.warn(`⚠️ No price data in response for ${coinId}`);
+          throw new Error('No chart data available');
+        }
+
         const points: PricePoint[] = (data.prices || []).map((p: [number, number]) => ({
           time: p[0],
           price: p[1],
         }));
+
+        console.log(`✅ Loaded ${points.length} data points for ${symbol}`);
 
         if (isMounted) {
           setPriceData(current);
           setHistory(points);
         }
       } catch (err: any) {
-        console.error('Token chart load error', err);
+        console.error('❌ Token chart load error:', err);
         if (isMounted) {
-          setError('Unable to load chart data right now.');
+          // Provide more specific error messages
+          let errorMessage = 'Unable to load chart data right now.';
+          
+          if (err.message) {
+            if (err.message.includes('timeout')) {
+              errorMessage = 'Request timed out. Please check your internet connection.';
+            } else if (err.message.includes('Failed to fetch') || err.message.includes('Network')) {
+              errorMessage = 'Network error. Please check your internet connection.';
+            } else if (err.message.includes('No chart data')) {
+              errorMessage = `No chart data available for ${symbol}.`;
+            } else {
+              errorMessage = err.message;
+            }
+          }
+          
+          setError(errorMessage);
         }
       } finally {
         if (isMounted) {

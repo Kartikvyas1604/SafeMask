@@ -212,7 +212,16 @@ export default function RealSwapScreen() {
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                // If we're in Tab Navigator, navigate to Wallet tab
+                (navigation as any).navigate('MainTabs', {
+                  screen: 'Wallet',
+                });
+              }
+            },
           },
         ]
       );
@@ -252,7 +261,19 @@ export default function RealSwapScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity 
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  // If we're in Tab Navigator, navigate to Wallet tab
+                  (navigation as any).navigate('MainTabs', {
+                    screen: 'Wallet',
+                  });
+                }
+              }} 
+              style={styles.backButton}
+            >
               <Ionicons name="chevron-back" size={20} color={Colors.white} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Swap</Text>
