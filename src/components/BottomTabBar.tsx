@@ -88,27 +88,33 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
       return;
     }
 
-    // Check if we're currently in Tab Navigator
-    const isInTabNavigator = tabState !== undefined;
-    const isTargetInTabNavigator = TAB_NAVIGATOR_SCREENS.includes(tab.route);
-
-    if (isInTabNavigator && isTargetInTabNavigator) {
-      // We're in Tab Navigator and target is also in Tab Navigator
-      // Use Tab Navigator navigation
-      const targetIndex = tabState.routes.findIndex(r => r.name === tab.route);
-      if (targetIndex !== -1 && tabState.index !== targetIndex) {
+    // Simplified navigation - prevent unnecessary reloads
+    try {
+      if (activeRoute === tab.route) {
+        // Already on this screen, do nothing
+        return;
+      }
+      
+      // Check if target is in Tab Navigator
+      const isTargetInTabNavigator = TAB_NAVIGATOR_SCREENS.includes(tab.route);
+      
+      if (isTargetInTabNavigator) {
+        // Check if we're currently in the Tab Navigator
+        const isInTabNavigator = tabState !== undefined;
+        
+        if (isInTabNavigator) {
+          // Direct navigation within tabs
+          navigation.navigate(tab.route);
+        } else {
+          // We're on a Stack screen, need to go through MainTabs
+          navigation.navigate('MainTabs', { screen: tab.route });
+        }
+      } else {
+        // Navigate to stack screen
         navigation.navigate(tab.route);
       }
-    } else if (!isInTabNavigator && isTargetInTabNavigator) {
-      // We're on a Stack screen, need to navigate to Tab Navigator
-      navigation.navigate('MainTabs', {
-        screen: tab.route,
-      });
-    } else {
-      // Target is a Stack screen, navigate directly
-      if (activeRoute !== tab.route) {
-        navigation.navigate(tab.route);
-      }
+    } catch (err) {
+      console.error('Navigation error:', err);
     }
   };
 
@@ -117,16 +123,19 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
     setShowSendReceiveModal(false);
     const targetRoute = action === 'send' ? 'RealSend' : 'RealReceive';
     
-    const isInTabNavigator = tabState !== undefined;
-    
-    if (isInTabNavigator) {
-      // We're in Tab Navigator, navigate directly
-      navigation.navigate(targetRoute);
-    } else {
-      // We're on a Stack screen, navigate through MainTabs
-      navigation.navigate('MainTabs', {
-        screen: targetRoute,
-      });
+    // Check if we're in Tab Navigator or Stack screen
+    try {
+      const isInTabNavigator = tabState !== undefined;
+      
+      if (isInTabNavigator) {
+        // Direct navigation within tabs
+        navigation.navigate(targetRoute);
+      } else {
+        // We're on a Stack screen, go through MainTabs
+        navigation.navigate('MainTabs', { screen: targetRoute });
+      }
+    } catch (err) {
+      console.error('Navigation error:', err);
     }
   };
 

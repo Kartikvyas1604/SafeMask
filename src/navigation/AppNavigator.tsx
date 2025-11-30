@@ -39,7 +39,7 @@ export type RootStackParamList = {
   VerifySeedPhrase: { seedPhrase: string };
   ImportWallet: undefined;
   ImportPrivateKey: undefined;
-  MainTabs: undefined;
+  MainTabs: { screen?: string } | undefined;
   Wallet: undefined;
   Send: { walletAddress: string; balances: any[] };
   Receive: { walletAddress: string };
@@ -82,7 +82,7 @@ function MainTabs() {
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        lazy: false, // Pre-mount all tabs
+        lazy: true, // Load screens on demand for faster initial load
       }}
       detachInactiveScreens={false} // Keep inactive screens in memory
     >

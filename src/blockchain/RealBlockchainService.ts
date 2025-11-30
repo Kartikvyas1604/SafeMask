@@ -90,7 +90,9 @@ export class RealBlockchainService {
   
   private providers: Map<string, ethers.JsonRpcProvider> = new Map();
   private priceCache: Map<string, { price: number; timestamp: number }> = new Map();
+  private balanceCache: Map<string, { balance: RealBalance; timestamp: number }> = new Map();
   private readonly PRICE_CACHE_TTL = 60000; // 1 minute
+  private readonly BALANCE_CACHE_TTL = 30000; // 30 seconds
   
   private constructor() {
     this.initializeProviders();
@@ -125,6 +127,14 @@ export class RealBlockchainService {
    * @returns Real balance data with USD value
    */
   public async getRealBalance(network: string, address: string): Promise<RealBalance> {
+    // Check cache first for faster loads
+    const cacheKey = `${network}-${address}`;
+    const cached = this.balanceCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.BALANCE_CACHE_TTL) {
+      logger.info(`✅ Using cached balance for ${address} on ${network}`);
+      return cached.balance;
+    }
+    
     logger.info(`📊 Fetching REAL balance for ${address} on ${network}`);
     
     const provider = this.providers.get(network);
@@ -164,6 +174,9 @@ export class RealBlockchainService {
       
       logger.info(`✅ Real balance: ${balanceFormatted} ${config.nativeCurrency.symbol} ($${balanceUSD.toFixed(2)})`);
       logger.info(`📦 Block height: ${blockNumber}`);
+      
+      // Cache the balance
+      this.balanceCache.set(cacheKey, { balance: realBalance, timestamp: Date.now() });
       
       return realBalance;
     } catch (error) {

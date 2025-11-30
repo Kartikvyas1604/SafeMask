@@ -144,20 +144,22 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const [privacyScore, setPrivacyScore] = useState(0);
   const [privacyScoreVisible, setPrivacyScoreVisible] = useState(false);
   const [hdWallet] = useState(() => new SafeMaskWalletCore());
+  const [lastBalanceUpdate, setLastBalanceUpdate] = useState(0);
   
   const blockchainService = RealBlockchainService;
+  const BALANCE_CACHE_TIME = 30000; // 30 seconds cache
   
   // Use ref to track if wallet has been loaded (persists across re-renders and re-mounts)
   const hasLoadedWallet = useRef(false);
   const isInitializing = useRef(false);
   
-  // Animation values for scroll-based animations
+  // Animation values for scroll-based animations (reduced for performance)
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnims = useRef(
-    Array.from({ length: 10 }, () => new Animated.Value(0))
+    Array.from({ length: 3 }, () => new Animated.Value(0))
   ).current;
   const slideAnims = useRef(
-    Array.from({ length: 10 }, () => new Animated.Value(30))
+    Array.from({ length: 3 }, () => new Animated.Value(30))
   ).current;
   
   // Calculate performance metrics (mock for now - can be enhanced with real 24h data)
@@ -192,18 +194,18 @@ export default function ProductionWalletScreen({ navigation }: any) {
       });
       hasLoadedWallet.current = true;
       
-      // Animate items in on mount
-      Animated.stagger(100, 
+      // Quick fade-in animation (faster load)
+      Animated.parallel(
         fadeAnims.map((anim, index) => 
           Animated.parallel([
             Animated.timing(anim, {
               toValue: 1,
-              duration: 500,
+              duration: 200,
               useNativeDriver: true,
             }),
             Animated.timing(slideAnims[index], {
               toValue: 0,
-              duration: 500,
+              duration: 200,
               useNativeDriver: true,
             }),
           ])
@@ -300,13 +302,31 @@ export default function ProductionWalletScreen({ navigation }: any) {
       
       logger.info(`📊 Loading real balances for ${ethAccount.address}`);
       
-      // Fetch REAL balances from blockchain
+      // Check if we have cached balances (prevent reload on navigation)
+      const now = Date.now();
+      if (balances.length > 0 && (now - lastBalanceUpdate) < BALANCE_CACHE_TIME) {
+        logger.info('✅ Using cached balances (fresh)');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Fetch REAL balances from blockchain in parallel with timeout
+      const fetchWithTimeout = (promise: Promise<any>, timeout: number) => {
+        return Promise.race([
+          promise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), timeout)
+          )
+        ]);
+      };
+      
       const balancePromises = [
-        blockchainService.getRealBalance('ethereum', ethAccount.address),
-        polyAccount ? blockchainService.getRealBalance('polygon', polyAccount.address) : null,
+        fetchWithTimeout(blockchainService.getRealBalance('ethereum', ethAccount.address), 8000),
+        polyAccount ? fetchWithTimeout(blockchainService.getRealBalance('polygon', polyAccount.address), 8000) : null,
       ];
       
       const results = await Promise.allSettled(balancePromises);
+      setLastBalanceUpdate(now);
       
       const realBalances: RealBalance[] = [];
       
