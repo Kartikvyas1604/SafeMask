@@ -165,7 +165,7 @@ export default function CrossChainBridgeScreen({ navigation }: CrossChainBridgeS
         <View style={styles.bridgeCard}>
           <View style={styles.infoRow}>
             <Ionicons name="shield-checkmark" size={20} color={Colors.zcash} />
-            <Text style={styles.infoText}>Private cross-chain transfers</Text>
+            <Text style={styles.infoText}>Secure cross-chain transfers</Text>
           </View>
 
           <View style={styles.chainSelector}>

@@ -29,11 +29,13 @@ export interface ShieldedTransaction {
 
 /**
  * Zcash Shielded Transaction Service
+ * Implements Sapling protocol for private transactions
  */
 export class ZcashShieldedService {
   private static instance: ZcashShieldedService;
   private zkProofService: typeof ZKProofService;
   private readonly ZCASH_RPC = 'https://api.zcha.in';
+  private readonly TESTNET_RPC = 'https://testnet.zcha.in';
   
   private constructor() {
     this.zkProofService = ZKProofService;
@@ -50,21 +52,14 @@ export class ZcashShieldedService {
    * Generate new Sapling shielded address
    */
   public async generateShieldedAddress(): Promise<ShieldedAddress> {
-    logger.info('🛡️ Generating Zcash Sapling shielded address...');
+    logger.info('Generating Zcash Sapling shielded address');
     
     try {
-      // Generate spending key (32 bytes)
       const spendingKey = this.generateRandomKey();
-      
-      // Derive viewing key from spending key
       const viewingKey = await this.deriveViewingKey(spendingKey);
-      
-      // Derive payment address from viewing key
       const address = await this.derivePaymentAddress(viewingKey);
       
-      logger.info('✅ Shielded address generated');
-      logger.info(`   Address: ${address}`);
-      logger.info(`   Type: Sapling`);
+      logger.info('Shielded address generated successfully');
       
       return {
         address,
@@ -73,7 +68,7 @@ export class ZcashShieldedService {
         type: 'sapling',
       };
     } catch (error) {
-      logger.error('❌ Failed to generate shielded address:', error);
+      logger.error('Failed to generate shielded address:', error);
       throw error;
     }
   }
@@ -86,18 +81,11 @@ export class ZcashShieldedService {
     recipient: string,
     memo: string = ''
   ): Promise<ShieldedNote> {
-    logger.info('📝 Creating shielded note...');
-    logger.info(`   Value: ${value} zatoshis`);
-    logger.info(`   Recipient: ${recipient.substring(0, 16)}...`);
+    logger.info('Creating shielded note');
     
     try {
-      // Generate randomness for commitment
       const rcm = this.zkProofService.generateRandomness();
-      
-      // Generate nullifier seed
       const rho = this.zkProofService.generateRandomness();
-      
-      // Create value commitment: commit(value, rcm)
       const commitment = await this.zkProofService.generateCommitment(value, rcm);
       
       // Generate nullifier: hash(rho, commitment)

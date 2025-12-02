@@ -104,14 +104,14 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
           icon: '',
         },
         {
-          chain: 'Bitcoin (Demo)',
+          chain: 'Bitcoin',
           symbol: 'BTC',
           address: btcAccount?.address || '',
           icon: '',
           warning: 'Only send Bitcoin to this address',
         },
         {
-          chain: 'Zcash (Demo)',
+          chain: 'Zcash',
           symbol: 'ZEC',
           address: zecAccount?.address || '',
           icon: '',
@@ -146,8 +146,8 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
       'Sepolia Testnet': 'ethereum',
       'Polygon Amoy': 'polygon',
       'Solana Devnet': 'solana',
-      'Bitcoin (Demo)': 'bitcoin',
-      'Zcash (Demo)': 'zcash',
+      'Bitcoin': 'bitcoin',
+      'Zcash': 'zcash',
     };
     return chainMap[chain] || 'ethereum';
   };

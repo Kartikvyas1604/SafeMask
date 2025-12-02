@@ -1,11 +1,11 @@
 /**
- * SafeMask Wallet Core - Multi-Chain HD Wallet
- * Supports: Zcash, Ethereum, Polygon, Solana, Bitcoin
+ * SafeMask Wallet Core
+ * Multi-chain HD wallet with BIP-32/44 derivation
+ * Supports 11 blockchains with privacy features
  */
 
-import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
-// @ts-expect-error - TypeScript may not resolve this import correctly but it works at runtime
-import { wordlist } from '@scure/bip39/wordlists/english';
+import * as bip39 from '@scure/bip39';
+import { wordlist as englishWordlist } from '@scure/bip39/wordlists/english.js';
 import { ed25519 } from '@noble/curves/ed25519';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
@@ -102,11 +102,11 @@ export class SafeMaskWalletCore {
       Logger.info('Starting wallet creation...');
       
       // Generate 24-word BIP39 mnemonic using @scure/bip39
-      const mnemonic = generateMnemonic(wordlist, 256); // 256 bits = 24 words
+      const mnemonic = bip39.generateMnemonic(englishWordlist, 256); // 256 bits = 24 words
       Logger.debug('Generated mnemonic:', mnemonic.split(' ').length + ' words');
       
       // Derive master key using simple derivation
-      const seed = mnemonicToSeedSync(mnemonic);
+      const seed = bip39.mnemonicToSeedSync(mnemonic);
 
       // Derive accounts for all chains
       const accounts: Account[] = [];
@@ -178,7 +178,7 @@ export class SafeMaskWalletCore {
       Logger.debug('Normalized mnemonic:', normalizedMnemonic.split(' ').length + ' words');
       
       // Validate mnemonic using @scure/bip39
-      if (!validateMnemonic(normalizedMnemonic, wordlist)) {
+      if (!bip39.validateMnemonic(normalizedMnemonic, englishWordlist)) {
         Logger.error('Invalid mnemonic validation failed');
         throw new Error('Invalid recovery phrase');
       }
@@ -186,7 +186,7 @@ export class SafeMaskWalletCore {
       Logger.info('Mnemonic validated successfully');
 
       // Derive from existing seed phrase
-      const seed = mnemonicToSeedSync(normalizedMnemonic);
+      const seed = bip39.mnemonicToSeedSync(normalizedMnemonic);
 
       const accounts: Account[] = [];
       accounts.push(await this.deriveZcashAccount(seed));

@@ -104,11 +104,10 @@ export default function ViewingKeyScreen({ navigation }: ViewingKeyScreenProps) 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.infoCard}>
           <Ionicons name="shield-checkmark" size={48} color={Colors.zcash} />
-          <Text style={styles.infoTitle}>What are Viewing Keys?</Text>
+          <Text style={styles.infoTitle}>Zcash Viewing Keys</Text>
           <Text style={styles.infoText}>
-            Viewing keys allow you to share read-only access to your shielded Zcash
-            transactions without revealing your spending key. Perfect for audits and
-            compliance while maintaining privacy.
+            Share read-only access to your shielded transactions without revealing
+            your spending key. Secure and private by design.
           </Text>
         </View>
 
