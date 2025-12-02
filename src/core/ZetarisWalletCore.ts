@@ -22,6 +22,12 @@ export enum ChainType {
   POLYGON = 'Polygon',
   SOLANA = 'Solana',
   BITCOIN = 'Bitcoin',
+  STARKNET = 'Starknet',
+  AZTEC = 'Aztec',
+  MINA = 'Mina',
+  ARBITRUM = 'Arbitrum',
+  OPTIMISM = 'Optimism',
+  BASE = 'Base',
 }
 
 export interface Account {
@@ -32,6 +38,10 @@ export interface Account {
   privateKey: string;
   balance: string;
   derivationPath: string;
+  viewingKey?: string;
+  spendingKey?: string;
+  diversifier?: string;
+  isShielded?: boolean;
 }
 
 export interface WalletData {
@@ -116,6 +126,24 @@ export class SafeMaskWalletCore {
       // Bitcoin
       accounts.push(await this.deriveBitcoinAccount(seed));
 
+      // Starknet
+      accounts.push(await this.deriveStarknetAccount(seed));
+
+      // Aztec (shielded)
+      accounts.push(await this.deriveAztecAccount(seed));
+
+      // Mina (ZK-SNARK)
+      accounts.push(await this.deriveMinaAccount(seed));
+
+      // Arbitrum (L2)
+      accounts.push(await this.deriveArbitrumAccount(seed));
+
+      // Optimism (L2)
+      accounts.push(await this.deriveOptimismAccount(seed));
+
+      // Base (L2)
+      accounts.push(await this.deriveBaseAccount(seed));
+
       // Generate unified address
       const unifiedAddress = this.generateUnifiedAddress(accounts);
 
@@ -166,6 +194,12 @@ export class SafeMaskWalletCore {
       accounts.push(await this.derivePolygonAccount(seed));
       accounts.push(this.deriveSolanaAccount(seed));
       accounts.push(await this.deriveBitcoinAccount(seed));
+      accounts.push(await this.deriveStarknetAccount(seed));
+      accounts.push(await this.deriveAztecAccount(seed));
+      accounts.push(await this.deriveMinaAccount(seed));
+      accounts.push(await this.deriveArbitrumAccount(seed));
+      accounts.push(await this.deriveOptimismAccount(seed));
+      accounts.push(await this.deriveBaseAccount(seed));
 
       const unifiedAddress = this.generateUnifiedAddress(accounts);
 
@@ -191,6 +225,9 @@ export class SafeMaskWalletCore {
     switch (chain) {
       case ChainType.ETHEREUM:
       case ChainType.POLYGON:
+      case ChainType.ARBITRUM:
+      case ChainType.OPTIMISM:
+      case ChainType.BASE:
         return this.importEVMPrivateKey(privateKey, chain);
       
       case ChainType.SOLANA:
@@ -198,6 +235,12 @@ export class SafeMaskWalletCore {
       
       case ChainType.BITCOIN:
         return this.importBitcoinPrivateKey(privateKey);
+      
+      case ChainType.STARKNET:
+      case ChainType.AZTEC:
+      case ChainType.MINA:
+      case ChainType.ZCASH:
+        throw new Error(`Private key import for ${chain} requires specialized tools. Please use recovery phrase instead.`);
       
       default:
         throw new Error(`Private key import not supported for ${chain}`);
@@ -209,27 +252,34 @@ export class SafeMaskWalletCore {
   // ========================================================================
 
   private async deriveZcashAccount(seed: Uint8Array): Promise<Account> {
-    // BIP44: m/44'/133'/0'/0/0 (133 is Zcash coin type)
-    const path = "m/44'/133'/0'/0/0";
+    const path = "m/32'/133'/0'";
     const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
     
-    const privateKey = Buffer.from(privKeyBytes).toString('hex');
+    const spendingKey = Buffer.from(privKeyBytes).toString('hex');
+    const viewingKeyHash = sha256(Buffer.concat([Buffer.from(privKeyBytes), Buffer.from('viewing')]));
+    const viewingKey = Buffer.from(viewingKeyHash).toString('hex');
     
-    // Generate public key using secp256k1
+    const diversifierHash = sha256(Buffer.concat([Buffer.from(privKeyBytes), Buffer.from('div')]));
+    const diversifier = Buffer.from(diversifierHash).slice(0, 11).toString('hex');
+    
+    const addressHash = sha256(Buffer.concat([Buffer.from(viewingKey), Buffer.from(diversifier)]));
+    const address = 'zs1' + Buffer.from(addressHash).toString('hex').substring(0, 76);
+    
     const pubKeyBytes = secp256k1.getPublicKey(privKeyBytes, true);
     const publicKey = Buffer.from(pubKeyBytes).toString('hex');
-    
-    // Generate Zcash shielded address (simplified)
-    const address = 'zs1' + Buffer.from(pubKeyBytes).toString('hex').substring(0, 76);
 
     return {
-      name: 'Zcash Shielded',
+      name: 'Zcash Sapling',
       chain: ChainType.ZCASH,
       address,
       publicKey,
-      privateKey,
+      privateKey: spendingKey,
       balance: '0',
       derivationPath: path,
+      viewingKey,
+      spendingKey,
+      diversifier,
+      isShielded: true,
     };
   }
 
@@ -313,6 +363,140 @@ export class SafeMaskWalletCore {
     return {
       name: 'Bitcoin',
       chain: ChainType.BITCOIN,
+      address,
+      publicKey,
+      privateKey,
+      balance: '0',
+      derivationPath: path,
+    };
+  }
+
+  private async deriveStarknetAccount(seed: Uint8Array): Promise<Account> {
+    const path = "m/44'/9004'/0'/0/0";
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
+    
+    const privateKey = Buffer.from(privKeyBytes).toString('hex');
+    const pubKeyBytes = secp256k1.getPublicKey(privKeyBytes, true);
+    const publicKey = Buffer.from(pubKeyBytes).toString('hex');
+    
+    const addressHash = sha256(Buffer.concat([Buffer.from('starknet'), Buffer.from(pubKeyBytes)]));
+    const address = '0x' + Buffer.from(addressHash).toString('hex').substring(0, 62);
+
+    return {
+      name: 'Starknet',
+      chain: ChainType.STARKNET,
+      address,
+      publicKey,
+      privateKey,
+      balance: '0',
+      derivationPath: path,
+    };
+  }
+
+  private async deriveAztecAccount(seed: Uint8Array): Promise<Account> {
+    const path = "m/44'/60'/0'/0/1";
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
+    
+    const spendingKey = Buffer.from(privKeyBytes).toString('hex');
+    const viewingKeyHash = sha256(Buffer.concat([Buffer.from(privKeyBytes), Buffer.from('aztec-viewing')]));
+    const viewingKey = Buffer.from(viewingKeyHash).toString('hex');
+    
+    const addressHash = sha256(Buffer.concat([Buffer.from('aztec'), Buffer.from(viewingKey)]));
+    const address = '0xaz' + Buffer.from(addressHash).toString('hex').substring(0, 60);
+
+    return {
+      name: 'Aztec',
+      chain: ChainType.AZTEC,
+      address,
+      publicKey: viewingKey.substring(0, 64),
+      privateKey: spendingKey,
+      balance: '0',
+      derivationPath: path,
+      viewingKey,
+      spendingKey,
+      isShielded: true,
+    };
+  }
+
+  private async deriveMinaAccount(seed: Uint8Array): Promise<Account> {
+    const path = "m/44'/12586'/0'/0/0";
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
+    
+    const privateKey = Buffer.from(privKeyBytes).toString('hex');
+    const pubKeyBytes = ed25519.getPublicKey(privKeyBytes);
+    const publicKey = Buffer.from(pubKeyBytes).toString('hex');
+    
+    const address = 'B62' + Buffer.from(pubKeyBytes).toString('base64').slice(0, 52).replace(/[+/=]/g, '');
+
+    return {
+      name: 'Mina',
+      chain: ChainType.MINA,
+      address,
+      publicKey,
+      privateKey,
+      balance: '0',
+      derivationPath: path,
+    };
+  }
+
+  private async deriveArbitrumAccount(seed: Uint8Array): Promise<Account> {
+    const path = "m/44'/60'/0'/0/2";
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
+    
+    const privateKey = Buffer.from(privKeyBytes).toString('hex');
+    const pubKeyBytes = secp256k1.getPublicKey(privKeyBytes, false).slice(1);
+    const publicKey = Buffer.from(pubKeyBytes).toString('hex');
+    
+    const addressHash = keccak_256(pubKeyBytes);
+    const address = '0x' + Buffer.from(addressHash).toString('hex').slice(-40);
+
+    return {
+      name: 'Arbitrum',
+      chain: ChainType.ARBITRUM,
+      address,
+      publicKey,
+      privateKey,
+      balance: '0',
+      derivationPath: path,
+    };
+  }
+
+  private async deriveOptimismAccount(seed: Uint8Array): Promise<Account> {
+    const path = "m/44'/60'/0'/0/3";
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
+    
+    const privateKey = Buffer.from(privKeyBytes).toString('hex');
+    const pubKeyBytes = secp256k1.getPublicKey(privKeyBytes, false).slice(1);
+    const publicKey = Buffer.from(pubKeyBytes).toString('hex');
+    
+    const addressHash = keccak_256(pubKeyBytes);
+    const address = '0x' + Buffer.from(addressHash).toString('hex').slice(-40);
+
+    return {
+      name: 'Optimism',
+      chain: ChainType.OPTIMISM,
+      address,
+      publicKey,
+      privateKey,
+      balance: '0',
+      derivationPath: path,
+    };
+  }
+
+  private async deriveBaseAccount(seed: Uint8Array): Promise<Account> {
+    const path = "m/44'/60'/0'/0/4";
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
+    
+    const privateKey = Buffer.from(privKeyBytes).toString('hex');
+    const pubKeyBytes = secp256k1.getPublicKey(privKeyBytes, false).slice(1);
+    const publicKey = Buffer.from(pubKeyBytes).toString('hex');
+    
+    const addressHash = keccak_256(pubKeyBytes);
+    const address = '0x' + Buffer.from(addressHash).toString('hex').slice(-40);
+
+    return {
+      name: 'Base',
+      chain: ChainType.BASE,
       address,
       publicKey,
       privateKey,

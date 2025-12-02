@@ -289,9 +289,18 @@ export default function ProductionWalletScreen({ navigation }: any) {
         throw new Error('No wallet data found');
       }
       
-      // Get Ethereum account
+      // Get all chain accounts
       const ethAccount = hdWallet.getAccount(ChainType.ETHEREUM);
       const polyAccount = hdWallet.getAccount(ChainType.POLYGON);
+      const zcashAccount = hdWallet.getAccount(ChainType.ZCASH);
+      const solanaAccount = hdWallet.getAccount(ChainType.SOLANA);
+      const bitcoinAccount = hdWallet.getAccount(ChainType.BITCOIN);
+      const starknetAccount = hdWallet.getAccount(ChainType.STARKNET);
+      const aztecAccount = hdWallet.getAccount(ChainType.AZTEC);
+      const minaAccount = hdWallet.getAccount(ChainType.MINA);
+      const arbitrumAccount = hdWallet.getAccount(ChainType.ARBITRUM);
+      const optimismAccount = hdWallet.getAccount(ChainType.OPTIMISM);
+      const baseAccount = hdWallet.getAccount(ChainType.BASE);
       
       if (!ethAccount) {
         throw new Error('No Ethereum account found');
@@ -300,7 +309,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
       setWalletAddress(ethAccount.address);
       setWalletInitialized(true);
       
-      logger.info(`📊 Loading real balances for ${ethAccount.address}`);
+      logger.info(`📊 Loading real balances for all chains`);
       
       // Check if we have cached balances (prevent reload on navigation)
       const now = Date.now();
@@ -321,8 +330,17 @@ export default function ProductionWalletScreen({ navigation }: any) {
       };
       
       const balancePromises = [
-        fetchWithTimeout(blockchainService.getRealBalance('ethereum', ethAccount.address), 8000),
+        ethAccount ? fetchWithTimeout(blockchainService.getRealBalance('ethereum', ethAccount.address), 8000) : null,
         polyAccount ? fetchWithTimeout(blockchainService.getRealBalance('polygon', polyAccount.address), 8000) : null,
+        zcashAccount ? fetchWithTimeout(blockchainService.getRealBalance('zcash', zcashAccount.address), 8000) : null,
+        solanaAccount ? fetchWithTimeout(blockchainService.getRealBalance('solana', solanaAccount.address), 8000) : null,
+        bitcoinAccount ? fetchWithTimeout(blockchainService.getRealBalance('bitcoin', bitcoinAccount.address), 8000) : null,
+        starknetAccount ? fetchWithTimeout(blockchainService.getRealBalance('starknet', starknetAccount.address), 8000) : null,
+        aztecAccount ? fetchWithTimeout(blockchainService.getRealBalance('aztec', aztecAccount.address), 8000) : null,
+        minaAccount ? fetchWithTimeout(blockchainService.getRealBalance('mina', minaAccount.address), 8000) : null,
+        arbitrumAccount ? fetchWithTimeout(blockchainService.getRealBalance('arbitrum', arbitrumAccount.address), 8000) : null,
+        optimismAccount ? fetchWithTimeout(blockchainService.getRealBalance('optimism', optimismAccount.address), 8000) : null,
+        baseAccount ? fetchWithTimeout(blockchainService.getRealBalance('base', baseAccount.address), 8000) : null,
       ];
       
       const results = await Promise.allSettled(balancePromises);

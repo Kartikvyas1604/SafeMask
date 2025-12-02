@@ -18,6 +18,9 @@ export type ChainType =
   | 'arbitrum' 
   | 'optimism' 
   | 'base'
+  | 'starknet'
+  | 'aztec'
+  | 'mina'
   | string;
 
 interface ChainIconProps {
@@ -45,6 +48,10 @@ const assetKeyMap: Partial<Record<string, TokenIconKey>> = {
   optimism: 'optimism',
   op: 'optimism',
   base: 'base',
+  starknet: 'eth',
+  strk: 'eth',
+  aztec: 'eth',
+  mina: 'eth',
   bnb: 'bnb',
   binance: 'bnb',
   'binance smart chain': 'bnb',
@@ -72,6 +79,9 @@ const getChainInfo = (chain: ChainType) => {
     arbitrum: { symbol: 'ARB', color: ChainColors.arbitrum, icon: 'layers' },
     optimism: { symbol: 'OP', color: ChainColors.optimism, icon: 'rocket' },
     base: { symbol: 'BASE', color: ChainColors.base, icon: 'cube' },
+    starknet: { symbol: 'STRK', color: '#EC796B', icon: 'star' },
+    aztec: { symbol: 'AZTEC', color: '#8B5CF6', icon: 'eye-off' },
+    mina: { symbol: 'MINA', color: '#E64C3C', icon: 'keypad' },
     bnb: { symbol: 'BNB', color: ChainColors.ethereum, icon: 'cube-outline' },
     avalanche: { symbol: 'AVAX', color: ChainColors.ethereum, icon: 'triangle' },
     fantom: { symbol: 'FTM', color: ChainColors.ethereum, icon: 'planet' },

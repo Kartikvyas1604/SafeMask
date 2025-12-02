@@ -86,6 +86,48 @@ export class RealBlockchainService {
       explorerUrl: 'https://sepolia.basescan.org',
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     }],
+    ['zcash', {
+      name: 'Zcash Testnet',
+      chainId: 0,
+      rpcUrl: 'https://testnet.zec.rocks',
+      explorerUrl: 'https://explorer.testnet.z.cash',
+      nativeCurrency: { name: 'Zcash', symbol: 'ZEC', decimals: 8 },
+    }],
+    ['solana', {
+      name: 'Solana Devnet',
+      chainId: 0,
+      rpcUrl: 'https://api.devnet.solana.com',
+      explorerUrl: 'https://explorer.solana.com',
+      nativeCurrency: { name: 'Solana', symbol: 'SOL', decimals: 9 },
+    }],
+    ['bitcoin', {
+      name: 'Bitcoin Testnet',
+      chainId: 0,
+      rpcUrl: 'https://blockstream.info/testnet/api',
+      explorerUrl: 'https://blockstream.info/testnet',
+      nativeCurrency: { name: 'Bitcoin', symbol: 'BTC', decimals: 8 },
+    }],
+    ['starknet', {
+      name: 'Starknet Sepolia',
+      chainId: 0,
+      rpcUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7',
+      explorerUrl: 'https://sepolia.starkscan.co',
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    }],
+    ['aztec', {
+      name: 'Aztec Testnet',
+      chainId: 0,
+      rpcUrl: 'https://aztec-connect-testnet.aztec.network',
+      explorerUrl: 'https://aztec-connect-testnet-explorer.aztec.network',
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    }],
+    ['mina', {
+      name: 'Mina Devnet',
+      chainId: 0,
+      rpcUrl: 'https://proxy.devnet.minaexplorer.com/graphql',
+      explorerUrl: 'https://devnet.minaexplorer.com',
+      nativeCurrency: { name: 'Mina', symbol: 'MINA', decimals: 9 },
+    }],
   ]);
   
   private providers: Map<string, ethers.JsonRpcProvider> = new Map();
@@ -203,6 +245,8 @@ export class RealBlockchainService {
       'BTC': 'bitcoin',
       'ZEC': 'zcash',
       'SOL': 'solana',
+      'STRK': 'starknet',
+      'MINA': 'mina-protocol',
     };
     
     const coinId = coinIds[symbol] || symbol.toLowerCase();
