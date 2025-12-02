@@ -20,15 +20,29 @@ export const Colors = {
 
   // Text colors
   textPrimary: '#ffffff',
+  text: '#ffffff', // Alias for textPrimary
   textSecondary: '#9ca3af',
   textTertiary: '#6b7280',
   textMuted: '#4b5563',
+
+  // Border colors
+  border: '#1f1f1f',
 
   // Status colors
   success: '#10b981',
   warning: '#f59e0b',
   error: '#ef4444',
   info: '#1460f7',
+
+  // Chain colors (moved from ChainColors for easier access)
+  zcash: '#F4B024',
+  ethereum: '#627EEA',
+  polygon: '#8247E5',
+  solana: '#14F195',
+  bitcoin: '#F7931A',
+  arbitrum: '#28A0F0',
+  optimism: '#FF0420',
+  base: '#0052FF',
 
   // Accent colors
   accent: '#1460f7', // Primary blue
