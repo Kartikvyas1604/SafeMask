@@ -1,13 +1,8 @@
-/**
- * Production Verification Tests
- * Validates all core functionality works correctly
- */
-
-import { SafeMaskWalletCore, ChainType } from '../core/ZetarisWalletCore';
-import { ZcashShieldedService } from '../privacy/ZcashShieldedService';
-import { MeshNetwork } from '../mesh/MeshNetwork';
-import { NFCService } from '../nfc/NFCService';
-import { ZecPortBridgeService, BridgeChain } from '../bridge/ZecPortBridgeService';
+import { SafeMaskWalletCore, ChainType } from '../src/core/ZetarisWalletCore';
+import { ZcashShieldedService } from '../src/privacy/ZcashShieldedService';
+import { MeshNetwork } from '../src/mesh/MeshNetwork';
+import { NFCService } from '../src/nfc/NFCService';
+import { ZecPortBridgeService, BridgeChain } from '../src/bridge/ZecPortBridgeService';
 
 describe('Production Verification', () => {
   describe('Multi-Chain Wallet Core', () => {
