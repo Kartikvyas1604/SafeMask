@@ -301,6 +301,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
       const arbitrumAccount = hdWallet.getAccount(ChainType.ARBITRUM);
       const optimismAccount = hdWallet.getAccount(ChainType.OPTIMISM);
       const baseAccount = hdWallet.getAccount(ChainType.BASE);
+      const nearAccount = hdWallet.getAccount(ChainType.NEAR);
       
       if (!ethAccount) {
         throw new Error('No Ethereum account found');
@@ -341,6 +342,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
         arbitrumAccount ? fetchWithTimeout(blockchainService.getRealBalance('arbitrum', arbitrumAccount.address), 8000) : null,
         optimismAccount ? fetchWithTimeout(blockchainService.getRealBalance('optimism', optimismAccount.address), 8000) : null,
         baseAccount ? fetchWithTimeout(blockchainService.getRealBalance('base', baseAccount.address), 8000) : null,
+        nearAccount ? fetchWithTimeout(blockchainService.getRealBalance('near', nearAccount.address), 8000) : null,
       ];
       
       const results = await Promise.allSettled(balancePromises);

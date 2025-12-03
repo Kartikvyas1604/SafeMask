@@ -4,9 +4,6 @@
  * Supports 11 blockchains with privacy features
  */
 
-// Ensure polyfills are loaded before crypto libraries
-import '../utils/polyfills';
-
 import * as bip39 from '@scure/bip39';
 import { wordlist as englishWordlist } from '@scure/bip39/wordlists/english.js';
 import { ed25519 } from '@noble/curves/ed25519';
@@ -31,6 +28,7 @@ export enum ChainType {
   ARBITRUM = 'Arbitrum',
   OPTIMISM = 'Optimism',
   BASE = 'Base',
+  NEAR = 'NEAR',
 }
 
 export interface Account {
@@ -147,6 +145,9 @@ export class SafeMaskWalletCore {
       // Base (L2)
       accounts.push(await this.deriveBaseAccount(seed));
 
+      // NEAR Protocol
+      accounts.push(await this.deriveNEARAccount(seed));
+
       // Generate unified address
       const unifiedAddress = this.generateUnifiedAddress(accounts);
 
@@ -201,6 +202,9 @@ export class SafeMaskWalletCore {
       accounts.push(await this.deriveAztecAccount(seed));
       accounts.push(await this.deriveMinaAccount(seed));
       accounts.push(await this.deriveArbitrumAccount(seed));
+      accounts.push(await this.deriveOptimismAccount(seed));
+      accounts.push(await this.deriveBaseAccount(seed));
+      accounts.push(await this.deriveNEARAccount(seed));
       accounts.push(await this.deriveOptimismAccount(seed));
       accounts.push(await this.deriveBaseAccount(seed));
 
@@ -500,6 +504,28 @@ export class SafeMaskWalletCore {
     return {
       name: 'Base',
       chain: ChainType.BASE,
+      address,
+      publicKey,
+      privateKey,
+      balance: '0',
+      derivationPath: path,
+    };
+  }
+
+  private async deriveNEARAccount(seed: Uint8Array): Promise<Account> {
+    const path = "m/44'/397'/0'";
+    const { privateKey: privKeyBytes } = this.deriveChildKey(seed, path);
+    
+    const privateKey = 'ed25519:' + Buffer.from(privKeyBytes).toString('hex');
+    const pubKeyBytes = ed25519.getPublicKey(privKeyBytes);
+    const publicKey = 'ed25519:' + Buffer.from(pubKeyBytes).toString('base64');
+    
+    const implicitAccountId = Buffer.from(pubKeyBytes).toString('hex');
+    const address = implicitAccountId;
+
+    return {
+      name: 'NEAR',
+      chain: ChainType.NEAR,
       address,
       publicKey,
       privateKey,

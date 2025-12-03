@@ -9,11 +9,13 @@ import {
   Clipboard,
   TextInput,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../design/colors';
 import { SafeMaskWalletCore } from '../core/ZetarisWalletCore';
 import { ChainType } from '../core/ZetarisWalletCore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as logger from '../utils/logger';
 
 interface ViewingKeyScreenProps {
@@ -32,14 +34,74 @@ export default function ViewingKeyScreen({ navigation }: ViewingKeyScreenProps) 
   const [showExportModal, setShowExportModal] = useState(false);
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importedViewingKey, setImportedViewingKey] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [hdWallet] = useState(() => new SafeMaskWalletCore());
+  const [hdWallet, setHdWallet] = useState<SafeMaskWalletCore | null>(null);
 
   useEffect(() => {
-    loadViewingKeys();
+    loadWalletAndKeys();
   }, []);
 
+  const loadWalletAndKeys = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Load wallet from storage
+      const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data');
+      if (!walletDataStr) {
+        const oldWalletStr = await AsyncStorage.getItem('wallet_data');
+        if (!oldWalletStr) {
+          setError('No wallet found. Please create or restore a wallet first.');
+          setLoading(false);
+          return;
+        }
+      }
+      
+      const walletData = JSON.parse(walletDataStr || '{}');
+      if (!walletData.seedPhrase && !walletData.mnemonic) {
+        setError('Invalid wallet data. Please restore your wallet.');
+        setLoading(false);
+        return;
+      }
+      
+      // Import wallet from seed
+      const mnemonic = walletData.seedPhrase || walletData.mnemonic;
+      const wallet = new SafeMaskWalletCore();
+      await wallet.importWallet(mnemonic);
+      setHdWallet(wallet);
+      
+      // Load Zcash viewing keys
+      const zcashAccount = wallet.getAccount(ChainType.ZCASH);
+      
+      if (!zcashAccount) {
+        setError('Zcash account not found in wallet. Please restore your wallet.');
+        logger.error('No Zcash account found');
+        setLoading(false);
+        return;
+      }
+
+      setShieldedAddress(zcashAccount.address);
+      setViewingKey(zcashAccount.viewingKey || '');
+      setSpendingKey(zcashAccount.spendingKey || '');
+      setDiversifier(zcashAccount.diversifier || '');
+      
+      logger.info('Viewing keys loaded successfully');
+      setLoading(false);
+    } catch (error) {
+      logger.error('Error loading viewing keys:', error);
+      setError('Failed to load viewing keys: ' + (error as Error).message);
+      setLoading(false);
+    }
+  };
+
   const loadViewingKeys = () => {
+    if (!hdWallet) {
+      logger.error('Wallet not loaded');
+      return;
+    }
+    
     try {
       const zcashAccount = hdWallet.getAccount(ChainType.ZCASH);
       
@@ -101,7 +163,26 @@ export default function ViewingKeyScreen({ navigation }: ViewingKeyScreenProps) 
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.zcash} />
+          <Text style={styles.loadingText}>Loading wallet...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={64} color={Colors.error} />
+          <Text style={styles.errorTitle}>Error</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={loadWalletAndKeys}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={styles.content}>
+          {/* Rest of the existing UI */}
         <View style={styles.infoCard}>
           <Ionicons name="shield-checkmark" size={48} color={Colors.zcash} />
           <Text style={styles.infoTitle}>Zcash Viewing Keys</Text>
@@ -242,6 +323,7 @@ export default function ViewingKeyScreen({ navigation }: ViewingKeyScreenProps) 
           </Text>
         </View>
       </ScrollView>
+      )}
 
       <Modal
         visible={showExportModal}
@@ -567,5 +649,47 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
     marginLeft: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  retryButton: {
+    backgroundColor: Colors.zcash,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
   },
 });
