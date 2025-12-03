@@ -19,6 +19,7 @@ import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RealBlockchainService, { RealBalance } from '../blockchain/RealBlockchainService';
 import { SafeMaskWalletCore, ChainType } from '../core/ZetarisWalletCore';
+import { PrivacyAIService } from '../ai/PrivacyAIService';
 import ChainIcon from '../components/ChainIcon';
 import BottomTabBar from '../components/BottomTabBar';
 import { Colors } from '../design/colors';

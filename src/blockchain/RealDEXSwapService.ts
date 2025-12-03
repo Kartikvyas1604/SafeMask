@@ -4,6 +4,15 @@ import { Pool, Route, SwapQuoter, Trade, SwapRouter } from '@uniswap/v3-sdk';
 import * as logger from '../utils/logger';
 import TokenService from './TokenService';
 
+const ONEINCH_API_BASE = 'https://api.1inch.dev/swap/v5.2';
+const ONEINCH_CHAINS: { [key: string]: number } = {
+  ethereum: 1,
+  polygon: 137,
+  arbitrum: 42161,
+  optimism: 10,
+  base: 8453,
+};
+
 // Uniswap V3 Router address (same on Ethereum, Polygon, Arbitrum)
 const UNISWAP_V3_ROUTER = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
 const UNISWAP_V3_QUOTER = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6';
@@ -82,6 +91,67 @@ export class RealDEXSwapService {
     return chainIds[network] || 1;
   }
   
+  /**
+   * Get swap quote from 1inch aggregator (better rates than Uniswap alone)
+   * Supports NEAR cross-chain via bridges
+   */
+  public async get1inchSwapQuote(
+    network: string,
+    inputTokenAddress: string,
+    outputTokenAddress: string,
+    inputAmount: string,
+    slippageTolerance: number = 0.5
+  ): Promise<SwapQuote> {
+    const chainId = ONEINCH_CHAINS[network];
+    if (!chainId) {
+      // Fallback to Uniswap for unsupported chains
+      return this.getRealSwapQuote(network, inputTokenAddress, outputTokenAddress, inputAmount, slippageTolerance);
+    }
+
+    try {
+      logger.info(`📊 Fetching 1inch quote on ${network} (chainId: ${chainId})`);
+      
+      // Convert amount to smallest unit (assuming 18 decimals)
+      const amountInWei = ethers.parseUnits(inputAmount, 18).toString();
+      
+      // 1inch quote API endpoint
+      const quoteUrl = `${ONEINCH_API_BASE}/${chainId}/quote?` +
+        `src=${inputTokenAddress}&` +
+        `dst=${outputTokenAddress}&` +
+        `amount=${amountInWei}`;
+      
+      const response = await fetch(quoteUrl);
+      
+      if (!response.ok) {
+        throw new Error(`1inch API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Calculate output amount with slippage
+      const outputAmount = ethers.formatUnits(data.dstAmount, 18);
+      const slippageMultiplier = 1 - (slippageTolerance / 100);
+      const outputAmountMin = (parseFloat(outputAmount) * slippageMultiplier).toFixed(6);
+      
+      return {
+        inputToken: inputTokenAddress,
+        outputToken: outputTokenAddress,
+        inputAmount,
+        outputAmount,
+        outputAmountMin,
+        priceImpact: parseFloat(data.estimatedGas) / 1000000, // Rough estimate
+        gasEstimate: data.estimatedGas.toString(),
+        gasEstimateUSD: 0, // Calculate separately
+        route: [inputTokenAddress, outputTokenAddress],
+        dex: 'uniswap', // 1inch aggregates multiple DEXs
+      };
+    } catch (error) {
+      logger.warn('1inch quote failed, falling back to Uniswap:', error);
+      // Fallback to Uniswap
+      return this.getRealSwapQuote(network, inputTokenAddress, outputTokenAddress, inputAmount, slippageTolerance);
+    }
+  }
+
   /**
    * Get REAL swap quote from Uniswap V3
    * This fetches actual liquidity pool data

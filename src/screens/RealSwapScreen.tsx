@@ -109,6 +109,7 @@ export default function RealSwapScreen() {
   
   /**
    * Get real-time swap quote from DEX
+   * Uses 1inch aggregator for best rates across multiple DEXs
    */
   const getSwapQuote = async () => {
     setIsLoadingQuote(true);
@@ -116,7 +117,8 @@ export default function RealSwapScreen() {
     try {
       logger.info(`📊 Getting real swap quote...`);
       
-      const swapQuote = await dexService.getRealSwapQuote(
+      // Try 1inch first for better rates, fallback to Uniswap
+      const swapQuote = await dexService.get1inchSwapQuote(
         network,
         inputToken,
         outputToken,
