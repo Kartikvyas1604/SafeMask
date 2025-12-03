@@ -14,6 +14,7 @@ import {
   Share,
   Clipboard,
   Linking,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 import RealBlockchainService from '../blockchain/RealBlockchainService';
+import ZcashLightwalletService from '../blockchain/ZcashLightwalletService';
 import { SafeMaskWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import ChainIcon from '../components/ChainIcon';
 import { Colors } from '../design/colors';
@@ -53,11 +55,18 @@ interface ChainOption {
 }
 
 const SUPPORTED_CHAINS: ChainOption[] = [
-  { id: 'ethereum', name: 'ETH', symbol: 'ETH' },
-  { id: 'polygon', name: 'MATIC', symbol: 'MATIC' },
-  { id: 'solana', name: 'SOL', symbol: 'SOL' },
-  { id: 'bitcoin', name: 'BTC', symbol: 'BTC' },
-  { id: 'zcash', name: 'ZEC', symbol: 'ZEC' },
+  { id: 'ethereum', name: 'Sepolia Testnet', symbol: 'ETH' },
+  { id: 'polygon', name: 'Polygon Amoy', symbol: 'MATIC' },
+  { id: 'near', name: 'NEAR Testnet', symbol: 'NEAR' },
+  { id: 'solana', name: 'Solana Devnet', symbol: 'SOL' },
+  { id: 'bitcoin', name: 'Bitcoin Testnet', symbol: 'BTC' },
+  { id: 'zcash', name: 'Zcash Testnet', symbol: 'ZEC' },
+  { id: 'starknet', name: 'Starknet Sepolia', symbol: 'STRK' },
+  { id: 'mina', name: 'Mina Berkeley', symbol: 'MINA' },
+  { id: 'arbitrum', name: 'Arbitrum Sepolia', symbol: 'ETH' },
+  { id: 'optimism', name: 'Optimism Sepolia', symbol: 'ETH' },
+  { id: 'base', name: 'Base Sepolia', symbol: 'ETH' },
+  { id: 'aztec', name: 'Aztec Testnet', symbol: 'ETH' },
 ];
 
 const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
@@ -76,6 +85,8 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
   const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false);
   const [paymentLink, setPaymentLink] = useState('');
+  const [useShieldedZcash, setUseShieldedZcash] = useState(true);
+  const [showZcashPrivacyOption, setShowZcashPrivacyOption] = useState(false);
 
   // Prevent unnecessary reloads by memoizing loaded state
   const isInitialMount = useRef(true);
@@ -137,6 +148,11 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
       setMemo(initialMemo);
     }
   }, [route?.params?.initialMemo]);
+
+  // Show/hide Zcash privacy toggle based on selected chain
+  useEffect(() => {
+    setShowZcashPrivacyOption(selectedChain.id === 'zcash');
+  }, [selectedChain.id]);
 
   useEffect(() => {
     // Only reload balance if chain actually changed
@@ -304,11 +320,58 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
             balanceValue = maticBalance.balanceFormatted;
             break;
           }
-          case 'solana':
-          case 'bitcoin':
-          case 'zcash':
-            balanceValue = '0.00';
+          case 'near': {
+            const nearBalance = await RealBlockchainService.getRealBalance('near', address);
+            balanceValue = nearBalance.balanceFormatted;
             break;
+          }
+          case 'solana': {
+            const solBalance = await RealBlockchainService.getRealBalance('solana', address);
+            balanceValue = solBalance.balanceFormatted;
+            break;
+          }
+          case 'bitcoin': {
+            const btcBalance = await RealBlockchainService.getRealBalance('bitcoin', address);
+            balanceValue = btcBalance.balanceFormatted;
+            break;
+          }
+          case 'zcash': {
+            const zecBalance = await RealBlockchainService.getRealBalance('zcash', address);
+            balanceValue = zecBalance.balanceFormatted;
+            break;
+          }
+          case 'starknet': {
+            const strkBalance = await RealBlockchainService.getRealBalance('starknet', address);
+            balanceValue = strkBalance.balanceFormatted;
+            break;
+          }
+          case 'mina': {
+            const minaBalance = await RealBlockchainService.getRealBalance('mina', address);
+            balanceValue = minaBalance.balanceFormatted;
+            break;
+          }
+          case 'arbitrum': {
+            const arbBalance = await RealBlockchainService.getRealBalance('arbitrum', address);
+            balanceValue = arbBalance.balanceFormatted;
+            break;
+          }
+          case 'optimism': {
+            const opBalance = await RealBlockchainService.getRealBalance('optimism', address);
+            balanceValue = opBalance.balanceFormatted;
+            break;
+          }
+          case 'base': {
+            const baseBalance = await RealBlockchainService.getRealBalance('base', address);
+            balanceValue = baseBalance.balanceFormatted;
+            break;
+          }
+          case 'aztec': {
+            const aztecBalance = await RealBlockchainService.getRealBalance('aztec', address);
+            balanceValue = aztecBalance.balanceFormatted;
+            break;
+          }
+          default:
+            balanceValue = '0.00';
         }
       }
 
@@ -375,11 +438,15 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
   const handleSend = async () => {
     if (!validateInputs()) return;
 
+    const privacyMessage = selectedChain.id === 'zcash' 
+      ? `\n\nPrivacy: ${useShieldedZcash ? '🔒 Shielded (Private)' : '👁️ Transparent (Public)'}`
+      : '';
+    
     Alert.alert(
       'Confirm Transaction',
       `Send ${amount} ${selectedChain.symbol} to ${recipientAddress.substring(0, 10)}...?${
         parseFloat(gasEstimate) > 0 ? `\n\nEstimated Gas: ${gasEstimate} ${selectedChain.symbol}` : ''
-      }`,
+      }${privacyMessage}`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Send', onPress: sendTransaction },
@@ -443,20 +510,186 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
           break;
         }
 
+        case 'near': {
+          const nearAccount = tempWallet.getAccount(ChainType.NEAR);
+          if (!nearAccount) {
+            throw new Error('NEAR account not found');
+          }
+          currentPrivateKey = nearAccount.privateKey;
+          currentAddress = nearAccount.address;
+          
+          const NEARService = require('../blockchain/NEARService').default;
+          const nearResult = await NEARService.sendTransaction(
+            currentAddress,
+            currentPrivateKey,
+            recipientAddress,
+            amount
+          );
+          
+          if (!nearResult.success) {
+            throw new Error(nearResult.error || 'NEAR transaction failed');
+          }
+          
+          txResult = {
+            hash: nearResult.txHash || '',
+            from: currentAddress,
+            to: recipientAddress,
+            value: amount,
+            gas: '0',
+            gasPrice: '0',
+            nonce: 0,
+            confirmations: 0,
+            status: 'pending',
+            explorerUrl: `https://explorer.testnet.near.org/transactions/${nearResult.txHash}`,
+          } as any;
+          break;
+        }
+
+        case 'mina': {
+          const minaAccount = tempWallet.getAccount(ChainType.MINA);
+          if (!minaAccount) {
+            throw new Error('Mina account not found');
+          }
+          currentPrivateKey = minaAccount.privateKey;
+          currentAddress = minaAccount.address;
+          
+          const MinaService = require('../blockchain/MinaService').default;
+          const minaTxHash = await MinaService.sendTransaction(
+            currentPrivateKey,
+            recipientAddress,
+            amount
+          );
+          
+          txResult = {
+            hash: minaTxHash,
+            from: currentAddress,
+            to: recipientAddress,
+            value: amount,
+            gas: '0',
+            gasPrice: '0',
+            nonce: 0,
+            confirmations: 0,
+            status: 'pending',
+            explorerUrl: `https://berkeley.minaexplorer.com/transaction/${minaTxHash}`,
+          } as any;
+          break;
+        }
+
+        case 'starknet': {
+          const starknetAccount = tempWallet.getAccount(ChainType.STARKNET);
+          if (!starknetAccount) {
+            throw new Error('Starknet account not found');
+          }
+          currentPrivateKey = starknetAccount.privateKey;
+          currentAddress = starknetAccount.address;
+          
+          const StarknetService = require('../blockchain/StarknetService').default;
+          const starkTxHash = await StarknetService.sendTransaction(
+            currentPrivateKey,
+            recipientAddress,
+            amount
+          );
+          
+          txResult = {
+            hash: starkTxHash,
+            from: currentAddress,
+            to: recipientAddress,
+            value: amount,
+            gas: '0',
+            gasPrice: '0',
+            nonce: 0,
+            confirmations: 0,
+            status: 'pending',
+            explorerUrl: `https://sepolia.starkscan.co/tx/${starkTxHash}`,
+          } as any;
+          break;
+        }
+
+        case 'arbitrum':
+        case 'optimism':
+        case 'base':
+        case 'aztec': {
+          const chainMap: Record<string, ChainType> = {
+            arbitrum: ChainType.ARBITRUM,
+            optimism: ChainType.OPTIMISM,
+            base: ChainType.BASE,
+            aztec: ChainType.AZTEC,
+          };
+          
+          const evmAccount = tempWallet.getAccount(chainMap[selectedChain.id]);
+          if (!evmAccount) {
+            throw new Error(`${selectedChain.name} account not found`);
+          }
+          currentPrivateKey = evmAccount.privateKey;
+          currentAddress = evmAccount.address;
+          
+          txResult = await RealBlockchainService.sendRealTransaction(
+            selectedChain.id,
+            currentAddress,
+            recipientAddress,
+            amount,
+            currentPrivateKey
+          );
+          break;
+        }
+
         case 'solana':
-          ErrorHandler.info('Solana sending coming soon!');
+          logger.info('Solana transaction (demo mode)');
+          ErrorHandler.info('Solana sending will be available soon!');
           setIsSending(false);
           return;
 
         case 'bitcoin':
-          ErrorHandler.info('Bitcoin sending coming soon!');
+          logger.info('Bitcoin transaction (demo mode)');
+          ErrorHandler.info('Bitcoin sending will be available soon!');
           setIsSending(false);
           return;
 
         case 'zcash':
-          ErrorHandler.info('Zcash sending coming soon!');
-          setIsSending(false);
-          return;
+          logger.info(`Sending ${useShieldedZcash ? 'shielded' : 'transparent'} Zcash transaction`);
+          
+          const zcashAccount = tempWallet.getAccount(ChainType.ZCASH);
+          if (!zcashAccount) {
+            throw new Error('Zcash account not found');
+          }
+          
+          if (useShieldedZcash) {
+            if (!zcashAccount.spendingKey) {
+              throw new Error('Zcash spending key not found');
+            }
+            
+            const zcashResult = await ZcashLightwalletService.sendShieldedTransaction(
+              zcashAccount.spendingKey,
+              recipientAddress,
+              amount,
+              memo || undefined
+            );
+            
+            if (!zcashResult.success) {
+              throw new Error(zcashResult.error || 'Zcash transaction failed');
+            }
+            
+            txResult = {
+              hash: zcashResult.txid || '',
+              from: zcashAccount.address,
+              to: recipientAddress,
+              value: amount,
+              gas: '0',
+              gasPrice: '0',
+              nonce: 0,
+              confirmations: 0,
+              status: 'pending',
+              explorerUrl: `https://explorer.testnet.z.cash/tx/${zcashResult.txid}`,
+            } as any;
+            
+            logger.info(`✅ Zcash shielded transaction sent: ${zcashResult.txid}`);
+          } else {
+            logger.info('Zcash transparent transaction (demo mode)');
+            ErrorHandler.info('Zcash transparent sending will be available soon!');
+            setIsSending(false);
+            return;
+          }
+          break;
       }
 
       setIsSending(false);
@@ -474,7 +707,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
             amount: `-${amount}`,
             time: 'Just now',
             color: Colors.error,
-            isPrivate: false,
+            isPrivate: selectedChain.id === 'zcash' && useShieldedZcash,
             txHash: txResult.hash,
             fromAddress: currentAddress,
             toAddress: recipientAddress,
@@ -488,6 +721,8 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
             timestamp: txResult.timestamp || Date.now(),
             explorerUrl: txResult.explorerUrl,
             nonce: txResult.nonce,
+            memo: memo || undefined,
+            privacyType: selectedChain.id === 'zcash' ? (useShieldedZcash ? 'shielded' : 'transparent') : undefined,
           };
           
           transactions.unshift(transactionRecord);
@@ -501,13 +736,21 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
           logger.error('Failed to save transaction:', error);
         }
 
-        // Show success alert with hash and Etherscan link
+        // Show success alert with hash and Explorer link
         const explorerName = selectedChain.id === 'ethereum' ? 'Etherscan' : 
-                            selectedChain.id === 'polygon' ? 'Polygonscan' : 'Explorer';
+                            selectedChain.id === 'polygon' ? 'Polygonscan' :
+                            selectedChain.id === 'zcash' ? 'Zcash Explorer' :
+                            selectedChain.id === 'near' ? 'NEAR Explorer' :
+                            selectedChain.id === 'mina' ? 'Mina Explorer' :
+                            selectedChain.id === 'starknet' ? 'StarkScan' : 'Explorer';
+        
+        const privacyStatus = selectedChain.id === 'zcash' 
+          ? `\n\nPrivacy: ${useShieldedZcash ? '🔒 Shielded (Private)' : '👁️ Transparent (Public)'}`
+          : '';
         
         Alert.alert(
           '✅ Transaction Sent!',
-          `Transaction Hash:\n${txResult.hash}\n\nStatus: ${txResult.status === 'confirmed' ? 'Confirmed' : 'Pending'}\n\nWould you like to view it on ${explorerName}?`,
+          `Transaction Hash:\n${txResult.hash}\n\nStatus: ${txResult.status === 'confirmed' ? 'Confirmed' : 'Pending'}${privacyStatus}\n\nWould you like to view it on ${explorerName}?`,
           [
             {
               text: 'Copy Hash',
@@ -857,6 +1100,47 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
             maxLength={100}
           />
         </View>
+
+        {/* Zcash Privacy Toggle */}
+        {showZcashPrivacyOption && (
+          <View style={styles.privacyToggleContainer}>
+            <View style={styles.privacyToggleHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="shield-checkmark" size={20} color={Colors.zcash} />
+                <Text style={styles.privacyToggleTitle}>Privacy Mode</Text>
+              </View>
+              <Switch
+                value={useShieldedZcash}
+                onValueChange={setUseShieldedZcash}
+                trackColor={{ false: Colors.border, true: Colors.zcash + '60' }}
+                thumbColor={useShieldedZcash ? Colors.zcash : Colors.white}
+                ios_backgroundColor={Colors.border}
+              />
+            </View>
+            
+            <View style={styles.privacyToggleDescription}>
+              <Text style={styles.privacyToggleText}>
+                {useShieldedZcash ? '🔒 Shielded (Private)' : '👁️ Transparent (Public)'}
+              </Text>
+            </View>
+
+            {!useShieldedZcash ? (
+              <View style={styles.privacyWarning}>
+                <Ionicons name="warning" size={16} color={Colors.warning} />
+                <Text style={styles.privacyWarningText}>
+                  Transparent transactions are visible on the blockchain. Use shielded transactions for privacy.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.privacyInfo}>
+                <Ionicons name="lock-closed" size={16} color={Colors.success} />
+                <Text style={styles.privacyInfoText}>
+                  Shielded transactions use zero-knowledge proofs to protect your privacy. Amount, sender, and receiver are encrypted.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Gas Estimate */}
         {parseFloat(gasEstimate) > 0 && (
@@ -1510,6 +1794,66 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xs,
     color: Colors.textSecondary,
     lineHeight: 16,
+  },
+  privacyToggleContainer: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  privacyToggleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  privacyToggleTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.textPrimary,
+  },
+  privacyToggleDescription: {
+    marginBottom: Spacing.md,
+  },
+  privacyToggleText: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  privacyWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    backgroundColor: Colors.warning + '10',
+    padding: Spacing.md,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.warning + '30',
+  },
+  privacyWarningText: {
+    flex: 1,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  privacyInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    backgroundColor: Colors.success + '10',
+    padding: Spacing.md,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.success + '30',
+  },
+  privacyInfoText: {
+    flex: 1,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: 18,
   },
 });
 
