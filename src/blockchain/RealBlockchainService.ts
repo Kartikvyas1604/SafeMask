@@ -1,6 +1,10 @@
 import { ethers } from 'ethers';
 import axios from 'axios';
 import * as logger from '../utils/logger';
+import NEARService from './NEARService';
+import MinaService from './MinaService';
+import StarknetService from './StarknetService';
+import ZcashLightwalletService from './ZcashLightwalletService';
 
 export interface RealBalance {
   chain: string;
@@ -128,6 +132,13 @@ export class RealBlockchainService {
       explorerUrl: 'https://devnet.minaexplorer.com',
       nativeCurrency: { name: 'Mina', symbol: 'MINA', decimals: 9 },
     }],
+    ['near', {
+      name: 'NEAR Testnet',
+      chainId: 0,
+      rpcUrl: 'https://rpc.testnet.near.org',
+      explorerUrl: 'https://explorer.testnet.near.org',
+      nativeCurrency: { name: 'NEAR', symbol: 'NEAR', decimals: 24 },
+    }],
   ]);
   
   private providers: Map<string, ethers.JsonRpcProvider> = new Map();
@@ -162,6 +173,89 @@ export class RealBlockchainService {
     }
   }
   
+  /**
+   * Static method to get balance for any chain
+   * Routes to the appropriate service (EVM, NEAR, Mina, Starknet, Zcash)
+   */
+  public static async getBalance(address: string, chain: string): Promise<string> {
+    const chainLower = chain.toLowerCase();
+    
+    try {
+      // NEAR Protocol
+      if (chainLower === 'near') {
+        await NEARService.initialize('testnet');
+        return await NEARService.getBalance(address);
+      }
+      
+      // Mina Protocol
+      if (chainLower === 'mina') {
+        return await MinaService.getBalance(address);
+      }
+      
+      // Starknet
+      if (chainLower === 'starknet') {
+        return await StarknetService.getBalance(address);
+      }
+      
+      // Zcash
+      if (chainLower === 'zcash') {
+        return await ZcashLightwalletService.getTransparentBalance(address);
+      }
+      
+      // Solana
+      if (chainLower === 'solana') {
+        try {
+          const response = await fetch('https://api.devnet.solana.com', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'getBalance',
+              params: [address],
+            }),
+          });
+          const data = await response.json();
+          if (data.result?.value) {
+            return (data.result.value / 1e9).toString();
+          }
+        } catch (error) {
+          logger.error('Solana balance fetch failed:', error);
+        }
+        return '0';
+      }
+      
+      // Bitcoin
+      if (chainLower === 'bitcoin') {
+        try {
+          const response = await fetch(`https://blockstream.info/testnet/api/address/${address}`);
+          if (response.ok) {
+            const data = await response.json();
+            const balance = (data.chain_stats?.funded_txo_sum || 0) - (data.chain_stats?.spent_txo_sum || 0);
+            return (balance / 1e8).toString();
+          }
+        } catch (error) {
+          logger.error('Bitcoin balance fetch failed:', error);
+        }
+        return '0';
+      }
+      
+      // EVM chains (Ethereum, Polygon, Arbitrum, Optimism, Base, Aztec)
+      const evmChains = ['ethereum', 'polygon', 'arbitrum', 'optimism', 'base', 'aztec'];
+      if (evmChains.includes(chainLower)) {
+        const instance = RealBlockchainService.getInstance();
+        const realBalance = await instance.getRealBalance(chainLower, address);
+        return realBalance.balanceFormatted;
+      }
+      
+      logger.warn(`Unsupported chain: ${chain}`);
+      return '0';
+    } catch (error) {
+      logger.error(`Failed to fetch balance for ${chain}:`, error);
+      return '0';
+    }
+  }
+
   /**
    * Get REAL balance from blockchain
    * @param network - Network name (ethereum, polygon, etc.)
@@ -247,6 +341,7 @@ export class RealBlockchainService {
       'SOL': 'solana',
       'STRK': 'starknet',
       'MINA': 'mina-protocol',
+      'NEAR': 'near',
     };
     
     const coinId = coinIds[symbol] || symbol.toLowerCase();
