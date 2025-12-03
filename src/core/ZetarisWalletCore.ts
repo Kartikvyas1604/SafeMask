@@ -4,6 +4,9 @@
  * Supports 11 blockchains with privacy features
  */
 
+// Ensure polyfills are loaded before crypto libraries
+import '../utils/polyfills';
+
 import * as bip39 from '@scure/bip39';
 import { wordlist as englishWordlist } from '@scure/bip39/wordlists/english.js';
 import { ed25519 } from '@noble/curves/ed25519';

@@ -3,6 +3,9 @@
  * NO MOCKS - Real BIP-39, BIP-32, BIP-44 with actual cryptography
  */
 
+// Ensure polyfills are loaded before crypto libraries
+import '../utils/polyfills';
+
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
 // @ts-ignore - wordlist is a JS module
 import { wordlist } from '@scure/bip39/wordlists/english.js';

@@ -1,11 +1,12 @@
+// IMPORTANT: Polyfills must be defined BEFORE any imports that use them
 import 'react-native-gesture-handler';
 import 'react-native-get-random-values';
+
+// Load polyfills FIRST - this ensures base64FromArrayBuffer is available before any crypto libraries load
+import './src/utils/polyfills';
+
+// Now import Expo and App AFTER polyfills are set up
 import { registerRootComponent } from 'expo';
-import { Buffer } from '@craftzdog/react-native-buffer';
-
-// Polyfill Buffer globally
-global.Buffer = Buffer as any;
-
 import App from './App';
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
