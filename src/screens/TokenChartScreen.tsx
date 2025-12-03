@@ -120,20 +120,21 @@ const TokenChartScreen: React.FC = () => {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
       
-      {/* Header */}
+      {/* Header - Matching reference */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Ionicons name="chevron-back" size={24} color={Colors.white} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>{name}</Text>
-            <Text style={styles.headerSubtitle}>{symbol}</Text>
-          </View>
-        </View>
+        <TouchableOpacity
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              (navigation as any).navigate('MainTabs', { screen: 'Wallet' });
+            }
+          }}
+          style={styles.backButton}
+        >
+          <Ionicons name="chevron-back" size={20} color={Colors.white} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Chart</Text>
         <TouchableOpacity 
           style={styles.refreshButton}
           onPress={handleRefresh}
@@ -141,7 +142,7 @@ const TokenChartScreen: React.FC = () => {
         >
           <Ionicons 
             name="refresh" 
-            size={24} 
+            size={20} 
             color={Colors.white} 
             style={isRefreshing ? { opacity: 0.5 } : {}}
           />
@@ -160,49 +161,42 @@ const TokenChartScreen: React.FC = () => {
           />
         }
       >
-        {/* Price Info Card */}
+        {/* Token Symbol and Price Info - Matching reference */}
         {priceData && (
-          <View style={styles.priceCard}>
-            <View style={styles.priceHeader}>
+          <View style={styles.priceInfoRow}>
+            <View style={styles.priceInfoLeft}>
+              <Text style={styles.tokenSymbol}>{symbol}</Text>
               <Text style={styles.currentPrice}>{formatPrice(priceData.price)}</Text>
-              <View style={[styles.changeBadge, isPositive ? styles.changeBadgePositive : styles.changeBadgeNegative]}>
-                <Ionicons 
-                  name={isPositive ? 'trending-up' : 'trending-down'} 
-                  size={16} 
-                  color={Colors.white} 
-                />
-                <Text style={styles.changeText}>
-                  {formatChange(priceData.change24h)}
-                </Text>
-              </View>
             </View>
-            <Text style={styles.sourceText}>
-              Source: {priceData.source === 'chainlink' ? '🔗 Chainlink Oracle' : 
-                      priceData.source === 'coingecko' ? '🦎 CoinGecko' : '💾 Cached'}
-            </Text>
+            <View style={styles.priceInfoRight}>
+              <Text style={[styles.priceChange, { color: isPositive ? Colors.success : Colors.error }]}>
+                {isPositive ? '+' : ''}{formatPrice(priceData.price - (priceData.price / (1 + priceData.change24h / 100)))}
+              </Text>
+              <Text style={[styles.priceChangePercent, { color: isPositive ? Colors.success : Colors.error }]}>
+                {formatChange(priceData.change24h)}
+              </Text>
+            </View>
           </View>
         )}
 
         {/* Chart Component */}
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Price Chart</Text>
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="warning-outline" size={48} color={Colors.error} />
-              <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <PriceChart 
-              symbol={symbol} 
-              height={300}
-              showTimeframes={true}
-              showCurrentPrice={true}
-            />
-          )}
-        </View>
+        {error ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="warning-outline" size={48} color={Colors.error} />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <PriceChart 
+            symbol={symbol} 
+            height={350}
+            showTimeframes={true}
+            showCurrentPrice={false}
+            currentPriceData={priceData}
+          />
+        )}
 
         {/* Market Stats */}
         {priceData && (
@@ -235,6 +229,32 @@ const TokenChartScreen: React.FC = () => {
           </View>
         )}
 
+        {/* Buy and Sell Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={styles.buyButton}
+            onPress={() => {
+              (navigation as any).navigate('MainTabs', { 
+                screen: 'RealSwap',
+                params: { outputTokenSymbol: symbol }
+              });
+            }}
+          >
+            <Text style={styles.buyButtonText}>Buy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.sellButton}
+            onPress={() => {
+              (navigation as any).navigate('MainTabs', { 
+                screen: 'RealSend',
+                params: { initialTokenSymbol: symbol }
+              });
+            }}
+          >
+            <Text style={styles.sellButtonText}>Sell</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Bottom Spacing for Tab Bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -266,111 +286,77 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: Spacing.lg,
     paddingBottom: Spacing.xl * 2,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
-  },
-  headerLeft: {
-    flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   backButton: {
-    padding: Spacing.sm,
-    marginRight: Spacing.sm,
-  },
-  headerTitleContainer: {
-    flex: 1,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   headerTitle: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize.xl,
     fontFamily: Typography.fontFamily.primary,
-    fontWeight: '600',
-    lineHeight: Typography.lineHeight.tight * Typography.fontSize.lg,
-    color: Colors.white,
-  },
-  headerSubtitle: {
-    fontSize: Typography.fontSize.xs,
-    fontFamily: Typography.fontFamily.primary,
-    lineHeight: Typography.lineHeight.normal * Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
   },
   refreshButton: {
-    padding: Spacing.sm,
-  },
-  priceCard: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: Colors.card,
-    borderRadius: 16,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
-  priceHeader: {
+  priceInfoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    alignItems: 'flex-start',
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
   },
-  currentPrice: {
-    fontSize: 36,
-    fontFamily: Typography.fontFamily.primary,
-    fontWeight: '700',
-    lineHeight: Typography.lineHeight.tight * 36,
-    color: Colors.white,
+  priceInfoLeft: {
+    flex: 1,
   },
-  changeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: 12,
-    gap: 4,
-  },
-  changeBadgePositive: {
-    backgroundColor: Colors.success + '20',
-  },
-  changeBadgeNegative: {
-    backgroundColor: Colors.error + '20',
-  },
-  changeText: {
+  tokenSymbol: {
     fontSize: Typography.fontSize.md,
     fontFamily: Typography.fontFamily.primary,
-    fontWeight: '600',
-    lineHeight: Typography.lineHeight.normal * Typography.fontSize.md,
-    color: Colors.white,
-  },
-  sourceText: {
-    fontSize: Typography.fontSize.xs,
-    fontFamily: Typography.fontFamily.primary,
-    lineHeight: Typography.lineHeight.normal * Typography.fontSize.xs,
     color: Colors.textSecondary,
-    marginTop: Spacing.xs,
+    marginBottom: Spacing.xs,
   },
-  chartCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 16,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  chartTitle: {
-    fontSize: Typography.fontSize.lg,
+  currentPrice: {
+    fontSize: 32,
     fontFamily: Typography.fontFamily.primary,
-    fontWeight: '600',
-    lineHeight: Typography.lineHeight.tight * Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
     color: Colors.white,
-    marginBottom: Spacing.md,
+  },
+  priceInfoRight: {
+    alignItems: 'flex-end',
+  },
+  priceChange: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.primary,
+    fontWeight: Typography.fontWeight.semibold,
+    marginBottom: 2,
+  },
+  priceChangePercent: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.primary,
+    fontWeight: Typography.fontWeight.semibold,
   },
   errorContainer: {
     alignItems: 'center',
@@ -453,6 +439,43 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.primary,
     lineHeight: Typography.lineHeight.normal * Typography.fontSize.xs,
     color: Colors.textSecondary,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+  },
+  buyButton: {
+    flex: 1,
+    backgroundColor: Colors.accent,
+    paddingVertical: Spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buyButtonText: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.primary,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.white,
+  },
+  sellButton: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    paddingVertical: Spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  sellButtonText: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.primary,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.white,
   },
 });
 

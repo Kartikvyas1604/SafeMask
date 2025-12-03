@@ -72,6 +72,11 @@ export default function RecentTransactionsScreen() {
         time: tx.timestamp ? formatTimeAgo(tx.timestamp) : tx.time,
       }));
 
+      // Immediately show whatever we have locally so the screen doesn't spin forever
+      setTransactions(savedTransactions);
+      setIsLoading(false);
+      setRefreshing(false);
+
       // Try to fetch real transactions from blockchain
       try {
         const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
@@ -86,11 +91,17 @@ export default function RecentTransactionsScreen() {
           const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
           if (ethAccount && ethAccount.address) {
             try {
-              const blockchainTxs = await RealBlockchainService.getRealTransactionHistory(
-                'ethereum',
-                ethAccount.address,
-                1
-              );
+              // Add a timeout so we don't block the UI indefinitely
+              const blockchainTxs = await Promise.race([
+                RealBlockchainService.getRealTransactionHistory(
+                  'ethereum',
+                  ethAccount.address,
+                  1
+                ),
+                new Promise<never>((_, reject) =>
+                  setTimeout(() => reject(new Error('Transaction history request timed out')), 12000)
+                ),
+              ]);
 
               // Convert blockchain transactions to our format
               const formattedTxs: Transaction[] = blockchainTxs.map(tx => {
@@ -133,25 +144,24 @@ export default function RecentTransactionsScreen() {
               setTransactions(combined);
             } catch (error) {
               logger.error('Failed to fetch blockchain transactions:', error);
-              // Use saved transactions if blockchain fetch fails
-              setTransactions(savedTransactions);
+              // If blockchain fetch fails, we already showed savedTransactions above
             }
           } else {
-            setTransactions(savedTransactions);
+            // No valid account, just keep whatever we loaded from storage
           }
         } else {
-          setTransactions(savedTransactions);
+          // No wallet data, keep existing (likely empty) list
         }
       } catch (error) {
         logger.error('Error loading transactions:', error);
-        setTransactions(savedTransactions);
+        // Keep whatever we already showed from storage
       }
 
-      // Transactions are already set above
     } catch (error) {
       logger.error('Failed to load transactions:', error);
       setTransactions([]);
     } finally {
+      // Flags are already cleared once we have local data
       setIsLoading(false);
       setRefreshing(false);
     }

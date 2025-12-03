@@ -53,11 +53,11 @@ interface ChainOption {
 }
 
 const SUPPORTED_CHAINS: ChainOption[] = [
-  { id: 'ethereum', name: 'Sepolia Testnet', symbol: 'ETH' },
-  { id: 'polygon', name: 'Polygon Amoy', symbol: 'MATIC' },
-  { id: 'solana', name: 'Solana Devnet', symbol: 'SOL' },
-  { id: 'bitcoin', name: 'Bitcoin (Demo)', symbol: 'BTC' },
-  { id: 'zcash', name: 'Zcash (Demo)', symbol: 'ZEC' },
+  { id: 'ethereum', name: 'ETH', symbol: 'ETH' },
+  { id: 'polygon', name: 'MATIC', symbol: 'MATIC' },
+  { id: 'solana', name: 'SOL', symbol: 'SOL' },
+  { id: 'bitcoin', name: 'BTC', symbol: 'BTC' },
+  { id: 'zcash', name: 'ZEC', symbol: 'ZEC' },
 ];
 
 const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
@@ -81,16 +81,27 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
   const isInitialMount = useRef(true);
   const lastChain = useRef(selectedChain.id);
   const hasLoadedWallet = useRef(false);
+  const walletDataCache = useRef<{ address: string; privateKey: string } | null>(null);
+  const walletInstanceCache = useRef<SafeMaskWalletCore | null>(null);
+  const walletAddressesCache = useRef<Record<string, string>>({});
 
-  // Only load wallet data once when component mounts
-  // Tab Navigator keeps this screen mounted
+  // Load wallet data asynchronously after initial render to avoid blocking navigation
   useEffect(() => {
     if (!hasLoadedWallet.current) {
-      loadWalletData();
-      loadBalance(); // Load balance on initial mount
+      // Load wallet data in background - don't block UI
+      loadWalletData().catch(err => {
+        logger.error('[RealSend] Failed to load wallet:', err);
+      });
       hasLoadedWallet.current = true;
     }
   }, []);
+
+  // Load balance after wallet is loaded or when chain changes
+  useEffect(() => {
+    if (walletDataCache.current) {
+      loadBalance();
+    }
+  }, [selectedChain.id, walletDataCache.current]);
 
   // If an initialChain param is provided (e.g. from chart screen or super link), preselect it
   useEffect(() => {
@@ -146,7 +157,14 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
   }, [recipientAddress, amount, selectedChain.id]);
 
   const loadWalletData = async () => {
-    const result = await withErrorHandling(async () => {
+    try {
+      // Check cache first to avoid re-importing wallet
+      if (walletDataCache.current) {
+        setWalletAddress(walletDataCache.current.address);
+        setPrivateKey(walletDataCache.current.privateKey);
+        return;
+      }
+
       const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
                             await AsyncStorage.getItem('SafeMask_wallet');
       if (!walletDataStr) {
@@ -155,94 +173,152 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
 
       const walletData = JSON.parse(walletDataStr);
       const tempWallet = new SafeMaskWalletCore();
+      
+      // Import wallet asynchronously - don't block UI
       await tempWallet.importWallet(walletData.seedPhrase);
       
-      // Get Ethereum account with its private key
+      // Cache wallet instance to avoid re-importing
+      walletInstanceCache.current = tempWallet;
+      
+      // Cache all addresses for quick access
       const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
+      const polyAccount = tempWallet.getAccount(ChainType.POLYGON);
+      const solAccount = tempWallet.getAccount(ChainType.SOLANA);
+      const btcAccount = tempWallet.getAccount(ChainType.BITCOIN);
+      const zecAccount = tempWallet.getAccount(ChainType.ZCASH);
+      
       if (ethAccount) {
+        walletAddressesCache.current = {
+          ethereum: ethAccount.address,
+          polygon: polyAccount?.address || '',
+          solana: solAccount?.address || '',
+          bitcoin: btcAccount?.address || '',
+          zcash: zecAccount?.address || '',
+        };
+        
+        // Cache the wallet data
+        walletDataCache.current = {
+          address: ethAccount.address,
+          privateKey: ethAccount.privateKey,
+        };
+        
         setWalletAddress(ethAccount.address);
         setPrivateKey(ethAccount.privateKey);
-        logger.info(`Loaded wallet address: ${ethAccount.address}`);
+        
+        // Load balance after wallet is loaded
+        loadBalance();
+        
+        logger.info(`✅ Loaded wallet address: ${ethAccount.address}`);
       } else {
         throw new Error('Failed to get Ethereum account');
       }
-    }, 'Load Wallet Data');
-
-    if (!result) {
-      // Check if we can navigate back, otherwise navigate to Wallet screen
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      } else {
-        // If we're in Tab Navigator, navigate to Wallet tab
-        (navigation as any).navigate('MainTabs', {
-          screen: 'Wallet',
-        });
+    } catch (error) {
+      logger.error('[RealSend] Wallet load error:', error);
+      // Don't navigate away immediately - let user see the error
+      // Only navigate if this is a critical error
+      if (error instanceof Error && error.message.includes('No wallet')) {
+        // Delay navigation to allow UI to render first
+        setTimeout(() => {
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            (navigation as any).navigate('MainTabs', {
+              screen: 'Wallet',
+            });
+          }
+        }, 100);
       }
     }
   };
 
   const loadBalance = async () => {
+    // Don't load balance if wallet isn't ready yet
+    if (!walletAddress && !walletDataCache.current) {
+      return;
+    }
+    
     setIsLoadingBalance(true);
-    await withErrorHandling(async () => {
-      // Get wallet data and initialize HD wallet
-      const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
-                            await AsyncStorage.getItem('SafeMask_wallet');
-      
-      if (!walletDataStr) {
-        logger.warn('No wallet found in storage');
-        setBalance('0.00');
-        return;
-      }
-
-      const walletData = JSON.parse(walletDataStr);
-      const tempWallet = new SafeMaskWalletCore();
-      
-      // Import wallet to get addresses
-      await tempWallet.importWallet(walletData.seedPhrase);
-      
+    
+    try {
+      // Use cached address if available (much faster than re-importing wallet)
       let address: string = '';
+      
+      if (walletAddressesCache.current[selectedChain.id]) {
+        address = walletAddressesCache.current[selectedChain.id];
+      } else if (walletInstanceCache.current) {
+        // Fallback to wallet instance if addresses cache is missing
+        switch (selectedChain.id) {
+          case 'ethereum': {
+            const ethAccount = walletInstanceCache.current.getAccount(ChainType.ETHEREUM);
+            address = ethAccount?.address || '';
+            break;
+          }
+          case 'polygon': {
+            const polyAccount = walletInstanceCache.current.getAccount(ChainType.POLYGON);
+            address = polyAccount?.address || '';
+            break;
+          }
+          default:
+            address = '';
+        }
+      } else {
+        // Last resort: load wallet (should rarely happen)
+        const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
+                              await AsyncStorage.getItem('SafeMask_wallet');
+        
+        if (!walletDataStr) {
+          setBalance('0.00');
+          setIsLoadingBalance(false);
+          return;
+        }
+
+        const walletData = JSON.parse(walletDataStr);
+        const tempWallet = new SafeMaskWalletCore();
+        await tempWallet.importWallet(walletData.seedPhrase);
+        
+        switch (selectedChain.id) {
+          case 'ethereum': {
+            const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
+            address = ethAccount?.address || '';
+            break;
+          }
+          case 'polygon': {
+            const polyAccount = tempWallet.getAccount(ChainType.POLYGON);
+            address = polyAccount?.address || '';
+            break;
+          }
+        }
+      }
+      
       let balanceValue = '0.00';
 
-      switch (selectedChain.id) {
-        case 'ethereum': {
-          const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
-          if (ethAccount && ethAccount.address) {
-            address = ethAccount.address;
-            logger.info(`Loading ETH balance for: ${address}`);
+      if (address) {
+        switch (selectedChain.id) {
+          case 'ethereum': {
             const ethBalance = await RealBlockchainService.getRealBalance('ethereum', address);
             balanceValue = ethBalance.balanceFormatted;
-            logger.info(`ETH balance: ${balanceValue}`);
+            break;
           }
-          break;
-        }
-        case 'polygon': {
-          const polyAccount = tempWallet.getAccount(ChainType.POLYGON);
-          if (polyAccount && polyAccount.address) {
-            address = polyAccount.address;
-            logger.info(`Loading MATIC balance for: ${address}`);
+          case 'polygon': {
             const maticBalance = await RealBlockchainService.getRealBalance('polygon', address);
             balanceValue = maticBalance.balanceFormatted;
-            logger.info(`MATIC balance: ${balanceValue}`);
+            break;
           }
-          break;
+          case 'solana':
+          case 'bitcoin':
+          case 'zcash':
+            balanceValue = '0.00';
+            break;
         }
-        case 'solana':
-          // Solana devnet balance (would need SolanaIntegration)
-          balanceValue = '0.00';
-          break;
-        case 'bitcoin':
-          balanceValue = '0.00';
-          break;
-        case 'zcash':
-          balanceValue = '0.00';
-          break;
       }
 
       setBalance(balanceValue);
+    } catch (error) {
+      logger.error('[RealSend] Balance load error:', error);
+      setBalance('0.00');
+    } finally {
       setIsLoadingBalance(false);
-    }, 'Load Balance');
-    
-    setIsLoadingBalance(false);
+    }
   };
 
   const estimateGas = async () => {

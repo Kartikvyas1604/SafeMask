@@ -86,32 +86,32 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
 
       const addressList: ChainAddress[] = [
         {
-          chain: 'Sepolia Testnet',
+          chain: 'ETH',
           symbol: 'ETH',
           address: ethAccount?.address || '',
           icon: '',
         },
         {
-          chain: 'Polygon Amoy',
+          chain: 'MATIC',
           symbol: 'MATIC',
           address: polyAccount?.address || '',
           icon: '',
         },
         {
-          chain: 'Solana Devnet',
+          chain: 'SOL',
           symbol: 'SOL',
           address: solAccount?.address || '',
           icon: '',
         },
         {
-          chain: 'Bitcoin',
+          chain: 'BTC',
           symbol: 'BTC',
           address: btcAccount?.address || '',
           icon: '',
           warning: 'Only send Bitcoin to this address',
         },
         {
-          chain: 'Zcash',
+          chain: 'ZEC',
           symbol: 'ZEC',
           address: zecAccount?.address || '',
           icon: '',
@@ -143,11 +143,17 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
 
   const getChainId = (chain: string): string => {
     const chainMap: { [key: string]: string } = {
-      'Sepolia Testnet': 'ethereum',
-      'Polygon Amoy': 'polygon',
-      'Solana Devnet': 'solana',
-      'Bitcoin': 'bitcoin',
-      'Zcash': 'zcash',
+      'ETH': 'ethereum',
+      'MATIC': 'polygon',
+      'SOL': 'solana',
+      'BTC': 'bitcoin',
+      'ZEC': 'zcash',
+      'ARB': 'arbitrum',
+      'OP': 'optimism',
+      'BASE': 'base',
+      'STRK': 'starknet',
+      'AZTEC': 'aztec',
+      'MINA': 'mina',
     };
     return chainMap[chain] || 'ethereum';
   };

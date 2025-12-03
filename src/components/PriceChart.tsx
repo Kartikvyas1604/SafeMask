@@ -12,16 +12,18 @@ interface PriceChartProps {
   height?: number;
   showTimeframes?: boolean;
   showCurrentPrice?: boolean;
+  currentPriceData?: { price: number; change24h?: number } | null;
 }
 
-type Timeframe = '1D' | '1W' | '1M' | '3M' | '1Y';
+type Timeframe = 'D' | 'W' | 'M' | '6M' | 'Y' | 'All';
 
-const TIMEFRAME_DAYS: Record<Timeframe, number> = {
-  '1D': 1,
-  '1W': 7,
-  '1M': 30,
-  '3M': 90,
-  '1Y': 365,
+const TIMEFRAME_CONFIG: Record<Timeframe, { days?: number; hours?: number }> = {
+  'D': { days: 1 }, // 1 day
+  'W': { days: 7 }, // 1 week
+  'M': { days: 30 }, // 1 month
+  '6M': { days: 180 }, // 6 months
+  'Y': { days: 365 }, // 1 year
+  'All': { days: 365 }, // 1 year (max)
 };
 
 export default function PriceChart({ 
@@ -29,13 +31,15 @@ export default function PriceChart({
   height = 250,
   showTimeframes = true,
   showCurrentPrice = true,
+  currentPriceData,
 }: PriceChartProps) {
   const [prices, setPrices] = useState<HistoricalPrice[]>([]);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('1W');
+  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('D');
   const [isLoading, setIsLoading] = useState(true);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [priceChange, setPriceChange] = useState(0);
   const [priceChangePercent, setPriceChangePercent] = useState(0);
+  const [selectedPoint, setSelectedPoint] = useState<{ x: number; y: number; price: number } | null>(null);
 
   const screenWidth = Dimensions.get('window').width;
   const chartWidth = screenWidth - (Spacing.xl * 2);
@@ -48,13 +52,20 @@ export default function PriceChart({
   const loadPrices = async () => {
     try {
       setIsLoading(true);
-      const days = TIMEFRAME_DAYS[selectedTimeframe];
-      const historicalPrices = await PriceFeedService.getHistoricalPrices(symbol, days);
+      const config = TIMEFRAME_CONFIG[selectedTimeframe];
+      let historicalPrices: HistoricalPrice[] = [];
+      
+      if (config.days) {
+        historicalPrices = await PriceFeedService.getHistoricalPrices(symbol, config.days);
+      } else {
+        // For "All", fetch max available (1 year)
+        historicalPrices = await PriceFeedService.getHistoricalPrices(symbol, 365);
+      }
       
       if (historicalPrices.length > 0) {
         setPrices(historicalPrices);
         
-        const latest = historicalPrices[historicalPrices.length - 1].price;
+        const latest = currentPriceData?.price || historicalPrices[historicalPrices.length - 1].price;
         const first = historicalPrices[0].price;
         const change = latest - first;
         const changePercent = (change / first) * 100;
@@ -62,6 +73,23 @@ export default function PriceChart({
         setCurrentPrice(latest);
         setPriceChange(change);
         setPriceChangePercent(changePercent);
+        
+        // Set initial selected point to the latest price
+        setTimeout(() => {
+          const maxPrice = Math.max(...historicalPrices.map(p => p.price));
+          const minPrice = Math.min(...historicalPrices.map(p => p.price));
+          const padding = (maxPrice - minPrice) * 0.1;
+          const adjustedMinPrice = minPrice - padding;
+          const adjustedMaxPrice = maxPrice + padding;
+          const adjustedRange = adjustedMaxPrice - adjustedMinPrice;
+          const lastIndex = historicalPrices.length - 1;
+          const lastPrice = historicalPrices[lastIndex].price;
+          setSelectedPoint({
+            x: chartWidth,
+            y: chartHeight - ((lastPrice - adjustedMinPrice) / adjustedRange) * chartHeight,
+            price: lastPrice,
+          });
+        }, 100);
       }
     } catch (error) {
       logger.error('[PriceChart] Failed to load prices:', error);
@@ -160,45 +188,212 @@ export default function PriceChart({
       )}
 
       {/* Chart */}
-      <View style={[styles.chartContainer, { height: chartHeight }]}>
-        <Svg width={chartWidth} height={chartHeight}>
-          <Defs>
-            <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-              <Stop 
-                offset="0%" 
-                stopColor={isPositive ? Colors.success : Colors.error} 
-                stopOpacity="0.3" 
-              />
-              <Stop 
-                offset="100%" 
-                stopColor={isPositive ? Colors.success : Colors.error} 
-                stopOpacity="0" 
-              />
-            </LinearGradient>
-          </Defs>
+      <View style={[styles.chartContainer, { height: chartHeight + 80 }]}>
+        <View style={[styles.chartSvgContainer, { height: chartHeight }]}>
+          <Svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
+            <Defs>
+              <LinearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
+                <Stop 
+                  offset="0%" 
+                  stopColor={Colors.white} 
+                  stopOpacity="0.2" 
+                />
+                <Stop 
+                  offset="100%" 
+                  stopColor={Colors.white} 
+                  stopOpacity="0" 
+                />
+              </LinearGradient>
+            </Defs>
+            
+            {/* Grid lines */}
+            {(() => {
+              if (prices.length === 0) return null;
+              const maxPrice = Math.max(...prices.map(p => p.price));
+              const minPrice = Math.min(...prices.map(p => p.price));
+              const padding = (maxPrice - minPrice) * 0.1;
+              const adjustedMinPrice = minPrice - padding;
+              const adjustedMaxPrice = maxPrice + padding;
+              const adjustedRange = adjustedMaxPrice - adjustedMinPrice;
+              
+              // Vertical grid lines (time markers)
+              const timeMarkers = [];
+              const numTimeMarkers = 5;
+              for (let i = 0; i <= numTimeMarkers; i++) {
+                const x = (i / numTimeMarkers) * chartWidth;
+                timeMarkers.push(
+                  <Line
+                    key={`v-${i}`}
+                    x1={x}
+                    y1={0}
+                    x2={x}
+                    y2={chartHeight}
+                    stroke={Colors.cardBorder}
+                    strokeWidth="0.5"
+                    strokeDasharray="2,2"
+                    opacity="0.3"
+                  />
+                );
+              }
+              
+              // Horizontal grid lines (price markers)
+              const priceMarkers = [];
+              const numPriceMarkers = 4;
+              for (let i = 0; i <= numPriceMarkers; i++) {
+                const y = (i / numPriceMarkers) * chartHeight;
+                priceMarkers.push(
+                  <Line
+                    key={`h-${i}`}
+                    x1={0}
+                    y1={y}
+                    x2={chartWidth}
+                    y2={y}
+                    stroke={Colors.cardBorder}
+                    strokeWidth="0.5"
+                    strokeDasharray="2,2"
+                    opacity="0.3"
+                  />
+                );
+              }
+              
+              return [...timeMarkers, ...priceMarkers];
+            })()}
+            
+            {/* Gradient fill */}
+            <Path
+              d={generateGradientPath()}
+              fill={`url(#gradient-${symbol})`}
+            />
+            
+            {/* Price line */}
+            <Path
+              d={generatePath()}
+              stroke={Colors.white}
+              strokeWidth={2}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            
+            {/* Blue indicator dot and line */}
+            {selectedPoint && (
+              <>
+                <Line
+                  x1={selectedPoint.x}
+                  y1={selectedPoint.y}
+                  x2={selectedPoint.x}
+                  y2={chartHeight}
+                  stroke={Colors.white}
+                  strokeWidth="1"
+                  strokeDasharray="4,4"
+                  opacity="0.6"
+                />
+                <Circle
+                  cx={selectedPoint.x}
+                  cy={selectedPoint.y}
+                  r={6}
+                  fill="#3B82F6"
+                  stroke={Colors.white}
+                  strokeWidth={2}
+                />
+              </>
+            )}
+          </Svg>
           
-          {/* Gradient fill */}
-          <Path
-            d={generateGradientPath()}
-            fill="url(#gradient)"
+          {/* Touch overlay for interaction */}
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => {
+              const { locationX } = e.nativeEvent;
+              if (prices.length > 0 && locationX >= 0 && locationX <= chartWidth) {
+                const index = Math.round((locationX / chartWidth) * (prices.length - 1));
+                const price = prices[index];
+                if (price) {
+                  const maxPrice = Math.max(...prices.map(p => p.price));
+                  const minPrice = Math.min(...prices.map(p => p.price));
+                  const padding = (maxPrice - minPrice) * 0.1;
+                  const adjustedMinPrice = minPrice - padding;
+                  const adjustedMaxPrice = maxPrice + padding;
+                  const adjustedRange = adjustedMaxPrice - adjustedMinPrice;
+                  const x = (index / (prices.length - 1)) * chartWidth;
+                  const y = chartHeight - ((price.price - adjustedMinPrice) / adjustedRange) * chartHeight;
+                  setSelectedPoint({ x, y, price: price.price });
+                }
+              }
+            }}
+            style={StyleSheet.absoluteFill}
           />
           
-          {/* Price line */}
-          <Path
-            d={generatePath()}
-            stroke={isPositive ? Colors.success : Colors.error}
-            strokeWidth={2.5}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
+          {/* Time labels */}
+          <View style={styles.timeLabels}>
+            {(() => {
+              const labels = [];
+              const numLabels = 5;
+              for (let i = 0; i <= numLabels; i++) {
+                const date = new Date();
+                if (selectedTimeframe === 'D') {
+                  date.setHours(date.getHours() - (numLabels - i) * 6);
+                  const hour = date.getHours();
+                  const ampm = hour >= 12 ? 'PM' : 'AM';
+                  const displayHour = hour % 12 || 12;
+                  labels.push(
+                    <Text key={i} style={styles.timeLabel}>
+                      {i === numLabels ? 'NOW' : `${displayHour} ${ampm}`}
+                    </Text>
+                  );
+                } else {
+                  labels.push(
+                    <Text key={i} style={styles.timeLabel}>
+                      {i === numLabels ? 'NOW' : ''}
+                    </Text>
+                  );
+                }
+              }
+              return labels;
+            })()}
+          </View>
+          
+          {/* Price labels */}
+          <View style={[styles.priceLabels, { height: chartHeight }]}>
+            {(() => {
+              if (prices.length === 0) return null;
+              const maxPrice = Math.max(...prices.map(p => p.price));
+              const minPrice = Math.min(...prices.map(p => p.price));
+              const padding = (maxPrice - minPrice) * 0.1;
+              const adjustedMinPrice = minPrice - padding;
+              const adjustedMaxPrice = maxPrice + padding;
+              const adjustedRange = adjustedMaxPrice - adjustedMinPrice;
+              
+              const labels = [];
+              const numLabels = 3;
+              for (let i = 0; i <= numLabels; i++) {
+                const price = adjustedMaxPrice - (i / numLabels) * adjustedRange;
+                const change = price - (currentPriceData?.price || currentPrice);
+                labels.push(
+                  <Text key={i} style={styles.priceLabel}>
+                    {change >= 0 ? '+' : ''}{formatPrice(change)}
+                  </Text>
+                );
+              }
+              return labels;
+            })()}
+          </View>
+          
+          {/* Blue indicator label */}
+          {selectedPoint && (
+            <View style={[styles.indicatorLabel, { left: selectedPoint.x - 30, top: selectedPoint.y - 30 }]}>
+              <Text style={styles.indicatorLabelText}>
+                {formatPrice(selectedPoint.price - (currentPriceData?.price || currentPrice))}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Timeframe Selector */}
       {showTimeframes && (
         <View style={styles.timeframeContainer}>
-          {(['1D', '1W', '1M', '3M', '1Y'] as Timeframe[]).map((timeframe) => (
+          {(['D', 'W', 'M', '6M', 'Y', 'All'] as Timeframe[]).map((timeframe) => (
             <TouchableOpacity
               key={timeframe}
               style={[
@@ -225,12 +420,8 @@ export default function PriceChart({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    padding: Spacing.lg,
-    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    overflow: 'visible',
   },
   priceInfo: {
     marginBottom: Spacing.lg,
@@ -255,8 +446,60 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.medium,
   },
   chartContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: '100%',
+    position: 'relative',
+    backgroundColor: '#1a1a1a', // Dark gray background like in reference
+    borderRadius: 16,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    minHeight: 250,
+  },
+  chartSvgContainer: {
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  timeLabels: {
+    position: 'absolute',
+    bottom: -20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xs,
+    height: 20,
+  },
+  timeLabel: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textSecondary,
+    fontFamily: Typography.fontFamily.primary,
+  },
+  priceLabels: {
+    position: 'absolute',
+    right: 4,
+    top: 0,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingVertical: 0,
+  },
+  priceLabel: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textSecondary,
+    fontFamily: Typography.fontFamily.primary,
+  },
+  indicatorLabel: {
+    position: 'absolute',
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 6,
+    zIndex: 10,
+  },
+  indicatorLabelText: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.white,
+    fontFamily: Typography.fontFamily.primary,
+    fontWeight: Typography.fontWeight.semibold,
   },
   timeframeContainer: {
     flexDirection: 'row',

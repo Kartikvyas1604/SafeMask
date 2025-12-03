@@ -10,6 +10,7 @@ import {
   Animated,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
+import SafeMaskLogo from '../../assets/appicon.png';
 
 interface LockScreenProps {
   onUnlock: () => void;
@@ -147,10 +149,10 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
           },
         ]}
       >
-        {/* Lock Icon */}
+        {/* Wallet Logo */}
         <View style={styles.iconContainer}>
           <View style={styles.iconCircle}>
-            <Ionicons name="lock-closed" size={48} color={Colors.accent} />
+            <Image source={SafeMaskLogo} style={styles.logoImage} resizeMode="contain" />
           </View>
         </View>
 
@@ -249,14 +251,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing['2xl'],
   },
   iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: Colors.card,
     borderWidth: 2,
     borderColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  logoImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
   },
   title: {
     fontSize: Typography.fontSize['3xl'],

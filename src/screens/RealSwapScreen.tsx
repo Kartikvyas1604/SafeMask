@@ -705,6 +705,7 @@ const styles = StyleSheet.create({
   tokenSymbol: {
     fontSize: Typography.fontSize.lg,
     color: Colors.textSecondary,
+
   },
   
   // Flip Button
@@ -960,3 +961,4 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+

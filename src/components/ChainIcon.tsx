@@ -100,7 +100,7 @@ export default function ChainIcon({ chain, size = 32, showLabel = false }: Chain
     assetKeyMap[normalizedChain] ||
     assetKeyMap[chainInfo.symbol.toLowerCase()];
   const iconSource = iconKey ? tokenIcons[iconKey] : undefined;
-  const imageSize = Math.max(size - 6, size * 0.7);
+  const imageSize = size * 0.85; // Larger image size for better visibility
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
@@ -108,21 +108,30 @@ export default function ChainIcon({ chain, size = 32, showLabel = false }: Chain
         style={[
           styles.iconContainer,
           {
-            backgroundColor: iconSource ? 'transparent' : `${chainInfo.color}20`,
+            backgroundColor: iconSource ? 'transparent' : `${chainInfo.color}35`,
             borderRadius: size / 2,
+            borderWidth: iconSource ? 0 : 1.5,
+            borderColor: iconSource ? 'transparent' : `${chainInfo.color}60`,
           },
         ]}
       >
         {iconSource ? (
           <Image
             source={iconSource}
-            style={{ width: imageSize, height: imageSize, borderRadius: imageSize / 2 }}
+            style={{ 
+              width: imageSize, 
+              height: imageSize,
+            }}
             resizeMode="contain"
           />
         ) : chainInfo.icon ? (
-          <Ionicons name={chainInfo.icon} size={size * 0.6} color={chainInfo.color} />
+          <Ionicons 
+            name={chainInfo.icon} 
+            size={size * 0.7} 
+            color={chainInfo.color} 
+          />
         ) : (
-          <Text style={[styles.symbol, { fontSize: size * 0.4, color: chainInfo.color }]}>
+          <Text style={[styles.symbol, { fontSize: size * 0.5, color: chainInfo.color }]}>
             {chainInfo.symbol.slice(0, 2)}
           </Text>
         )}
@@ -146,6 +155,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   symbol: {
     fontWeight: '700',
