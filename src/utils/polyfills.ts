@@ -34,10 +34,11 @@ function base64Encode(bytes: Uint8Array): string {
   return result;
 }
 
-// Polyfill base64FromArrayBuffer for React Native
-// Required by @scure/bip39 and other crypto libraries
-// Using direct base64 encoding to avoid regex stack overflow
-if (typeof global.base64FromArrayBuffer === 'undefined') {
+declare global {
+  var base64FromArrayBuffer: ((arrayBuffer: ArrayBuffer) => string) | undefined;
+}
+
+if (typeof (global as any).base64FromArrayBuffer === 'undefined') {
   (global as any).base64FromArrayBuffer = (arrayBuffer: ArrayBuffer): string => {
     try {
       const bytes = new Uint8Array(arrayBuffer);

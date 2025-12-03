@@ -30,6 +30,9 @@ import TransactionDetailScreen from '../screens/TransactionDetailScreen';
 import PaymentClaimScreen from '../screens/PaymentClaimScreen';
 import CalculatorModeScreen from '../screens/CalculatorModeScreen';
 import LockScreen from '../screens/LockScreen';
+import ViewingKeyScreen from '../screens/ViewingKeyScreen';
+import CrossChainBridgeScreen from '../screens/CrossChainBridgeScreen';
+import NFCPaymentScreen from '../screens/NFCPaymentScreen';
 
 export type RootStackParamList = {
   CalculatorMode: undefined;
@@ -62,6 +65,9 @@ export type RootStackParamList = {
   Browser: undefined;
   RecentTransactions: undefined;
   TransactionDetail: { transaction: any };
+  ViewingKey: undefined;
+  CrossChainBridge: undefined;
+  NFCPayment: undefined;
   PaymentClaim: {
     recipientAddress: string;
     amount: string;
@@ -174,6 +180,9 @@ export default function AppNavigator() {
       
       {/* Other screens */}
       <Stack.Screen name="Bridge" component={BridgeScreen} />
+      <Stack.Screen name="CrossChainBridge" component={CrossChainBridgeScreen} />
+      <Stack.Screen name="ViewingKey" component={ViewingKeyScreen} />
+      <Stack.Screen name="NFCPayment" component={NFCPaymentScreen} />
       <Stack.Screen name="MeshNetwork" component={MeshNetworkScreen} />
       <Stack.Screen name="BackupWallet" component={BackupWalletScreen} />
       <Stack.Screen name="Browser" component={BrowserScreen} />

@@ -156,10 +156,10 @@ export default function ProductionWalletScreen({ navigation }: any) {
   // Animation values for scroll-based animations (reduced for performance)
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnims = useRef(
-    Array.from({ length: 3 }, () => new Animated.Value(0))
+    Array.from({ length: 4 }, () => new Animated.Value(0))
   ).current;
   const slideAnims = useRef(
-    Array.from({ length: 3 }, () => new Animated.Value(30))
+    Array.from({ length: 4 }, () => new Animated.Value(30))
   ).current;
   
   // Calculate performance metrics (mock for now - can be enhanced with real 24h data)
@@ -640,8 +640,58 @@ export default function ProductionWalletScreen({ navigation }: any) {
           </ScrollView>
         </Animated.View>
         
+        {/* ADVANCED FEATURES Section */}
+        <Animated.View style={[styles.featuresSection, getAnimatedStyle(2)]}>
+          <Text style={styles.sectionLabel}>PRIVACY & FEATURES</Text>
+          <View style={styles.featureGrid}>
+            <TouchableOpacity
+              style={styles.featureCard}
+              onPress={() => navigation.navigate('ViewingKey')}
+            >
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="key" size={24} color={Colors.zcash} />
+              </View>
+              <Text style={styles.featureTitle}>Viewing Keys</Text>
+              <Text style={styles.featureDescription}>Zcash read-only access</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.featureCard}
+              onPress={() => navigation.navigate('CrossChainBridge')}
+            >
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="swap-horizontal" size={24} color={Colors.blue} />
+              </View>
+              <Text style={styles.featureTitle}>ZecPort</Text>
+              <Text style={styles.featureDescription}>Cross-chain bridge</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.featureCard}
+              onPress={() => navigation.navigate('NFCPayment')}
+            >
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="phone-portrait" size={24} color={Colors.success} />
+              </View>
+              <Text style={styles.featureTitle}>NFC Pay</Text>
+              <Text style={styles.featureDescription}>Tap to pay</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.featureCard}
+              onPress={() => navigation.navigate('MeshNetwork')}
+            >
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="git-network" size={24} color={Colors.warning} />
+              </View>
+              <Text style={styles.featureTitle}>Mesh Network</Text>
+              <Text style={styles.featureDescription}>Offline payments</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+        
         {/* RECENT ACTIONS Section */}
-        <Animated.View style={[styles.recentActionsSection, getAnimatedStyle(2)]}>
+        <Animated.View style={[styles.recentActionsSection, getAnimatedStyle(3)]}>
           <Text style={styles.sectionLabel}>RECENT ACTIONS</Text>
           {balances.length > 0 ? (
             <View style={styles.actionsList}>
@@ -991,6 +1041,46 @@ const styles = StyleSheet.create({
   fundCardChangePercent: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.medium,
+  },
+  
+  // FEATURES Section
+  featuresSection: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing['2xl'],
+  },
+  featureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  featureCard: {
+    flex: 1,
+    minWidth: '47%',
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  featureIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  featureTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  featureDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
   },
   
   // RECENT ACTIONS Section

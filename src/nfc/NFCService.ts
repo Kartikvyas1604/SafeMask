@@ -7,6 +7,8 @@ export interface NFCTransaction {
   amount: string;
   chain: string;
   timestamp: number;
+  memo?: string;
+  currency?: string;
 }
 
 export class NFCService {
