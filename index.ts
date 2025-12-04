@@ -2,7 +2,8 @@
 import 'react-native-gesture-handler';
 import 'react-native-get-random-values';
 
-// Load polyfills FIRST - this ensures base64FromArrayBuffer is available before any crypto libraries load
+// Load polyfills FIRST - this ensures all Node.js modules are polyfilled
+import './src/polyfills';
 import './src/utils/polyfills';
 
 // Now import Expo and App AFTER polyfills are set up
