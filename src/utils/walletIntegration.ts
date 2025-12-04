@@ -6,6 +6,7 @@
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { ethers } from 'ethers';
 import { SafeMaskWallet } from '../wallet';
 import { CrossChainBridge } from '../bridge/CrossChainBridge';
 import { TransactionRequest, Balance } from '../types';
@@ -76,7 +77,7 @@ export class WalletIntegration {
   }
 
   /**
-   * Estimate gas fee using real gas oracles
+   * Estimate gas fee using real gas oracles and RPC calls
    */
   async estimateGasFee(
     chain: string,
@@ -85,20 +86,56 @@ export class WalletIntegration {
     speed: 'slow' | 'normal' | 'fast'
   ): Promise<string> {
     try {
-      // Import gas oracle services
       const { rateLimiters } = await import('./rateLimiter');
+      const { ethers } = await import('ethers');
       
-      // Query real gas oracle (Etherscan API, Polygon Gas Station, etc.)
       return await rateLimiters.rpc.execute(`gas-${chain}`, async () => {
-        // In production: query chain-specific gas oracle
-        // For EVM chains: use eth_gasPrice and eth_estimateGas
-        // For Zcash: query average fee from recent blocks
+        // EVM chains: Use real RPC calls
+        if (['ethereum', 'polygon', 'arbitrum', 'optimism', 'base'].includes(chain)) {
+          try {
+            const { RealBlockchainService } = await import('../blockchain/RealBlockchainService');
+            const service = RealBlockchainService.getInstance();
+            
+            // Get provider directly from networks map
+            const networkMap = new Map([
+              ['ethereum', 'https://ethereum-sepolia-rpc.publicnode.com'],
+              ['polygon', 'https://rpc-amoy.polygon.technology'],
+              ['arbitrum', 'https://sepolia-rollup.arbitrum.io/rpc'],
+              ['optimism', 'https://sepolia.optimism.io'],
+              ['base', 'https://sepolia.base.org'],
+            ]);
+            
+            const rpcUrl = networkMap.get(chain) || 'https://ethereum-sepolia-rpc.publicnode.com';
+            const provider = new ethers.JsonRpcProvider(rpcUrl);
+            
+            // Get current gas price from network
+            const feeData = await provider.getFeeData();
+            const gasPrice = feeData.gasPrice || ethers.parseUnits('30', 'gwei');
+            
+            // Estimate gas units for transfer
+            const gasLimit = 21000n; // Standard ETH transfer
+            
+            // Apply speed multiplier to gas price
+            const speedMultiplier = {
+              slow: 0.8,
+              normal: 1.0,
+              fast: 1.5,
+            }[speed];
+            
+            const adjustedGasPrice = (gasPrice * BigInt(Math.floor(speedMultiplier * 100))) / 100n;
+            const totalGas = adjustedGasPrice * gasLimit;
+            
+            return ethers.formatEther(totalGas);
+          } catch (rpcError) {
+            console.warn(`RPC call failed for ${chain}, using fallback:`, rpcError);
+          }
+        }
         
-        // Fallback estimates based on current network conditions
+        // Non-EVM chains: Use network-specific fee estimation
         const baseGas = {
-          ethereum: 0.002,  // ~30 Gwei
-          polygon: 0.0001,  // ~30 Gwei on Polygon
-          arbitrum: 0.0003, // Lower L2 fees
+          ethereum: 0.002,
+          polygon: 0.0001,
+          arbitrum: 0.0003,
           optimism: 0.0003,
           base: 0.0003,
           starknet: 0.0005,
@@ -119,7 +156,7 @@ export class WalletIntegration {
       });
     } catch (error) {
       console.error('Failed to estimate gas:', error);
-      return '0.001'; // Safe fallback
+      return '0.001';
     }
   }
 
@@ -265,33 +302,69 @@ export class WalletIntegration {
   }> {
     try {
       const { rateLimiters } = await import('./rateLimiter');
+      const axios = await import('axios');
       
-      // Query real DEX aggregators (1inch, 0x, Paraswap)
       return await rateLimiters.oneinch.execute(`swap-${fromChain}-${toChain}`, async () => {
-        // In production: query 1inch API or 0x API
-        // For cross-chain: query Socket, LiFi, or Connext
-        
         const isCrossChain = fromChain !== toChain;
         
-        // Import price feed service to calculate exchange rates
+        // Same-chain swap: Query 1inch or 0x API
+        if (!isCrossChain && ['ethereum', 'polygon', 'arbitrum', 'optimism', 'base'].includes(fromChain)) {
+          try {
+            // Use 1inch API v5 for swap quotes
+            const chainId = {
+              ethereum: 1,
+              polygon: 137,
+              arbitrum: 42161,
+              optimism: 10,
+              base: 8453,
+            }[fromChain];
+            
+            const apiKey = process.env.ONEINCH_API_KEY || '';
+            const response = await axios.default.get(
+              `https://api.1inch.dev/swap/v5.2/${chainId}/quote`,
+              {
+                params: {
+                  src: fromToken,
+                  dst: toToken,
+                  amount: ethers.parseEther(fromAmount).toString(),
+                },
+                headers: apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {},
+                timeout: 5000,
+              }
+            );
+            
+            if (response.data?.toAmount) {
+              return {
+                outputAmount: ethers.formatEther(response.data.toAmount),
+                priceImpact: parseFloat(response.data.estimatedGas || '0') / 100,
+                route: [fromChain, '1inch Aggregator'],
+                estimatedTime: '30 seconds',
+              };
+            }
+          } catch (apiError) {
+            console.warn('1inch API failed, using price oracle fallback:', apiError);
+          }
+        }
+        
+        // Fallback: Use price feed service
         const PriceFeedService = (await import('../services/PriceFeedService')).default;
         
         const fromPrice = await PriceFeedService.getPrice(fromToken);
         const toPrice = await PriceFeedService.getPrice(toToken);
         
         const exchangeRate = fromPrice.price / toPrice.price;
-        const fee = isCrossChain ? 0.005 : 0.003; // 0.5% cross-chain, 0.3% same-chain
+        const fee = isCrossChain ? 0.005 : 0.003;
         const outputAmount = (parseFloat(fromAmount) * exchangeRate * (1 - fee)).toString();
         
         const route = isCrossChain 
-          ? [fromChain, 'Bridge Protocol', toChain] 
-          : [fromChain, 'DEX Aggregator'];
+          ? [fromChain, 'Cross-chain Bridge', toChain] 
+          : [fromChain, 'DEX (Price Oracle)'];
         
         return {
           outputAmount,
           priceImpact: 0.1,
           route,
-          estimatedTime: isCrossChain ? '5-10 minutes' : '30 seconds',
+          estimatedTime: isCrossChain ? '5-10 minutes' : '30-60 seconds',
         };
       });
     } catch (error) {
@@ -327,12 +400,70 @@ export class WalletIntegration {
       const { rateLimiters } = await import('./rateLimiter');
       
       return await rateLimiters.rpc.execute(`tx-status-${chain}`, async () => {
-        // In production: query blockchain explorer API or RPC
-        // For EVM: eth_getTransactionReceipt
-        // For Solana: getTransaction
-        // For Bitcoin/Zcash: getrawtransaction
+        // EVM chains: Use eth_getTransactionReceipt
+        if (['ethereum', 'polygon', 'arbitrum', 'optimism', 'base'].includes(chain)) {
+          try {
+            const { RealBlockchainService } = await import('../blockchain/RealBlockchainService');
+            const service = RealBlockchainService.getInstance();
+            
+            // Get provider directly
+            const networkMap = new Map([
+              ['ethereum', 'https://ethereum-sepolia-rpc.publicnode.com'],
+              ['polygon', 'https://rpc-amoy.polygon.technology'],
+              ['arbitrum', 'https://sepolia-rollup.arbitrum.io/rpc'],
+              ['optimism', 'https://sepolia.optimism.io'],
+              ['base', 'https://sepolia.base.org'],
+            ]);
+            
+            const rpcUrl = networkMap.get(chain) || 'https://ethereum-sepolia-rpc.publicnode.com';
+            const provider = new ethers.JsonRpcProvider(rpcUrl);
+            
+            const receipt = await provider.getTransactionReceipt(txHash);
+            
+            if (!receipt) {
+              return { status: 'pending' as const, confirmations: 0 };
+            }
+            
+            const currentBlock = await provider.getBlockNumber();
+            const confirmations = currentBlock - receipt.blockNumber + 1;
+            
+            return {
+              status: receipt.status === 1 ? 'confirmed' as const : 'failed' as const,
+              confirmations,
+            };
+          } catch (rpcError) {
+            console.warn(`RPC call failed for ${chain}:`, rpcError);
+          }
+        }
         
-        // Placeholder for real implementation
+        // Solana: Use getTransaction
+        if (chain === 'solana') {
+          try {
+            const { Connection } = await import('@solana/web3.js');
+            const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+            
+            const tx = await connection.getTransaction(txHash, {
+              maxSupportedTransactionVersion: 0,
+            });
+            
+            if (!tx) {
+              return { status: 'pending' as const, confirmations: 0 };
+            }
+            
+            const slot = tx.slot;
+            const currentSlot = await connection.getSlot();
+            const confirmations = currentSlot - slot;
+            
+            return {
+              status: tx.meta?.err ? 'failed' as const : 'confirmed' as const,
+              confirmations,
+            };
+          } catch (solanaError) {
+            console.warn('Solana RPC failed:', solanaError);
+          }
+        }
+        
+        // Fallback for other chains
         return {
           status: 'pending' as const,
           confirmations: 0,
