@@ -640,7 +640,7 @@ We welcome contributions from the community! SafeMask is built with the help of 
 - 📚 [Documentation](./docs/) - Comprehensive guides and API references
 
 **Direct Contact**
-- 📧 **General Inquiries**: kartikvyas1604@gmail.com
+- 📧 **General Inquiries**: vkartik013@gmail.com
 - 🔒 **Security Issues**: security@safemask.io (GPG key available)
 
 **Social Media** (Coming Soon)
@@ -768,7 +768,7 @@ With conditions:
 
 Need help? We're here for you:
 
-- 📧 **Email**: kartikvyas1604@gmail.com
+- 📧 **Email**: vkartik013@gmail.com
 - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/Kartikvyas1604/SafeMask/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/Kartikvyas1604/SafeMask/discussions)
 - 📱 **Telegram**: Coming soon
