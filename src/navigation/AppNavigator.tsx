@@ -26,6 +26,7 @@ import BrowserScreen from '../screens/BrowserScreen';
 import BottomTabBar from '../components/BottomTabBar';
 import RecentTransactionsScreen from '../screens/RecentTransactionsScreen';
 import TokenChartScreen from '../screens/TokenChartScreen';
+import MultiChainChartScreen from '../screens/MultiChainChartScreen';
 import TransactionDetailScreen from '../screens/TransactionDetailScreen';
 import PaymentClaimScreen from '../screens/PaymentClaimScreen';
 import CalculatorModeScreen from '../screens/CalculatorModeScreen';
@@ -58,6 +59,7 @@ export type RootStackParamList = {
   RealReceive: { walletAddress?: string };
   RealSwap: { walletAddress?: string; balances?: any[] };
   TokenChart: { symbol: string; name: string };
+  MultiChainChart: undefined;
   Bridge: undefined;
   MeshNetwork: undefined;
   Settings: undefined;
@@ -190,6 +192,7 @@ export default function AppNavigator() {
       <Stack.Screen name="RecentTransactions" component={RecentTransactionsScreen} />
       <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
       <Stack.Screen name="TokenChart" component={TokenChartScreen} />
+      <Stack.Screen name="MultiChainChart" component={MultiChainChartScreen} />
       <Stack.Screen name="PaymentClaim" component={PaymentClaimScreen} />
     </Stack.Navigator>
   );

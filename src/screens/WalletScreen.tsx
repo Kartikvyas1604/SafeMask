@@ -52,7 +52,7 @@ interface Asset {
 
 interface Transaction {
   id: string;
-  type: 'send' | 'receive' | 'swap' | 'nfc';
+  type: 'send' | 'receive' | 'swap' | 'nfc' | 'stake';
   token: string;
   amount: string;
   address?: string;
@@ -61,6 +61,9 @@ interface Transaction {
   color: string;
   isPrivate: boolean;
   confirmations?: number;
+  hash?: string;
+  chain?: string;
+  timestamp?: number;
 }
 
 export default function WalletScreen() {
@@ -107,103 +110,49 @@ export default function WalletScreen() {
     try {
       setLoading(true);
 
-      // In production: fetch from wallet instance
-      // const wallet = useWallet();
-      // const balances = await wallet.getAllBalances();
+      // Import real wallet balance service
+      const WalletBalanceService = (await import('../services/WalletBalanceService')).default;
       
-      // Mock data with privacy features
-      const mockAssets: Asset[] = [
-        {
-          name: 'Zcash',
-          symbol: 'ZEC',
-          amount: '12.5',
-          value: '$3,750.00',
-          icon: '',
-          color: '#F4B024',
-          chain: 'zcash',
-          privacyEnabled: true, // Shielded transactions
-        },
-        {
-          name: 'Ethereum',
-          symbol: 'ETH',
-          amount: '8.3',
-          value: '$16,600.00',
-          icon: '',
-          color: '#627EEA',
-          chain: 'ethereum',
-          privacyEnabled: false, // Public by default
-        },
-        {
-          name: 'Polygon',
-          symbol: 'MATIC',
-          amount: '5,420',
-          value: '$4,232.50',
-          icon: '',
-          color: '#8247E5',
-          chain: 'polygon',
-          privacyEnabled: false,
-        },
-      ];
+      // Get wallet addresses from secure storage
+      // In production: retrieve from encrypted keystore
+      const addresses = new Map<string, string>();
+      
+      // For now, use addresses from wallet context or props
+      // These should be actual addresses from the user's wallet
+      addresses.set('ETH', '0x...');  // Replace with actual address
+      addresses.set('MATIC', '0x...'); // Replace with actual address
+      addresses.set('SOL', '...');     // Replace with actual address
+      addresses.set('BTC', '...');     // Replace with actual address
+      addresses.set('ZEC', 'zs1...');  // Replace with actual address
+      addresses.set('NEAR', '...');    // Replace with actual address
+      addresses.set('MINA', '...');    // Replace with actual address
+      addresses.set('STRK', '0x...');  // Replace with actual address
+      addresses.set('ARB', '0x...');   // Replace with actual address
+      addresses.set('OP', '0x...');    // Replace with actual address
+      addresses.set('BASE', '0x...');  // Replace with actual address
 
-      const mockTransactions: Transaction[] = [
-        {
-          id: '1',
-          type: 'send',
-          token: 'ZEC',
-          amount: '-2.5',
-          address: 'zs1abc...def789',
-          time: '2 min ago',
-          color: '#A855F7',
-          isPrivate: true, // Shielded transaction
-          confirmations: 6,
-        },
-        {
-          id: '2',
-          type: 'receive',
-          token: 'ETH',
-          amount: '+1.2',
-          address: '0x742d...0bEb',
-          time: '1 hour ago',
-          color: '#10B981',
-          isPrivate: false,
-          confirmations: 12,
-        },
-        {
-          id: '3',
-          type: 'swap',
-          token: 'ETH',
-          amount: '+0.8',
-          description: '500 MATIC → 0.8 ETH',
-          time: '3 hours ago',
-          color: '#3B82F6',
-          isPrivate: false,
-          confirmations: 24,
-        },
-        {
-          id: '4',
-          type: 'nfc',
-          token: 'ETH',
-          amount: '-0.01',
-          description: 'Coffee Shop (NFC)',
-          time: 'Yesterday',
-          color: '#F59E0B',
-          isPrivate: false,
-          confirmations: 100,
-        },
-      ];
+      // Fetch real balances from blockchain
+      const realAssets = await WalletBalanceService.getAllBalances(addresses);
+      
+      // Fetch real transactions
+      const realTransactions = await WalletBalanceService.getAllTransactions(addresses);
 
-      setAssets(mockAssets);
-      setTransactions(mockTransactions);
-      setTotalBalance('$24,582.50');
-      setBalanceChange('+$2,741.23 (12.4%)');
+      setAssets(realAssets);
+      setTransactions(realTransactions);
+      
+      // Calculate total balance
+      const total = realAssets.reduce((sum, a) => sum + a.usdValue, 0);
+      setTotalBalance(`$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+      
+      // Calculate 24h change (would need historical data)
+      setBalanceChange('+$0.00 (0%)'); // TODO: Calculate from historical prices
       
       // Calculate privacy score
-      const privateAssetValue = mockAssets
+      const privateAssetValue = realAssets
         .filter(a => a.privacyEnabled)
-        .reduce((sum, a) => sum + parseFloat(a.value.replace(/[$,]/g, '')), 0);
-      const totalValue = mockAssets
-        .reduce((sum, a) => sum + parseFloat(a.value.replace(/[$,]/g, '')), 0);
-      const score = Math.round((privateAssetValue / totalValue) * 100);
+        .reduce((sum, a) => sum + a.usdValue, 0);
+      const totalValue = realAssets.reduce((sum, a) => sum + a.usdValue, 0);
+      const score = totalValue > 0 ? Math.round((privateAssetValue / totalValue) * 100) : 0;
       setPrivacyScore(`${score}%`);
 
     } catch (error) {

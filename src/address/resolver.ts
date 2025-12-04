@@ -1,4 +1,6 @@
-import type { Address } from './types';
+// Address type definition
+type Address = string;
+
 import { CryptoUtils } from '../utils/crypto';
 
 export class UnifiedAddressResolver {

@@ -8,11 +8,13 @@ export interface SolanaAccount {
 
 export class SolanaService {
   private connection: Connection;
-  private readonly HELIUS_RPC = 'https://devnet.helius-rpc.com/?api-key=demo';
+  private readonly HELIUS_RPC = process.env.HELIUS_API_KEY
+    ? `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
+    : 'https://api.mainnet-beta.solana.com'; // Fallback to public RPC
 
   constructor() {
     this.connection = new Connection(this.HELIUS_RPC, 'confirmed');
-    Logger.info('☀️ Solana with Helius RPC initialized');
+    Logger.info('☀️ Solana Service initialized with RPC');
   }
 
   deriveAccount(seed: Uint8Array): SolanaAccount {

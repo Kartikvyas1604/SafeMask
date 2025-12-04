@@ -1,13 +1,3 @@
-/**
- * Rate Limiter
- * 
- * Prevents API throttling and abuse by:
- * - Token bucket algorithm
- * - Per-endpoint rate limits
- * - Global rate limiting
- * - Automatic retry with backoff
- */
-
 import * as logger from './logger';
 
 export interface RateLimitConfig {

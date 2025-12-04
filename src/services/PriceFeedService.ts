@@ -20,9 +20,13 @@ const PRICE_FEED_ADDRESSES = {
   'USDT/USD': '0x3E7d1eAB13ad0104d2750B8863b489D65364e32D',
 };
 
-// Ethereum RPC Provider (Infura/Alchemy)
-const ETHEREUM_RPC_URL = 'https://eth-mainnet.g.alchemy.com/v2/demo'; // Replace with your API key
-const POLYGON_RPC_URL = 'https://polygon-mainnet.g.alchemy.com/v2/demo'; // Replace with your API key
+// Ethereum RPC Provider (use environment variables for production)
+const ETHEREUM_RPC_URL = process.env.ALCHEMY_ETH_API_KEY 
+  ? `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_API_KEY}`
+  : 'https://eth.llamarpc.com'; // Fallback to public RPC
+const POLYGON_RPC_URL = process.env.ALCHEMY_POLYGON_API_KEY
+  ? `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_POLYGON_API_KEY}`
+  : 'https://polygon.llamarpc.com'; // Fallback to public RPC
 
 interface PriceData {
   price: number;

@@ -1,8 +1,3 @@
-/**
- * ChainIcon Component
- * Replaces emoji chain icons with text-based icons
- */
-
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
