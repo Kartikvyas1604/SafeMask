@@ -43,7 +43,10 @@ interface HistoricalPrice {
 class PriceFeedService {
   private provider: ethers.JsonRpcProvider | null = null;
   private priceCache: Map<string, PriceData> = new Map();
-  private cacheDuration = 60000; // 1 minute cache
+  private cacheDuration = 300000; // 5 minute cache (increased to avoid 429)
+  private lastRequestTime = 0;
+  private requestDelay = 1500; // 1.5 second delay between requests
+  private requestQueue: Promise<any> = Promise.resolve();
 
   constructor() {
     this.initializeProvider();
@@ -84,6 +87,24 @@ class PriceFeedService {
   }
 
   /**
+   * Rate-limited fetch to avoid 429 errors
+   */
+  private async rateLimitedFetch(url: string): Promise<Response> {
+    // Wait for previous request to complete
+    await this.requestQueue;
+    
+    // Enforce minimum delay between requests
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    if (timeSinceLastRequest < this.requestDelay) {
+      await new Promise(resolve => setTimeout(resolve, this.requestDelay - timeSinceLastRequest));
+    }
+    
+    this.lastRequestTime = Date.now();
+    return fetch(url);
+  }
+
+  /**
    * Get price from CoinGecko API (fallback)
    */
   private async getCoinGeckoPrice(symbol: string): Promise<PriceData | null> {
@@ -107,15 +128,17 @@ class PriceFeedService {
         return null;
       }
 
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`
-      );
+    const response = await this.rateLimitedFetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`
+    );
 
-      if (!response.ok) {
-        throw new Error(`CoinGecko API error: ${response.status}`);
+    if (!response.ok) {
+      if (response.status === 429) {
+        logger.warn(`[PriceFeed] Rate limited for ${symbol}, using cache`);
+        return null;
       }
-
-      const data = await response.json();
+      throw new Error(`CoinGecko API error: ${response.status}`);
+    }      const data = await response.json();
       const coinData = data[coinId];
 
       if (!coinData) {
@@ -253,11 +276,15 @@ class PriceFeedService {
         return [];
       }
 
-      const response = await fetch(
+      const response = await this.rateLimitedFetch(
         `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`
       );
 
       if (!response.ok) {
+        if (response.status === 429) {
+          logger.warn(`[PriceFeed] Rate limited for historical ${symbol}, returning empty`);
+          return [];
+        }
         throw new Error(`CoinGecko API error: ${response.status}`);
       }
 

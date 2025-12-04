@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeMaskWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import ChainIcon from '../components/ChainIcon';
@@ -275,10 +276,17 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.sectionLabel}>QR CODE</Text>
               <View style={styles.qrContainer}>
                 <View style={styles.qrPlaceholder}>
-                  <View style={styles.qrIconContainer}>
-                    <Ionicons name="qr-code-outline" size={64} color={Colors.textTertiary} />
-                  </View>
-                  <Text style={styles.qrAddressShort}>
+                  <QRCode
+                    value={selectedAddress.address}
+                    size={200}
+                    backgroundColor="white"
+                    color="black"
+                    logo={require('../../assets/appicon.png')}
+                    logoSize={40}
+                    logoBackgroundColor="white"
+                    logoBorderRadius={8}
+                  />
+                  <Text style={[styles.qrAddressShort, { marginTop: Spacing.md }]}>
                     {selectedAddress.address.substring(0, 8)}...
                     {selectedAddress.address.substring(selectedAddress.address.length - 8)}
                   </Text>
