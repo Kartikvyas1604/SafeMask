@@ -1,6 +1,8 @@
 import * as nearAPI from 'near-api-js';
 import * as bip39 from '@scure/bip39';
 import { wordlist as englishWordlist } from '@scure/bip39/wordlists/english.js';
+import { rateLimiters } from '../utils/rateLimiter';
+import { executeTransactionWithRetry } from '../utils/transactionRetry';
 
 const { connect, keyStores, KeyPair, utils } = nearAPI;
 

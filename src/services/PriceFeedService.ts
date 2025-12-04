@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as logger from '../utils/logger';
+import { rateLimiters } from '../utils/rateLimiter';
 
 // Chainlink Price Feed ABI (simplified)
 const PRICE_FEED_ABI = [
@@ -90,18 +91,10 @@ class PriceFeedService {
    * Rate-limited fetch to avoid 429 errors
    */
   private async rateLimitedFetch(url: string): Promise<Response> {
-    // Wait for previous request to complete
-    await this.requestQueue;
-    
-    // Enforce minimum delay between requests
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
-    if (timeSinceLastRequest < this.requestDelay) {
-      await new Promise(resolve => setTimeout(resolve, this.requestDelay - timeSinceLastRequest));
-    }
-    
-    this.lastRequestTime = Date.now();
-    return fetch(url);
+    // Use rate limiter for CoinGecko
+    return rateLimiters.coingecko.execute('price-fetch', async () => {
+      return fetch(url);
+    });
   }
 
   /**

@@ -1,6 +1,8 @@
 import { Logger } from '../utils/logger';
 import { HDKey } from '@scure/bip32';
 import * as bip39 from '@scure/bip39';
+import { rateLimiters } from '../utils/rateLimiter';
+import { executeTransactionWithRetry } from '../utils/transactionRetry';
 
 export interface StarknetAccount {
   address: string;
