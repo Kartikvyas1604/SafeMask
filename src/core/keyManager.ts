@@ -53,10 +53,15 @@ export class KeyManager {
 
   async deriveAddressKey(chain: string, account: number = 0, index: number = 0): Promise<HDNode> {
     const coinTypes: Record<string, number> = {
-      'bitcoin': 0,
-      'ethereum': 60,
-      'zcash': 133,
-      'polygon': 60
+      'bitcoin': 0,        // BIP44: m/44'/0'
+      'ethereum': 60,      // BIP44: m/44'/60'
+      'solana': 501,       // BIP44: m/44'/501'
+      'polygon': 60,       // Same as Ethereum (EVM-compatible)
+      'arbitrum': 60,      // Same as Ethereum (EVM-compatible)
+      'optimism': 60,      // Same as Ethereum (EVM-compatible)
+      'zcash': 133,        // BIP44: m/44'/133'
+      'cosmos': 118,       // BIP44: m/44'/118'
+      'near': 397          // BIP44: m/44'/397'
     };
 
     const coinType = coinTypes[chain.toLowerCase()];
@@ -64,6 +69,19 @@ export class KeyManager {
       throw new Error(`Unsupported chain: ${chain}`);
     }
 
+    // Bitcoin uses BIP84 for Native SegWit (m/84'/0'/0'/0/x)
+    if (chain.toLowerCase() === 'bitcoin') {
+      const path = `m/84'/${coinType}'/${account}'/0/${index}`;
+      return this.deriveKey(path);
+    }
+
+    // Solana derivation path (m/44'/501'/account'/index')
+    if (chain.toLowerCase() === 'solana') {
+      const path = `m/44'/${coinType}'/${account}'/${index}'`;
+      return this.deriveKey(path);
+    }
+
+    // Standard BIP44 path for other chains
     const path = `m/44'/${coinType}'/${account}'/0/${index}`;
     return this.deriveKey(path);
   }
