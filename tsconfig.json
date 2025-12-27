@@ -9,7 +9,9 @@
     "noUnusedParameters": false,
     "target": "esnext",
     "module": "esnext",
-    "lib": ["esnext"],
+    "lib": [
+      "esnext"
+    ],
     "types": [],
     "jsx": "react-native",
     "moduleResolution": "node",
@@ -25,7 +27,9 @@
     "noEmit": false,
     "noImplicitThis": false,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
   "include": [
@@ -49,5 +53,6 @@
     "compilerOptions": {
       "module": "commonjs"
     }
-  }
+  },
+  "extends": "expo/tsconfig.base"
 }

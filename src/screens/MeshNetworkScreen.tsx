@@ -21,6 +21,7 @@ import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
 import * as logger from '../utils/logger';
+import { showError, showSuccess, showInfo } from '../utils/customAlert';
 
 export default function MeshNetworkScreen() {
   const navigation = useNavigation();
@@ -175,7 +176,7 @@ export default function MeshNetworkScreen() {
       setTimeout(() => setDiscoveryProgress(0), 1000);
     } catch (error) {
       logger.error('Peer discovery failed:', error);
-      Alert.alert('Discovery Failed', 'Could not discover peers. Please try again.');
+      showError('Discovery Failed', 'Could not discover peers. Please try again.');
       setDiscoveryProgress(0);
     } finally {
       setIsDiscovering(false);
@@ -198,18 +199,18 @@ export default function MeshNetworkScreen() {
   const handleSync = useCallback(async (peerId: string) => {
     try {
       await meshNetwork.syncWithPeer(peerId);
-      Alert.alert('Sync Complete', 'Successfully synced with peer');
+      showSuccess('Sync Complete', 'Successfully synced with peer');
       loadPeers();
       loadStats();
     } catch (error) {
       logger.error('Sync failed:', error);
-      Alert.alert('Sync Failed', 'Could not sync with peer. Please try again.');
+      showError('Sync Failed', 'Could not sync with peer. Please try again.');
     }
   }, [loadPeers, loadStats]);
 
   const handleCopyNodeId = useCallback(() => {
     Clipboard.setString(stats.nodeId);
-    Alert.alert('Copied', 'Node ID copied to clipboard');
+    showSuccess('Copied', 'Node ID copied to clipboard');
   }, [stats.nodeId]);
 
   const formatNodeId = (nodeId: string) => {

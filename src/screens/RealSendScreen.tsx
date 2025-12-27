@@ -16,6 +16,7 @@ import {
   Linking,
   Switch,
 } from 'react-native';
+import { showTransaction, showSuccess } from '../utils/customAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -748,31 +749,23 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
           ? `\n\nPrivacy: ${useShieldedZcash ? '🔒 Shielded (Private)' : '👁️ Transparent (Public)'}`
           : '';
         
-        Alert.alert(
-          '✅ Transaction Sent!',
-          `Transaction Hash:\n${txResult.hash}\n\nStatus: ${txResult.status === 'confirmed' ? 'Confirmed' : 'Pending'}${privacyStatus}\n\nWould you like to view it on ${explorerName}?`,
-          [
-            {
-              text: 'Copy Hash',
-              onPress: () => {
-                Clipboard.setString(txResult.hash);
-                Alert.alert('Copied', 'Transaction hash copied to clipboard');
-              },
-            },
-            {
-              text: 'View on Explorer',
-              onPress: () => {
-                if (txResult.explorerUrl) {
-                  Linking.openURL(txResult.explorerUrl);
-                }
-              },
-            },
-            {
-              text: 'OK',
-              style: 'default',
-            },
-          ]
-        );
+        showTransaction({
+          title: 'Transaction Sent!',
+          transactionHash: txResult.hash,
+          transactionStatus: txResult.status === 'confirmed' ? 'confirmed' : 'pending',
+          message: privacyStatus || undefined,
+          showExplorerLink: true,
+          explorerUrl: txResult.explorerUrl,
+          onCopyHash: () => {
+            Clipboard.setString(txResult.hash);
+            showSuccess('Copied', 'Transaction hash copied to clipboard');
+          },
+          onViewExplorer: () => {
+            if (txResult.explorerUrl) {
+              Linking.openURL(txResult.explorerUrl);
+            }
+          },
+        });
       }
 
       // Clear form

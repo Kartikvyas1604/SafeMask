@@ -29,6 +29,7 @@ import { Spacing } from '../design/spacing';
 import { KNOWN_TOKENS } from '../blockchain/TokenService';
 import PriceFeedService, { PriceData, HistoricalPrice } from '../services/PriceFeedService';
 import * as logger from '../utils/logger';
+import { showError, showSuccess, showAlert } from '../utils/customAlert';
 
 // Sparkline graph component with smooth curves
 const SparklineGraph = ({ 
@@ -179,6 +180,18 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const [lastBalanceUpdate, setLastBalanceUpdate] = useState(0);
   const [tokenPriceData, setTokenPriceData] = useState<Map<string, PriceData>>(new Map());
   const [tokenPriceHistory, setTokenPriceHistory] = useState<Map<string, HistoricalPrice[]>>(new Map());
+  const [recentTransactions, setRecentTransactions] = useState<Array<{
+    id: string;
+    type: 'send' | 'receive' | 'swap' | 'nfc';
+    token: string;
+    amount: string;
+    time: string;
+    color: string;
+    isPrivate?: boolean;
+    chain?: string;
+    timestamp?: number;
+  }>>([]);
+  const [userName, setUserName] = useState<string>('User');
   
   const blockchainService = RealBlockchainService;
   const BALANCE_CACHE_TIME = 30000; // 30 seconds cache
@@ -216,11 +229,144 @@ export default function ProductionWalletScreen({ navigation }: any) {
   };
   
   /**
+   * Format time ago helper
+   */
+  const formatTimeAgo = (timestamp: number): string => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return 'Just now';
+  };
+
+  /**
+   * Load recent transactions from AsyncStorage and testnet blockchain
+   */
+  const loadRecentTransactions = async () => {
+    try {
+      // Load saved transactions from AsyncStorage
+      const transactionsStr = await AsyncStorage.getItem('SafeMask_transactions');
+      let savedTransactions: Array<{
+        id: string;
+        type: 'send' | 'receive' | 'swap' | 'nfc';
+        token: string;
+        amount: string;
+        time: string;
+        color: string;
+        isPrivate?: boolean;
+        chain?: string;
+        timestamp?: number;
+        txHash?: string;
+        fromAddress?: string;
+        toAddress?: string;
+      }> = transactionsStr ? JSON.parse(transactionsStr) : [];
+
+      // Update timestamps for saved transactions
+      savedTransactions = savedTransactions.map(tx => ({
+        ...tx,
+        time: tx.timestamp ? formatTimeAgo(tx.timestamp) : tx.time,
+      }));
+
+      // Try to fetch real transactions from testnet blockchain
+      try {
+        const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
+                              await AsyncStorage.getItem('SafeMask_wallet');
+        
+        if (walletDataStr) {
+          const walletData = JSON.parse(walletDataStr);
+          const tempWallet = new SafeMaskWalletCore();
+          await tempWallet.importWallet(walletData.seedPhrase);
+          
+          // Get Ethereum address (testnet)
+          const ethAccount = tempWallet.getAccount(ChainType.ETHEREUM);
+          if (ethAccount && ethAccount.address) {
+            try {
+              // Fetch transactions from testnet with timeout
+              const blockchainTxs = await Promise.race([
+                RealBlockchainService.getRealTransactionHistory(
+                  'ethereum',
+                  ethAccount.address,
+                  1
+                ),
+                new Promise<never>((_, reject) =>
+                  setTimeout(() => reject(new Error('Transaction history request timed out')), 10000)
+                ),
+              ]);
+
+              // Convert blockchain transactions to our format
+              const formattedTxs = blockchainTxs.map(tx => {
+                const isSend = tx.from.toLowerCase() === ethAccount.address.toLowerCase();
+                return {
+                  id: tx.hash,
+                  type: (isSend ? 'send' : 'receive') as 'send' | 'receive',
+                  token: 'ETH',
+                  amount: isSend ? `-${parseFloat(tx.value) / 1e18}` : `+${parseFloat(tx.value) / 1e18}`,
+                  time: tx.timestamp ? formatTimeAgo(tx.timestamp) : 'Unknown',
+                  color: isSend ? Colors.error : Colors.success,
+                  isPrivate: false,
+                  txHash: tx.hash,
+                  fromAddress: tx.from,
+                  toAddress: tx.to,
+                  chain: 'Ethereum',
+                  timestamp: tx.timestamp,
+                };
+              });
+
+              // Merge with saved transactions, avoiding duplicates
+              const allTxHashes = new Set(savedTransactions.map(t => t.txHash));
+              const newBlockchainTxs = formattedTxs.filter(tx => !allTxHashes.has(tx.txHash));
+              
+              // Combine and sort by timestamp (newest first)
+              savedTransactions = [...savedTransactions, ...newBlockchainTxs].sort((a, b) => {
+                const timeA = a.timestamp || 0;
+                const timeB = b.timestamp || 0;
+                return timeB - timeA;
+              });
+            } catch (error) {
+              logger.error('Failed to fetch blockchain transactions:', error);
+              // Continue with saved transactions only
+            }
+          }
+        }
+      } catch (error) {
+        logger.error('Error fetching blockchain transactions:', error);
+        // Continue with saved transactions only
+      }
+
+      // Sort by timestamp (newest first) and take only the 3 most recent
+      const sortedTransactions = savedTransactions
+        .sort((a, b) => {
+          const timeA = a.timestamp || 0;
+          const timeB = b.timestamp || 0;
+          return timeB - timeA;
+        })
+        .slice(0, 3);
+
+      setRecentTransactions(sortedTransactions);
+    } catch (error) {
+      logger.error('Failed to load recent transactions:', error);
+      setRecentTransactions([]);
+    }
+  };
+
+  /**
    * Load hidden cards and favorite tokens from storage
    */
   useEffect(() => {
     const loadStoredPreferences = async () => {
       try {
+        // Load username
+        const savedUsername = await AsyncStorage.getItem('SafeMask_username');
+        if (savedUsername) {
+          setUserName(savedUsername);
+        }
+        
         // Load favorite tokens
         const storedFavorites = await AsyncStorage.getItem('SafeMask_favorite_tokens');
         if (storedFavorites) {
@@ -232,6 +378,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
         if (storedHiddenCards) {
           setHiddenCards(new Set(JSON.parse(storedHiddenCards)));
         }
+        
+        // Load recent transactions
+        await loadRecentTransactions();
       } catch (error) {
         logger.error('Failed to load stored preferences:', error);
       }
@@ -293,16 +442,16 @@ export default function ProductionWalletScreen({ navigation }: any) {
           try {
             const priceData = await PriceFeedService.getPrice(symbol);
             
-            // Fetch historical prices for sparkline (last 1 hour only)
+            // Fetch historical prices for sparkline (last 1 day)
             const dayData = await PriceFeedService.getHistoricalPrices(symbol, 1);
-            const oneHourAgo = Date.now() - (60 * 60 * 1000); // 1 hour ago in milliseconds
-            let historicalPrices = dayData.filter(p => p.timestamp >= oneHourAgo);
             
-            // Sample the data to reduce detail
-            if (historicalPrices.length < 5) {
-              historicalPrices = dayData.slice(-15);
-            } else {
-              historicalPrices = historicalPrices.filter((_, index) => index % 3 === 0 || index === historicalPrices.length - 1);
+            // Sample the data to reduce detail for sparkline (take every Nth point)
+            // For 1 day of data, we want ~20-30 points for a clean sparkline
+            let historicalPrices = dayData;
+            if (dayData.length > 30) {
+              // Sample: take every Nth point to get ~25-30 points
+              const step = Math.ceil(dayData.length / 25);
+              historicalPrices = dayData.filter((_, index) => index % step === 0 || index === dayData.length - 1);
             }
             
             return {
@@ -387,21 +536,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
       await loadWalletData();
     } catch (error) {
       logger.error(`❌ Failed to load wallet data:`, error);
-      Alert.alert(
+      showError(
         'Error',
-        `Failed to load wallet data: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to wallet setup instead of going back
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'WalletSetup' }],
-              });
-            },
-          },
-        ]
+        `Failed to load wallet data: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
       setIsLoading(false);
     }
@@ -496,7 +633,19 @@ export default function ProductionWalletScreen({ navigation }: any) {
       );
       
       // Calculate total USD value from ALL balances (including ETH, USDC, etc.)
-      const total = realBalances.reduce((sum, balance) => sum + balance.balanceUSD, 0);
+      // For test tokens, if balanceUSD is 0 but balanceFormatted > 0, use a minimal USD value
+      // to ensure test tokens are visible in the total
+      const total = realBalances.reduce((sum, balance) => {
+        const balanceNum = parseFloat(balance.balanceFormatted || '0');
+        if (balance.balanceUSD > 0) {
+          return sum + balance.balanceUSD;
+        } else if (balanceNum > 0) {
+          // For test tokens without USD price, use token balance as USD value (1:1 for visibility)
+          // This ensures test tokens show up in the total balance
+          return sum + balanceNum;
+        }
+        return sum;
+      }, 0);
       setTotalUSD(total);
       
       // Priority order: SOL, BTC should be shown first
@@ -653,6 +802,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
       logger.info(`✅ Loaded ${filteredBalances.length} balances for cards (excluded OP, ARB, BASE, ETH, USDC from display)`);
       logger.info(`💰 Total portfolio value (including all tokens): $${total.toFixed(2)}`);
       
+      // Reload recent transactions after wallet data is loaded
+      await loadRecentTransactions();
+      
       setIsLoading(false);
       setIsRefreshing(false);
     } catch (error) {
@@ -710,10 +862,11 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const handleCardLongPress = (symbol: string, chain: string, isFavorite: boolean = false) => {
     const cardKey = `${symbol.toUpperCase()}-${chain}`;
     
-    Alert.alert(
-      'Remove Card',
-      `Do you want to remove ${symbol} (${chain}) from the funds section?`,
-      [
+    showAlert({
+      title: 'Remove Card',
+      message: `Do you want to remove ${symbol} (${chain}) from the funds section?`,
+      type: 'warning',
+      buttons: [
         {
           text: 'Cancel',
           style: 'cancel',
@@ -748,8 +901,8 @@ export default function ProductionWalletScreen({ navigation }: any) {
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
   
   if (isLoading) {
@@ -801,7 +954,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
           </View>
           
           <View style={styles.greetingSection}>
-            <Text style={styles.greetingText}>Hi User,</Text>
+            <Text style={styles.greetingText}>Hi {userName},</Text>
             <Text style={styles.greetingSubtext}>{getGreeting()}</Text>
           </View>
         </View>
@@ -1012,28 +1165,77 @@ export default function ProductionWalletScreen({ navigation }: any) {
         {/* RECENT ACTIONS Section */}
         <Animated.View style={[styles.recentActionsSection, getAnimatedStyle(3)]}>
           <Text style={styles.sectionLabel}>RECENT ACTIONS</Text>
-          {balances.length > 0 ? (
+          {recentTransactions.length > 0 ? (
             <View style={styles.actionsList}>
-              {balances.slice(0, 3).map((balance, index) => (
-                <TouchableOpacity key={index} style={styles.actionItem}>
-                  <View style={styles.actionItemLeft}>
-                    <View style={styles.actionItemIcon}>
-                      <ChainIcon chain={balance.chain.toLowerCase()} size={32} />
+              {recentTransactions.map((tx, index) => {
+                const getTransactionIcon = (type: string) => {
+                  switch (type) {
+                    case 'send':
+                      return 'arrow-up';
+                    case 'receive':
+                      return 'arrow-down';
+                    case 'swap':
+                      return 'swap-horizontal';
+                    case 'nfc':
+                      return 'phone-portrait';
+                    default:
+                      return 'help-circle';
+                  }
+                };
+
+                const getTransactionTitle = (type: string, token: string) => {
+                  switch (type) {
+                    case 'send':
+                      return `Sent ${token}`;
+                    case 'receive':
+                      return `Received ${token}`;
+                    case 'swap':
+                      return `Swapped ${token}`;
+                    case 'nfc':
+                      return 'NFC Payment';
+                    default:
+                      return 'Transaction';
+                  }
+                };
+
+                const isNegative = tx.amount.startsWith('-');
+                const iconName = getTransactionIcon(tx.type);
+                const title = getTransactionTitle(tx.type, tx.token);
+
+                return (
+                  <TouchableOpacity
+                    key={tx.id || index}
+                    style={styles.actionItem}
+                    onPress={() => navigation.navigate('RecentTransactions')}
+                  >
+                    <View style={styles.actionItemLeft}>
+                      <View style={[styles.actionItemIcon, { backgroundColor: tx.color || Colors.accent }]}>
+                        <Ionicons name={iconName as any} size={20} color={Colors.white} />
+                      </View>
+                      <View style={styles.actionItemInfo}>
+                        <Text style={styles.actionItemName}>{title}</Text>
+                        <Text style={styles.actionItemTicker}>{tx.time}</Text>
+                      </View>
                     </View>
-                    <View style={styles.actionItemInfo}>
-                      <Text style={styles.actionItemName}>{balance.chain}</Text>
-                      <Text style={styles.actionItemTicker}>{balance.symbol}</Text>
+                    <View style={styles.actionItemRight}>
+                      <Text style={[
+                        styles.actionItemAmount,
+                        isNegative ? styles.actionItemAmountNegative : styles.actionItemAmountPositive
+                      ]}>
+                        {tx.amount} {tx.token}
+                      </Text>
                     </View>
-                  </View>
-                  <View style={styles.actionItemRight}>
-                    <Text style={styles.actionItemAmount}>+ ${balance.balanceUSD.toFixed(2)}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ) : (
             <View style={styles.emptyActions}>
-              <Text style={styles.emptyActionsText}>No recent actions</Text>
+              <View style={styles.emptyActionsIconContainer}>
+                <Ionicons name="time-outline" size={48} color={Colors.textSecondary} />
+              </View>
+              <Text style={styles.emptyActionsText}>No transactions yet</Text>
+              <Text style={styles.emptyActionsSubtext}>Your recent transactions will appear here</Text>
             </View>
           )}
         </Animated.View>
@@ -1157,14 +1359,14 @@ export default function ProductionWalletScreen({ navigation }: any) {
                           return newMap;
                         });
                         
-                        // Fetch historical prices
+                        // Fetch historical prices (last 1 day)
                         PriceFeedService.getHistoricalPrices(item.symbol, 1).then(dayData => {
-                          const oneHourAgo = Date.now() - (60 * 60 * 1000);
-                          let historicalPrices = dayData.filter(p => p.timestamp >= oneHourAgo);
-                          if (historicalPrices.length < 5) {
-                            historicalPrices = dayData.slice(-15);
-                          } else {
-                            historicalPrices = historicalPrices.filter((_, index) => index % 3 === 0 || index === historicalPrices.length - 1);
+                          // Sample the data to reduce detail for sparkline
+                          let historicalPrices = dayData;
+                          if (dayData.length > 30) {
+                            // Sample: take every Nth point to get ~25-30 points
+                            const step = Math.ceil(dayData.length / 25);
+                            historicalPrices = dayData.filter((_, index) => index % step === 0 || index === dayData.length - 1);
                           }
                           
                           setTokenPriceHistory(prev => {
@@ -1676,9 +1878,30 @@ const styles = StyleSheet.create({
   emptyActions: {
     padding: Spacing['2xl'],
     alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    minHeight: 120,
+    justifyContent: 'center',
+  },
+  emptyActionsIconContainer: {
+    marginBottom: Spacing.md,
   },
   emptyActionsText: {
     fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  emptyActionsSubtext: {
+    fontSize: Typography.fontSize.sm,
     color: Colors.textSecondary,
+  },
+  actionItemAmountNegative: {
+    color: Colors.error,
+  },
+  actionItemAmountPositive: {
+    color: Colors.success,
   },
 });
