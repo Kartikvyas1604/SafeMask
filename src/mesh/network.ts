@@ -58,13 +58,19 @@ export class MeshNetwork {
     messagesReceived: 0
   };
 
-  constructor(config: MeshConfig, privateKey?: Uint8Array) {
+  constructor(config: MeshConfig, privateKey?: Uint8Array);
+  constructor(config?: Partial<MeshConfig>, privateKey?: Uint8Array);
+  constructor(config?: MeshConfig | Partial<MeshConfig>, privateKey?: Uint8Array) {
     this.config = {
+      protocols: ['bluetooth', 'wifi'],
+      maxHops: 10,
+      storageLimit: 10000,
+      broadcastInterval: 5000,
       gossipFanout: 3,
       maxPeers: 20,
       discoveryInterval: 30000,
       cleanupInterval: 60000,
-      ...config
+      ...(config || {})
     };
 
     // Generate identity keys
