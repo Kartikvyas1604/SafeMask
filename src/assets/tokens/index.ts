@@ -19,8 +19,8 @@ const icons = {
   bnb: require('../../../assets/tokens/BNB.png'),
   avax: require('../../../assets/tokens/AVAX.png'),
   ftm: require('../../../assets/tokens/FTM.png'),
-} as const satisfies Record<string, ImageSourcePropType>;
+} as const;
 
 export type TokenIconKey = keyof typeof icons;
-export const tokenIcons = icons;
+export const tokenIcons: Record<string, ImageSourcePropType> = icons;
 

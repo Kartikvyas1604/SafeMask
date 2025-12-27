@@ -11,10 +11,10 @@ export interface MeshConfig {
   maxHops: number;
   storageLimit: number;
   broadcastInterval: number;
-  gossipFanout?: number;           // Number of peers to gossip to (default: 3)
-  maxPeers?: number;               // Maximum connected peers (default: 20)
-  discoveryInterval?: number;      // Discovery scan interval ms (default: 30000)
-  cleanupInterval?: number;        // Cleanup interval ms (default: 60000)
+  gossipFanout?: number;           
+  maxPeers?: number;               
+  discoveryInterval?: number;      
+  cleanupInterval?: number;        
 }
 
 interface GossipState {
