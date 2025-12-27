@@ -1,6 +1,5 @@
 import { BaseAdapter, TransactionStatus, BlockchainEvent } from './adapter';
 import { Balance, TransactionRequest, Address } from '../types';
-import { CryptoUtils } from '../utils/crypto';
 import * as bitcoin from 'bitcoinjs-lib';
 import { payments, networks } from 'bitcoinjs-lib';
 import * as ecc from '@bitcoinerlab/secp256k1';
@@ -77,17 +76,17 @@ export class BitcoinAdapter extends BaseAdapter {
 
       return {
         chain: this.getChainName(),
-        amount: btcBalance,
         token: 'BTC',
-        decimals: 8,
+        confirmed: btcBalance,
+        unconfirmed: '0',
       };
     } catch (error) {
       console.error('Failed to get Bitcoin balance:', error);
       return {
         chain: this.getChainName(),
-        amount: '0',
         token: 'BTC',
-        decimals: 8,
+        confirmed: '0',
+        unconfirmed: '0',
       };
     }
   }

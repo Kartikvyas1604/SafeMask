@@ -1,6 +1,5 @@
 import { BaseAdapter, TransactionStatus, BlockchainEvent } from './adapter';
 import { Balance, TransactionRequest, Address } from '../types';
-import { CryptoUtils } from '../utils/crypto';
 import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL, SystemProgram, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
 
 export interface SolanaConfig {
@@ -82,17 +81,17 @@ export class SolanaAdapter extends BaseAdapter {
 
       return {
         chain: this.getChainName(),
-        amount: solBalance,
         token: 'SOL',
-        decimals: 9,
+        confirmed: solBalance,
+        unconfirmed: '0',
       };
     } catch (error) {
       console.error('Failed to get Solana balance:', error);
       return {
         chain: this.getChainName(),
-        amount: '0',
         token: 'SOL',
-        decimals: 9,
+        confirmed: '0',
+        unconfirmed: '0',
       };
     }
   }
