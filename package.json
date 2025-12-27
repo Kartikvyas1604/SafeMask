@@ -67,6 +67,7 @@
     "react-native-get-random-values": "~1.11.0",
     "react-native-keychain": "^10.0.0",
     "react-native-nfc-manager": "^3.17.1",
+    "react-native-nfc-payment": "^1.1.6",
     "react-native-qrcode-svg": "^6.3.20",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",

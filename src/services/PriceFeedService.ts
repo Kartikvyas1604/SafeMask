@@ -268,13 +268,29 @@ class PriceFeedService {
         'AVAX': 'avalanche-2',
       };
 
-      const coinId = coinIds[symbol];
-      if (!coinId) {
-        return [];
+      const coinId = coinIds[symbol.toUpperCase()] || symbol.toLowerCase();
+      
+      // Map days to CoinGecko's supported intervals
+      // CoinGecko supports: 1, 7, 14, 30, 90, 180, 365, max
+      let apiDays = days;
+      if (days <= 1) {
+        apiDays = 1; // Minimum 1 day
+      } else if (days <= 7) {
+        apiDays = 7;
+      } else if (days <= 30) {
+        apiDays = 30;
+      } else if (days <= 90) {
+        apiDays = 90;
+      } else if (days <= 180) {
+        apiDays = 180;
+      } else if (days <= 365) {
+        apiDays = 365;
+      } else {
+        apiDays = 365; // Max 1 year
       }
 
       const response = await this.rateLimitedFetch(
-        `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`
+        `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${apiDays}`
       );
 
       if (!response.ok) {

@@ -15,15 +15,15 @@ interface PriceChartProps {
   currentPriceData?: { price: number; change24h?: number } | null;
 }
 
-type Timeframe = 'D' | 'W' | 'M' | '6M' | 'Y' | 'All';
+type Timeframe = '1H' | '1D' | '1W' | '1M' | 'YTD' | 'ALL';
 
-const TIMEFRAME_CONFIG: Record<Timeframe, { days?: number; hours?: number }> = {
-  'D': { days: 1 }, // 1 day
-  'W': { days: 7 }, // 1 week
-  'M': { days: 30 }, // 1 month
-  '6M': { days: 180 }, // 6 months
-  'Y': { days: 365 }, // 1 year
-  'All': { days: 365 }, // 1 year (max)
+const TIMEFRAME_CONFIG: Record<Timeframe, { days: number }> = {
+  '1H': { days: 1 }, // Fetch 1 day, filter to last hour
+  '1D': { days: 1 }, // 1 day
+  '1W': { days: 7 }, // 1 week
+  '1M': { days: 30 }, // 1 month
+  'YTD': { days: Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24)) }, // Year to date
+  'ALL': { days: 365 }, // All available (1 year max)
 };
 
 export default function PriceChart({ 
@@ -34,7 +34,7 @@ export default function PriceChart({
   currentPriceData,
 }: PriceChartProps) {
   const [prices, setPrices] = useState<HistoricalPrice[]>([]);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('D');
+  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('1D');
   const [isLoading, setIsLoading] = useState(true);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [priceChange, setPriceChange] = useState(0);
@@ -42,7 +42,8 @@ export default function PriceChart({
   const [selectedPoint, setSelectedPoint] = useState<{ x: number; y: number; price: number } | null>(null);
 
   const screenWidth = Dimensions.get('window').width;
-  const chartWidth = screenWidth - (Spacing.xl * 2);
+  // Account for padding from parent container (Spacing.xl on each side) and chart container padding (Spacing.lg on each side)
+  const chartWidth = screenWidth - (Spacing.xl * 2) - (Spacing.lg * 2);
   const chartHeight = height - 80;
 
   useEffect(() => {
@@ -52,14 +53,26 @@ export default function PriceChart({
   const loadPrices = async () => {
     try {
       setIsLoading(true);
+      setPrices([]); // Clear previous prices
+      setSelectedPoint(null); // Clear selected point
+      
       const config = TIMEFRAME_CONFIG[selectedTimeframe];
       let historicalPrices: HistoricalPrice[] = [];
       
-      if (config.days) {
-        historicalPrices = await PriceFeedService.getHistoricalPrices(symbol, config.days);
+      // Fetch data based on timeframe
+      if (selectedTimeframe === '1H') {
+        // For 1H, fetch 1 day of data and filter to last hour
+        const dayData = await PriceFeedService.getHistoricalPrices(symbol, 1);
+        const oneHourAgo = Date.now() - (60 * 60 * 1000); // 1 hour ago in milliseconds
+        historicalPrices = dayData.filter(p => p.timestamp >= oneHourAgo);
+        
+        // If we don't have enough data points, use the last 24 data points (hourly resolution)
+        if (historicalPrices.length < 10) {
+          historicalPrices = dayData.slice(-24); // Last 24 hours worth of data
+        }
       } else {
-        // For "All", fetch max available (1 year)
-        historicalPrices = await PriceFeedService.getHistoricalPrices(symbol, 365);
+        // For other timeframes, fetch the specified number of days
+        historicalPrices = await PriceFeedService.getHistoricalPrices(symbol, config.days);
       }
       
       if (historicalPrices.length > 0) {
@@ -68,7 +81,7 @@ export default function PriceChart({
         const latest = currentPriceData?.price || historicalPrices[historicalPrices.length - 1].price;
         const first = historicalPrices[0].price;
         const change = latest - first;
-        const changePercent = (change / first) * 100;
+        const changePercent = first > 0 ? (change / first) * 100 : 0;
         
         setCurrentPrice(latest);
         setPriceChange(change);
@@ -78,10 +91,10 @@ export default function PriceChart({
         setTimeout(() => {
           const maxPrice = Math.max(...historicalPrices.map(p => p.price));
           const minPrice = Math.min(...historicalPrices.map(p => p.price));
-          const padding = (maxPrice - minPrice) * 0.1;
+          const padding = (maxPrice - minPrice) * 0.1 || maxPrice * 0.1;
           const adjustedMinPrice = minPrice - padding;
           const adjustedMaxPrice = maxPrice + padding;
-          const adjustedRange = adjustedMaxPrice - adjustedMinPrice;
+          const adjustedRange = adjustedMaxPrice - adjustedMinPrice || 1;
           const lastIndex = historicalPrices.length - 1;
           const lastPrice = historicalPrices[lastIndex].price;
           setSelectedPoint({
@@ -90,9 +103,12 @@ export default function PriceChart({
             price: lastPrice,
           });
         }, 100);
+      } else {
+        logger.warn(`[PriceChart] No historical prices found for ${symbol} with timeframe ${selectedTimeframe}`);
       }
     } catch (error) {
       logger.error('[PriceChart] Failed to load prices:', error);
+      setPrices([]);
     } finally {
       setIsLoading(false);
     }
@@ -188,7 +204,7 @@ export default function PriceChart({
       )}
 
       {/* Chart */}
-      <View style={[styles.chartContainer, { height: chartHeight + 80 }]}>
+      <View style={styles.chartContainer}>
         <View style={[styles.chartSvgContainer, { height: chartHeight }]}>
           <Svg width={chartWidth} height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
             <Defs>
@@ -331,7 +347,19 @@ export default function PriceChart({
               const numLabels = 5;
               for (let i = 0; i <= numLabels; i++) {
                 const date = new Date();
-                if (selectedTimeframe === 'D') {
+                if (selectedTimeframe === '1H') {
+                  // For 1H, show minutes
+                  date.setMinutes(date.getMinutes() - (numLabels - i) * 12);
+                  const hour = date.getHours();
+                  const minutes = date.getMinutes();
+                  const ampm = hour >= 12 ? 'PM' : 'AM';
+                  const displayHour = hour % 12 || 12;
+                  labels.push(
+                    <Text key={i} style={styles.timeLabel}>
+                      {i === numLabels ? 'NOW' : `${displayHour}:${minutes.toString().padStart(2, '0')} ${ampm}`}
+                    </Text>
+                  );
+                } else if (selectedTimeframe === '1D') {
                   date.setHours(date.getHours() - (numLabels - i) * 6);
                   const hour = date.getHours();
                   const ampm = hour >= 12 ? 'PM' : 'AM';
@@ -388,32 +416,33 @@ export default function PriceChart({
             </View>
           )}
         </View>
-      </View>
-
-      {/* Timeframe Selector */}
-      {showTimeframes && (
-        <View style={styles.timeframeContainer}>
-          {(['D', 'W', 'M', '6M', 'Y', 'All'] as Timeframe[]).map((timeframe) => (
-            <TouchableOpacity
-              key={timeframe}
-              style={[
-                styles.timeframeButton,
-                selectedTimeframe === timeframe && styles.timeframeButtonActive,
-              ]}
-              onPress={() => setSelectedTimeframe(timeframe)}
-            >
-              <Text
+        
+        {/* Timeframe Selector */}
+        {showTimeframes && (
+          <View style={styles.timeframeContainer}>
+            {(['1H', '1D', '1W', '1M', 'YTD', 'ALL'] as Timeframe[]).map((timeframe) => (
+              <TouchableOpacity
+                key={timeframe}
                 style={[
-                  styles.timeframeText,
-                  selectedTimeframe === timeframe && styles.timeframeTextActive,
+                  styles.timeframeButton,
+                  selectedTimeframe === timeframe && styles.timeframeButtonActive,
                 ]}
+                onPress={() => setSelectedTimeframe(timeframe)}
+                activeOpacity={0.7}
               >
-                {timeframe}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+                <Text
+                  style={[
+                    styles.timeframeText,
+                    selectedTimeframe === timeframe && styles.timeframeTextActive,
+                  ]}
+                >
+                  {timeframe}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -448,9 +477,10 @@ const styles = StyleSheet.create({
   chartContainer: {
     width: '100%',
     position: 'relative',
-    backgroundColor: '#1a1a1a', // Dark gray background like in reference
+    backgroundColor: Colors.card, // Dark gray background like in reference
     borderRadius: 16,
-    padding: Spacing.md,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.md,
     marginBottom: Spacing.md,
     minHeight: 250,
   },
@@ -504,31 +534,35 @@ const styles = StyleSheet.create({
   timeframeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: Spacing.lg,
-    gap: Spacing.sm,
+    alignItems: 'center',
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorderSecondary,
+    gap: Spacing.xs,
+    minHeight: 44,
   },
   timeframeButton: {
     flex: 1,
     paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.xs,
     borderRadius: 8,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    backgroundColor: 'transparent',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
   },
   timeframeButtonActive: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
+    backgroundColor: Colors.cardHover || '#2a2a2a',
   },
   timeframeText: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.medium,
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
   },
   timeframeTextActive: {
     color: Colors.textPrimary,
-    fontWeight: Typography.fontWeight.bold,
+    fontWeight: Typography.fontWeight.semibold,
   },
   loadingContainer: {
     flex: 1,
