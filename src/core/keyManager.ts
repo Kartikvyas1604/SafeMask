@@ -2,7 +2,6 @@
 import '../utils/polyfills';
 
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
-// @ts-expect-error - TypeScript may not resolve this import correctly but it works at runtime
 import { wordlist } from '@scure/bip39/wordlists/english';
 import { CryptoUtils } from '../utils/crypto';
 import { HDNode, KeyPair } from '../types';

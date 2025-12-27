@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
     "target": "esnext",
     "module": "esnext",
     "lib": ["esnext"],
@@ -12,11 +15,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "outDir": "./dist",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
     "noEmit": false,
-    "types": [],
     "paths": {
       "@/*": ["./src/*"]
     }

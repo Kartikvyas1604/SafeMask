@@ -424,7 +424,7 @@ export class ZcashShieldedService {
       return proof;
     } catch (error) {
       logger.warn('⚠️  Sapling circuit unavailable, using deterministic placeholder');
-      const { sha256 } = await import('@noble/hashes/sha256');
+      const { sha256 } = await import('@noble/hashes/sha2');
       const hash = Buffer.from(sha256(new TextEncoder().encode(`${from}${output.value}${output.rho}`))).toString('hex');
       return {
         type: 'shield',
@@ -466,7 +466,7 @@ export class ZcashShieldedService {
       return proof;
     } catch (error) {
       logger.warn('⚠️  Sapling circuit unavailable, using deterministic placeholder');
-      const { sha256 } = await import('@noble/hashes/sha256');
+      const { sha256 } = await import('@noble/hashes/sha2');
       const hash = Buffer.from(sha256(new TextEncoder().encode(`${inputs.map(i => i.commitment).join('')}${to}${amount}`))).toString('hex');
       return {
         type: 'unshield',
@@ -513,7 +513,7 @@ export class ZcashShieldedService {
       return proof;
     } catch (error) {
       logger.warn('⚠️  Sapling circuit unavailable, using deterministic placeholder');
-      const { sha256 } = await import('@noble/hashes/sha256');
+      const { sha256 } = await import('@noble/hashes/sha2');
       const hash = Buffer.from(sha256(new TextEncoder().encode(`${inputs.map(i => i.commitment).join('')}${outputs.map(o => o.commitment).join('')}`))).toString('hex');
       return {
         type: 'private_transfer',

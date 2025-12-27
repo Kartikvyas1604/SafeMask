@@ -5,7 +5,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from '@craftzdog/react-native-buffer';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import * as logger from '../utils/logger';
 import { EventEmitter } from '../utils/EventEmitter';
 import MeshNetworkProtocol, { MeshTransaction } from '../mesh/MeshNetworkProtocol';

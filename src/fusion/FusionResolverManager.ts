@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { EventEmitter } from '../utils/EventEmitter';
 import * as logger from '../utils/logger';
 import { Buffer } from '@craftzdog/react-native-buffer';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 
 /**
  * Resolver Callback Types

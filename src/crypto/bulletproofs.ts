@@ -13,7 +13,7 @@
  */
 
 import { secp256k1 } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { mod } from '@noble/curves/abstract/modular';
 import { CryptoUtils } from '../utils/crypto';
 

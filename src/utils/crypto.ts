@@ -1,10 +1,9 @@
 // Pure JavaScript crypto implementation for React Native/Expo Go
-import { sha256 } from '@noble/hashes/sha256';
-import { sha512 } from '@noble/hashes/sha512';
+import { sha256 } from '@noble/hashes/sha2';
+import { sha512 } from '@noble/hashes/sha2';
 import { pbkdf2 } from '@noble/hashes/pbkdf2';
-import { randomBytes } from '@noble/hashes/utils';
+import { randomBytes, utf8ToBytes } from '@noble/hashes/utils';
 import { xchacha20poly1305 } from '@noble/ciphers/chacha.js';
-import { utf8ToBytes, bytesToUtf8 } from '@noble/hashes/utils';
 
 export class CryptoUtils {
   static hash(data: Uint8Array | Buffer, algorithm: string = 'sha256'): Buffer {

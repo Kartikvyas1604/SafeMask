@@ -1,9 +1,7 @@
-/* eslint-disable no-console */
-
 import { MeshPeer, MeshMessage } from '../types';
 import { CryptoUtils } from '../utils/crypto';
 import { secp256k1 } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { randomBytes } from '@noble/hashes/utils';
 
 export interface MeshConfig {

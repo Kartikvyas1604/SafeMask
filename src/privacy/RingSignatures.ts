@@ -1,5 +1,5 @@
 import { Buffer } from '@craftzdog/react-native-buffer';
-import { blake2b } from '@noble/hashes/blake2b';
+import { blake2b } from '@noble/hashes/blake2';
 import { randomBytes as cryptoRandomBytes } from '@noble/hashes/utils';
 import { ed25519 } from '@noble/curves/ed25519';
 

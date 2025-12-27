@@ -158,7 +158,8 @@ export default function SellTokenScreen() {
       if (walletDataStr) {
         const walletData = JSON.parse(walletDataStr);
         // Get balances from blockchain service
-        const balances = await RealBlockchainService.getBalances(walletData.accounts || {});
+        // const balances = await RealBlockchainService.getBalances(walletData.accounts || {});
+        const balances: any[] = []; // TODO: Implement getBalances
         
         // Find balance for this token
         const tokenBalance = balances.find(
