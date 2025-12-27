@@ -156,55 +156,128 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
       }
       setWalletAddress(ethAccount.address);
 
-      // Fetch real balances from blockchain for all chains
-      const balancePromises = [
-        hdWallet.getAccount('Ethereum' as any),
-        hdWallet.getAccount('Solana' as any),
-        hdWallet.getAccount('Polygon' as any),
-        hdWallet.getAccount('Bitcoin' as any),
-        hdWallet.getAccount('Zcash' as any),
-      ].filter(Boolean).map(async (account) => {
-        if (!account) return null;
+      // Try to load cached balances first (for offline mode)
+      let cachedBalances: RealBalance[] = [];
+      try {
+        const cachedStr = await AsyncStorage.getItem('SafeMask_offline_balances');
+        if (cachedStr) {
+          cachedBalances = JSON.parse(cachedStr);
+          console.log('Loaded cached balances:', cachedBalances.length);
+        }
+      } catch (error) {
+        console.warn('Failed to load cached balances:', error);
+      }
+
+      // Check if we're online to fetch fresh balances
+      const isCurrentlyOnline = !NetworkConnectivity.isOffline();
+      
+      if (isCurrentlyOnline) {
+        // Fetch real balances from blockchain for all chains
+        const balancePromises = [
+          hdWallet.getAccount('Ethereum' as any),
+          hdWallet.getAccount('Solana' as any),
+          hdWallet.getAccount('Polygon' as any),
+          hdWallet.getAccount('Bitcoin' as any),
+          hdWallet.getAccount('Zcash' as any),
+        ].filter(Boolean).map(async (account) => {
+          if (!account) return null;
+          try {
+            // Use instance method getRealBalance (RealBlockchainService is the singleton instance)
+            const realBalance = await RealBlockchainService.getRealBalance(
+              account.chain.toLowerCase(),
+              account.address
+            );
+            return realBalance;
+          } catch (error) {
+            console.warn(`Failed to fetch balance for ${account.chain}:`, error);
+            // Return zero balance instead of null so assets still show
+            return {
+              chain: account.chain,
+              symbol: account.chain === 'Ethereum' ? 'ETH' : 
+                      account.chain === 'Solana' ? 'SOL' : 
+                      account.chain === 'Polygon' ? 'MATIC' :
+                      account.chain === 'Bitcoin' ? 'BTC' : 'ZEC',
+              address: account.address,
+              balance: '0',
+              balanceFormatted: '0',
+              balanceUSD: 0,
+              decimals: account.chain === 'Bitcoin' ? 8 : account.chain === 'Solana' ? 9 : 18,
+              lastUpdated: Date.now(),
+              blockHeight: 0,
+            } as RealBalance;
+          }
+        });
+        
+        const realBalances = (await Promise.all(balancePromises)).filter((b): b is RealBalance => b !== null);
+        
+        console.log('Loaded fresh balances:', realBalances.length, realBalances);
+        
+        // Cache the fresh balances for offline use
         try {
-          // Use instance method getRealBalance (RealBlockchainService is the singleton instance)
-          const realBalance = await RealBlockchainService.getRealBalance(
-            account.chain.toLowerCase(),
-            account.address
-          );
-          return realBalance;
+          await AsyncStorage.setItem('SafeMask_offline_balances', JSON.stringify(realBalances));
+          console.log('Cached balances for offline use');
         } catch (error) {
-          console.warn(`Failed to fetch balance for ${account.chain}:`, error);
-          // Return zero balance instead of null so assets still show
-          return {
-            chain: account.chain,
-            symbol: account.chain === 'Ethereum' ? 'ETH' : 
-                    account.chain === 'Solana' ? 'SOL' : 
-                    account.chain === 'Polygon' ? 'MATIC' :
-                    account.chain === 'Bitcoin' ? 'BTC' : 'ZEC',
-            address: account.address,
+          console.warn('Failed to cache balances:', error);
+        }
+        
+        // Show all balances including zero for demo
+        setBalances(realBalances);
+        
+        if (realBalances.length > 0) {
+          setSelectedAsset(realBalances[0]);
+        }
+      } else {
+        // Offline mode - use cached balances
+        console.log('Offline mode - using cached balances');
+        
+        if (cachedBalances.length > 0) {
+          setBalances(cachedBalances);
+          if (cachedBalances.length > 0) {
+            setSelectedAsset(cachedBalances[0]);
+          }
+          
+          // Show warning that balances might be outdated
+          Alert.alert(
+            'Offline Mode',
+            'Using cached balance data. Balances may not be up to date.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          // No cached balances and offline - create placeholder balances
+          const accounts = [
+            hdWallet.getAccount('Ethereum' as any),
+            hdWallet.getAccount('Solana' as any),
+            hdWallet.getAccount('Polygon' as any),
+          ].filter(Boolean);
+          
+          const placeholderBalances = accounts.map(account => ({
+            chain: account!.chain,
+            symbol: account!.chain === 'Ethereum' ? 'ETH' : 
+                    account!.chain === 'Solana' ? 'SOL' : 'MATIC',
+            address: account!.address,
             balance: '0',
             balanceFormatted: '0',
             balanceUSD: 0,
-            decimals: account.chain === 'Bitcoin' ? 8 : account.chain === 'Solana' ? 9 : 18,
+            decimals: account!.chain === 'Solana' ? 9 : 18,
             lastUpdated: Date.now(),
             blockHeight: 0,
-          } as RealBalance;
+          } as RealBalance));
+          
+          setBalances(placeholderBalances);
+          if (placeholderBalances.length > 0) {
+            setSelectedAsset(placeholderBalances[0]);
+          }
+          
+          Alert.alert(
+            'Offline Mode',
+            'No cached balance data available. Connect to internet first to fetch your balances.',
+            [{ text: 'OK' }]
+          );
         }
-      });
-      
-      const realBalances = (await Promise.all(balancePromises)).filter((b): b is RealBalance => b !== null);
-      
-      console.log('Loaded balances:', realBalances.length, realBalances);
-      
-      // Show all balances including zero for demo
-      setBalances(realBalances);
-      
-      if (realBalances.length > 0) {
-        setSelectedAsset(realBalances[0]);
       }
     } catch (error) {
       console.error('Failed to load wallet data:', error);
-      Alert.alert('Error', 'Failed to load wallet data. Using demo mode.');
+      Alert.alert('Error', 'Failed to load wallet data. Please try again.');
     } finally {
       setIsLoadingBalances(false);
     }
