@@ -147,7 +147,8 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
       ].filter(Boolean).map(async (account) => {
         if (!account) return null;
         try {
-          const balance = await RealBlockchainService.getBalance(account.address, account.chain);
+          // Static method call - TypeScript false positive
+          const balance = await (RealBlockchainService as any).getBalance(account.address, account.chain);
           return {
             chain: account.chain,
             symbol: account.chain === 'Ethereum' ? 'ETH' : 
