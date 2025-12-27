@@ -710,8 +710,3 @@ export async function broadcastTransaction(network: MeshNetwork, tx: any): Promi
 
   return await network.broadcastTypedMessage('transaction', payload);
 }
-
-/**
- * Export for CommonJS compatibility
- */
-export { MeshNetwork };
