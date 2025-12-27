@@ -36,6 +36,7 @@ import CrossChainBridgeScreen from '../screens/CrossChainBridgeScreen';
 import NFCPaymentScreen from '../screens/NFCPaymentScreen';
 import BuyTokenScreen from '../screens/BuyTokenScreen';
 import SellTokenScreen from '../screens/SellTokenScreen';
+import OfflineMeshPaymentScreen from '../screens/OfflineMeshPaymentScreen';
 
 export type RootStackParamList = {
   CalculatorMode: undefined;
@@ -66,6 +67,7 @@ export type RootStackParamList = {
   SellToken: { symbol: string; name: string };
   Bridge: undefined;
   MeshNetwork: undefined;
+  OfflineMeshPayment: { asset?: any } | undefined;
   Settings: undefined;
   BackupWallet: undefined;
   Browser: undefined;
@@ -189,6 +191,7 @@ export default function AppNavigator() {
       <Stack.Screen name="CrossChainBridge" component={CrossChainBridgeScreen} />
       <Stack.Screen name="ViewingKey" component={ViewingKeyScreen} />
       <Stack.Screen name="NFCPayment" component={NFCPaymentScreen} />
+      <Stack.Screen name="OfflineMeshPayment" component={OfflineMeshPaymentScreen} />
       <Stack.Screen name="MeshNetwork" component={MeshNetworkScreen} />
       <Stack.Screen name="BackupWallet" component={BackupWalletScreen} />
       <Stack.Screen name="Browser" component={BrowserScreen} />

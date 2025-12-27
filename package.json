@@ -29,6 +29,7 @@
     "@noble/hashes": "^2.0.1",
     "@noble/secp256k1": "^3.0.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/netinfo": "^11.4.1",
     "@react-navigation/bottom-tabs": "^7.8.6",
     "@react-navigation/core": "^7.13.1",
     "@react-navigation/elements": "^2.8.2",

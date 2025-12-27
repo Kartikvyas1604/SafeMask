@@ -1,8 +1,3 @@
-/**
- * Network Connectivity Service
- * Detects online/offline status and manages network transitions
- */
-
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { EventEmitter } from './EventEmitter';
 import * as logger from './logger';

@@ -998,6 +998,17 @@ export default function ProductionWalletScreen({ navigation }: any) {
 
             <TouchableOpacity
               style={styles.featureCard}
+              onPress={() => navigation.navigate('OfflineMeshPayment')}
+            >
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="wifi-outline" size={24} color={Colors.accent} />
+              </View>
+              <Text style={styles.featureTitle}>Offline Pay</Text>
+              <Text style={styles.featureDescription}>No internet</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.featureCard}
               onPress={() => navigation.navigate('MeshNetwork')}
             >
               <View style={styles.featureIconContainer}>

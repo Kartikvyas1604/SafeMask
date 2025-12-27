@@ -368,20 +368,24 @@ export default function NFCPaymentScreen() {
     }
 
     // Navigate to send screen with NFC write option
-    // @ts-ignore - navigation types are complex
-    navigation.navigate('RealSend' as never, {
-      useNFC: true,
-    } as never);
+    navigation.navigate('MainTabs', {
+      screen: 'RealSend',
+      params: {
+        useNFC: true,
+      }
+    });
   }, [isNFCSupported, isNFCEnabled, navigation]);
 
   const processPayment = useCallback((transaction: NFCTransaction) => {
-    // @ts-ignore - navigation types are complex
-    navigation.navigate('RealSend' as never, {
-      initialRecipientAddress: transaction.to,
-      initialAmount: transaction.amount,
-      initialChain: transaction.chain || 'ethereum',
-      initialMemo: transaction.memo,
-    } as never);
+    navigation.navigate('MainTabs', {
+      screen: 'RealSend',
+      params: {
+        initialRecipientAddress: transaction.to,
+        initialAmount: transaction.amount,
+        initialChain: transaction.chain || 'ethereum',
+        initialMemo: transaction.memo,
+      }
+    });
   }, [navigation]);
 
   const handleCopyAddress = useCallback((address: string) => {

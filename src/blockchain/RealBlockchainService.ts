@@ -144,8 +144,11 @@ export class RealBlockchainService {
   private providers: Map<string, ethers.JsonRpcProvider> = new Map();
   private priceCache: Map<string, { price: number; timestamp: number }> = new Map();
   private balanceCache: Map<string, { balance: RealBalance; timestamp: number }> = new Map();
-  private readonly PRICE_CACHE_TTL = 60000; // 1 minute
+  private priceRetryCount: Map<string, { count: number; lastAttempt: number }> = new Map();
+  private readonly PRICE_CACHE_TTL = 300000; // 5 minutes (reduced API calls)
   private readonly BALANCE_CACHE_TTL = 30000; // 30 seconds
+  private readonly MAX_PRICE_RETRIES = 3;
+  private readonly RATE_LIMIT_BACKOFF_MS = 60000; // 1 minute backoff on 429
   
   private constructor() {
     this.initializeProviders();
@@ -273,6 +276,60 @@ export class RealBlockchainService {
     
     logger.info(`📊 Fetching REAL balance for ${address} on ${network}`);
     
+    // Route non-EVM chains to specialized services
+    const nonEvmChains = ['solana', 'near', 'mina', 'starknet', 'zcash', 'bitcoin'];
+    if (nonEvmChains.includes(network.toLowerCase())) {
+      try {
+        // Use the static getBalance method which routes to specialized services
+        const balanceFormatted = await RealBlockchainService.getBalance(address, network);
+        const config = this.networks.get(network);
+        
+        if (!config) {
+          throw new Error(`Network ${network} not configured`);
+        }
+        
+        // Get price for USD value
+        const priceUSD = await this.getRealPrice(config.nativeCurrency.symbol);
+        const balanceUSD = parseFloat(balanceFormatted) * priceUSD;
+        
+        const realBalance: RealBalance = {
+          chain: config.name,
+          symbol: config.nativeCurrency.symbol,
+          address,
+          balance: (parseFloat(balanceFormatted) * Math.pow(10, config.nativeCurrency.decimals)).toString(),
+          balanceFormatted,
+          balanceUSD,
+          decimals: config.nativeCurrency.decimals,
+          lastUpdated: Date.now(),
+          blockHeight: 0, // Non-EVM chains may not have block height
+        };
+        
+        logger.info(`✅ Real balance: ${balanceFormatted} ${config.nativeCurrency.symbol} ($${balanceUSD.toFixed(2)})`);
+        
+        // Cache the balance
+        this.balanceCache.set(cacheKey, { balance: realBalance, timestamp: Date.now() });
+        
+        return realBalance;
+      } catch (error) {
+        logger.warn(`⚠️ Failed to fetch ${network} balance, returning zero:`, error);
+        const config = this.networks.get(network);
+        
+        // Return zero balance on error
+        return {
+          chain: config?.name || network,
+          symbol: config?.nativeCurrency.symbol || network.toUpperCase(),
+          address,
+          balance: '0',
+          balanceFormatted: '0',
+          balanceUSD: 0,
+          decimals: config?.nativeCurrency.decimals || 18,
+          lastUpdated: Date.now(),
+          blockHeight: 0,
+        };
+      }
+    }
+    
+    // EVM chains - use ethers provider
     const provider = this.providers.get(network);
     const config = this.networks.get(network);
     
@@ -280,9 +337,14 @@ export class RealBlockchainService {
       throw new Error(`Network ${network} not supported`);
     }
     
-    if (!ethers.isAddress(address)) {
-      throw new Error(`Invalid address: ${address}`);
+    // Validate address format based on network type
+    // Skip validation for non-EVM chains (they have different address formats)
+    if (['ethereum', 'polygon', 'arbitrum', 'optimism', 'base'].includes(network)) {
+      if (!ethers.isAddress(address)) {
+        throw new Error(`Invalid Ethereum address: ${address}`);
+      }
     }
+    // For other chains (Solana, Bitcoin, etc.), the validation happens in their respective services
     
     try {
       // Fetch real balance from blockchain
@@ -316,13 +378,27 @@ export class RealBlockchainService {
       
       return realBalance;
     } catch (error) {
-      logger.error(`❌ Failed to fetch balance from ${network}:`, error);
-      throw error;
+      logger.warn(`⚠️ Failed to fetch balance from ${network}, returning zero balance:`, error);
+      
+      // Return zero balance instead of throwing - graceful degradation
+      const zeroBalance: RealBalance = {
+        chain: config.name,
+        symbol: config.nativeCurrency.symbol,
+        address,
+        balance: '0',
+        balanceFormatted: '0',
+        balanceUSD: 0,
+        decimals: config.nativeCurrency.decimals,
+        lastUpdated: Date.now(),
+        blockHeight: 0,
+      };
+      
+      return zeroBalance;
     }
   }
   
   /**
-   * Get real-time cryptocurrency price from CoinGecko
+   * Get real-time cryptocurrency price from CoinGecko with retry logic
    * @param symbol - Cryptocurrency symbol (ETH, MATIC, etc.)
    * @returns Current USD price
    */
@@ -331,6 +407,13 @@ export class RealBlockchainService {
     const cached = this.priceCache.get(symbol);
     if (cached && Date.now() - cached.timestamp < this.PRICE_CACHE_TTL) {
       return cached.price;
+    }
+    
+    // Check if we're in rate limit backoff period
+    const retryInfo = this.priceRetryCount.get(symbol);
+    if (retryInfo && Date.now() - retryInfo.lastAttempt < this.RATE_LIMIT_BACKOFF_MS) {
+      logger.warn(`⏳ Rate limit backoff active for ${symbol}, using cached or zero price`);
+      return cached?.price || 0;
     }
     
     const coinIds: { [key: string]: string } = {
@@ -357,10 +440,25 @@ export class RealBlockchainService {
       // Cache the price
       this.priceCache.set(symbol, { price, timestamp: Date.now() });
       
+      // Reset retry count on success
+      this.priceRetryCount.delete(symbol);
+      
       return price;
-    } catch (error) {
-      logger.error(`Failed to fetch price for ${symbol}:`, error);
-      return 0;
+    } catch (error: any) {
+      // Handle rate limiting (429) with backoff
+      if (error.response?.status === 429) {
+        const currentRetry = retryInfo || { count: 0, lastAttempt: Date.now() };
+        this.priceRetryCount.set(symbol, {
+          count: currentRetry.count + 1,
+          lastAttempt: Date.now()
+        });
+        logger.warn(`⚠️ Rate limited for ${symbol} (attempt ${currentRetry.count + 1}/${this.MAX_PRICE_RETRIES}), backing off for 1 minute`);
+      } else {
+        logger.warn(`⚠️ Failed to fetch price for ${symbol}:`, error.message);
+      }
+      
+      // Return cached price if available, otherwise 0
+      return cached?.price || 0;
     }
   }
   

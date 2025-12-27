@@ -14,6 +14,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import meshNetwork from '../mesh/MeshNetwork';
+import RealBlockchainService, { RealBalance } from '../blockchain/RealBlockchainService';
+import { SafeMaskWalletCore } from '../core/ZetarisWalletCore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -45,7 +48,13 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<RealBalance | null>(null);
+  
+  // Wallet state
+  const [walletAddress, setWalletAddress] = useState('');
+  const [balances, setBalances] = useState<RealBalance[]>([]);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(true);
+  const [hdWallet] = useState(() => new SafeMaskWalletCore());
   
   // Network state
   const [isOffline, setIsOffline] = useState(true);
@@ -57,21 +66,23 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
   // Transaction tracking
   const [queuedTransactions, setQueuedTransactions] = useState<any[]>([]);
 
-  // Available assets
-  const assets: Asset[] = [
-    { symbol: 'BTC', name: 'Bitcoin', balance: '0.5', chain: 'bitcoin', color: '#F7931A' },
-    { symbol: 'ETH', name: 'Ethereum', balance: '2.3', chain: 'ethereum', color: '#627EEA' },
-    { symbol: 'SOL', name: 'Solana', balance: '15.7', chain: 'solana', color: '#00FFA3' },
-    { symbol: 'MATIC', name: 'Polygon', balance: '150', chain: 'polygon', color: '#8247E5' },
-  ];
+  useEffect(() => {
+    loadWalletData();
+  }, []);
 
   useEffect(() => {
     if (route?.params?.asset) {
-      setSelectedAsset(route.params.asset);
-    } else {
-      setSelectedAsset(assets[0]);
+      // Find matching balance from real balances
+      const matchingBalance = balances.find(
+        b => b.symbol === route.params.asset?.symbol && b.chain === route.params.asset?.chain
+      );
+      if (matchingBalance) {
+        setSelectedAsset(matchingBalance);
+      }
+    } else if (balances.length > 0 && !selectedAsset) {
+      setSelectedAsset(balances[0]);
     }
-  }, [route?.params?.asset]);
+  }, [route?.params?.asset, balances]);
 
   useEffect(() => {
     initializeMeshNetwork();
@@ -84,6 +95,44 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
     
     return () => clearInterval(interval);
   }, []);
+
+  const loadWalletData = async () => {
+    try {
+      setIsLoadingBalances(true);
+
+      // Get seed phrase from secure storage
+      const seedPhrase = await AsyncStorage.getItem('SafeMask_seed_phrase');
+      if (!seedPhrase) {
+        Alert.alert('Error', 'Wallet not found. Please create or import a wallet first.');
+        navigation.goBack();
+        return;
+      }
+
+      // Initialize wallet
+      await hdWallet.initializeFromMnemonic(seedPhrase);
+      const ethAddress = hdWallet.getEthereumAddress();
+      setWalletAddress(ethAddress);
+
+      // Fetch real balances from blockchain
+      const realBalances = await RealBlockchainService.getAllBalances(ethAddress);
+      
+      // Filter out zero balances for cleaner UI
+      const nonZeroBalances = realBalances.filter(b => parseFloat(b.balance) > 0);
+      
+      setBalances(nonZeroBalances.length > 0 ? nonZeroBalances : realBalances);
+      
+      if (nonZeroBalances.length > 0) {
+        setSelectedAsset(nonZeroBalances[0]);
+      } else if (realBalances.length > 0) {
+        setSelectedAsset(realBalances[0]);
+      }
+    } catch (error) {
+      console.error('Failed to load wallet data:', error);
+      Alert.alert('Error', 'Failed to load wallet data. Using demo mode.');
+    } finally {
+      setIsLoadingBalances(false);
+    }
+  };
 
   const initializeMeshNetwork = async () => {
     try {
@@ -233,14 +282,22 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
   };
 
   const getWalletAddress = async (chain: string): Promise<string> => {
-    // In production: get actual wallet address from wallet service
-    const mockAddresses: Record<string, string> = {
-      bitcoin: 'bc1q' + 'x'.repeat(39),
-      ethereum: '0x' + 'a'.repeat(40),
-      solana: 'Sol' + 'x'.repeat(41),
-      polygon: '0x' + 'b'.repeat(40),
-    };
-    return mockAddresses[chain] || '0x0000000000000000000000000000000000000000';
+    try {
+      switch (chain.toLowerCase()) {
+        case 'bitcoin':
+          return hdWallet.getBitcoinAddress();
+        case 'ethereum':
+        case 'polygon':
+          return hdWallet.getEthereumAddress();
+        case 'solana':
+          return hdWallet.getSolanaAddress();
+        default:
+          return hdWallet.getEthereumAddress();
+      }
+    } catch (error) {
+      console.error('Failed to get wallet address:', error);
+      return '';
+    }
   };
 
   const handleScanQR = () => {
@@ -323,20 +380,43 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
         {/* Asset Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Asset</Text>
-          <View style={styles.assetSelector}>
-            <View style={[styles.assetIcon, { backgroundColor: selectedAsset?.color || '#6B7280' }]}>
-              <Text style={styles.assetIconText}>{selectedAsset?.symbol.charAt(0)}</Text>
+          {isLoadingBalances ? (
+            <View style={styles.assetSelector}>
+              <ActivityIndicator size="small" color="#A855F7" />
+              <Text style={styles.assetName}>Loading balances...</Text>
             </View>
-            <View style={styles.assetInfo}>
-              <Text style={styles.assetName}>{selectedAsset?.name}</Text>
-              <Text style={styles.assetBalance}>
-                Balance: {selectedAsset?.balance} {selectedAsset?.symbol}
-              </Text>
+          ) : balances.length === 0 ? (
+            <View style={styles.assetSelector}>
+              <Text style={styles.assetName}>No assets found</Text>
+              <Text style={styles.assetBalance}>Please add funds to your wallet</Text>
             </View>
-            <TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.assetSelector}
+              onPress={() => {
+                // Show asset picker
+                Alert.alert(
+                  'Select Asset',
+                  'Choose which asset to send',
+                  balances.map(asset => ({
+                    text: `${asset.symbol} (${asset.balance})`,
+                    onPress: () => setSelectedAsset(asset)
+                  }))
+                );
+              }}
+            >
+              <View style={[styles.assetIcon, { backgroundColor: selectedAsset?.symbol === 'BTC' ? '#F7931A' : selectedAsset?.symbol === 'ETH' ? '#627EEA' : selectedAsset?.symbol === 'SOL' ? '#00FFA3' : '#8247E5' }]}>
+                <Text style={styles.assetIconText}>{selectedAsset?.symbol.charAt(0)}</Text>
+              </View>
+              <View style={styles.assetInfo}>
+                <Text style={styles.assetName}>{selectedAsset?.chain}</Text>
+                <Text style={styles.assetBalance}>
+                  Balance: {selectedAsset?.balance} {selectedAsset?.symbol}
+                </Text>
+              </View>
               <Ionicons name="chevron-down" size={24} color="#9CA3AF" />
             </TouchableOpacity>
-          </View>
+          )}
         </View>
 
         {/* Recipient Address */}
@@ -462,7 +542,8 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   headerTitle: {
-    ...Typography.h2,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
     color: '#FFFFFF',
   },
   content: {
@@ -488,9 +569,9 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   statusText: {
-    ...Typography.body,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   statusRow: {
     flexDirection: 'row',
@@ -504,14 +585,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusLabel: {
-    ...Typography.caption,
+    fontSize: Typography.fontSize.xs,
     color: '#9CA3AF',
     marginTop: 4,
   },
   statusValue: {
-    ...Typography.body,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
     color: '#FFFFFF',
-    fontWeight: '600',
     marginTop: 2,
   },
   meshToggleRow: {
@@ -521,14 +602,14 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   meshToggleLabel: {
-    ...Typography.body,
+    fontSize: Typography.fontSize.md,
     color: '#FFFFFF',
   },
   section: {
     marginTop: Spacing.lg,
   },
   sectionLabel: {
-    ...Typography.body,
+    fontSize: Typography.fontSize.md,
     color: '#9CA3AF',
     marginBottom: Spacing.sm,
   },
@@ -548,20 +629,20 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   assetIconText: {
-    ...Typography.h3,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
     color: '#FFFFFF',
-    fontWeight: 'bold',
   },
   assetInfo: {
     flex: 1,
   },
   assetName: {
-    ...Typography.body,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   assetBalance: {
-    ...Typography.caption,
+    fontSize: Typography.fontSize.xs,
     color: '#9CA3AF',
   },
   inputContainer: {
@@ -573,7 +654,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    ...Typography.body,
+    fontSize: Typography.fontSize.md,
     color: '#FFFFFF',
     paddingVertical: Spacing.md,
   },
@@ -592,9 +673,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   maxButtonText: {
-    ...Typography.caption,
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semibold,
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   infoBox: {
     flexDirection: 'row',
@@ -606,7 +687,7 @@ const styles = StyleSheet.create({
     borderLeftColor: '#A855F7',
   },
   infoText: {
-    ...Typography.caption,
+    fontSize: Typography.fontSize.xs,
     color: '#9CA3AF',
     marginLeft: Spacing.sm,
     flex: 1,
@@ -626,9 +707,9 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendButtonText: {
-    ...Typography.body,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
     color: '#FFFFFF',
-    fontWeight: '600',
     marginLeft: Spacing.sm,
   },
   queueSection: {
@@ -636,7 +717,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   queueTitle: {
-    ...Typography.body,
+    fontSize: Typography.fontSize.md,
     color: '#9CA3AF',
     marginBottom: Spacing.sm,
   },
@@ -649,7 +730,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   queueItemText: {
-    ...Typography.caption,
+    fontSize: Typography.fontSize.xs,
     color: '#FFFFFF',
     marginLeft: Spacing.sm,
   },
