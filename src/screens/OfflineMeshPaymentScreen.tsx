@@ -456,9 +456,13 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
                   'Select Asset',
                   'Choose which asset to send',
                   balances.map(asset => ({
-                    text: `${asset.symbol} (${asset.balance})`,
+                    text: `${asset.symbol} (${asset.balanceFormatted})`,
                     onPress: () => setSelectedAsset(asset)
-                  }))
+                  })),
+                  {
+                    cancelable: true,
+                    userInterfaceStyle: 'dark'
+                  }
                 );
               }}
             >
@@ -468,7 +472,7 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
               <View style={styles.assetInfo}>
                 <Text style={styles.assetName}>{selectedAsset?.chain}</Text>
                 <Text style={styles.assetBalance}>
-                  Balance: {selectedAsset?.balance} {selectedAsset?.symbol}
+                  Balance: {selectedAsset?.balanceFormatted} {selectedAsset?.symbol}
                 </Text>
               </View>
               <Ionicons name="chevron-down" size={24} color="#9CA3AF" />
