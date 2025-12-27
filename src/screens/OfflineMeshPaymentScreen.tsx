@@ -147,8 +147,15 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
       ].filter(Boolean).map(async (account) => {
         if (!account) return null;
         try {
-          // Static method call - TypeScript false positive
-          const balance = await (RealBlockchainService as any).getBalance(account.address, account.chain);
+          // Use instance method getRealBalance (RealBlockchainService is the singleton instance)
+          const realBalance = await RealBlockchainService.getRealBalance(
+            account.chain.toLowerCase(),
+            account.address
+          );
+          return realBalance;
+        } catch (error) {
+          console.warn(`Failed to fetch balance for ${account.chain}:`, error);
+          // Return zero balance instead of null so assets still show
           return {
             chain: account.chain,
             symbol: account.chain === 'Ethereum' ? 'ETH' : 
@@ -156,20 +163,19 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
                     account.chain === 'Polygon' ? 'MATIC' :
                     account.chain === 'Bitcoin' ? 'BTC' : 'ZEC',
             address: account.address,
-            balance: balance,
-            balanceFormatted: balance,
+            balance: '0',
+            balanceFormatted: '0',
             balanceUSD: 0,
-            decimals: 18,
+            decimals: account.chain === 'Bitcoin' ? 8 : account.chain === 'Solana' ? 9 : 18,
             lastUpdated: Date.now(),
             blockHeight: 0,
           } as RealBalance;
-        } catch (error) {
-          console.warn(`Failed to fetch balance for ${account.chain}:`, error);
-          return null;
         }
       });
       
       const realBalances = (await Promise.all(balancePromises)).filter((b): b is RealBalance => b !== null);
+      
+      console.log('Loaded balances:', realBalances.length, realBalances);
       
       // Show all balances including zero for demo
       setBalances(realBalances);
