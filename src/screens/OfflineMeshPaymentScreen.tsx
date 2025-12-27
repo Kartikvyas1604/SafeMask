@@ -100,30 +100,80 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
     try {
       setIsLoadingBalances(true);
 
-      // Get seed phrase from secure storage
-      const seedPhrase = await AsyncStorage.getItem('SafeMask_seed_phrase');
-      if (!seedPhrase) {
+      // Get wallet data from secure storage (check both keys)
+      let walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data');
+      if (!walletDataStr) {
+        walletDataStr = await AsyncStorage.getItem('SafeMask_wallet');
+      }
+      
+      // Also check for seed phrase directly
+      let seedPhrase = await AsyncStorage.getItem('SafeMask_seed_phrase');
+      
+      if (!walletDataStr && !seedPhrase) {
         Alert.alert('Error', 'Wallet not found. Please create or import a wallet first.');
+        navigation.goBack();
+        return;
+      }
+      
+      // Extract seed phrase from wallet data if needed
+      if (walletDataStr && !seedPhrase) {
+        const walletData = JSON.parse(walletDataStr);
+        seedPhrase = walletData.seedPhrase;
+      }
+
+      if (!seedPhrase) {
+        Alert.alert('Error', 'No seed phrase found. Please create a wallet first.');
         navigation.goBack();
         return;
       }
 
       // Initialize wallet
-      await hdWallet.initializeFromMnemonic(seedPhrase);
-      const ethAddress = hdWallet.getEthereumAddress();
-      setWalletAddress(ethAddress);
+      await hdWallet.importWallet(seedPhrase);
+      const ethAccount = hdWallet.getAccount('Ethereum' as any);
+      if (!ethAccount) {
+        Alert.alert('Error', 'Failed to load Ethereum account');
+        navigation.goBack();
+        return;
+      }
+      setWalletAddress(ethAccount.address);
 
-      // Fetch real balances from blockchain
-      const realBalances = await RealBlockchainService.getAllBalances(ethAddress);
+      // Fetch real balances from blockchain for all chains
+      const balancePromises = [
+        hdWallet.getAccount('Ethereum' as any),
+        hdWallet.getAccount('Solana' as any),
+        hdWallet.getAccount('Polygon' as any),
+        hdWallet.getAccount('Bitcoin' as any),
+        hdWallet.getAccount('Zcash' as any),
+      ].filter(Boolean).map(async (account) => {
+        if (!account) return null;
+        try {
+          const balance = await RealBlockchainService.getBalance(account.address, account.chain);
+          return {
+            chain: account.chain,
+            symbol: account.chain === 'Ethereum' ? 'ETH' : 
+                    account.chain === 'Solana' ? 'SOL' : 
+                    account.chain === 'Polygon' ? 'MATIC' :
+                    account.chain === 'Bitcoin' ? 'BTC' : 'ZEC',
+            address: account.address,
+            balance: balance,
+            balanceFormatted: balance,
+            balanceUSD: 0,
+            decimals: 18,
+            lastUpdated: Date.now(),
+            blockHeight: 0,
+          } as RealBalance;
+        } catch (error) {
+          console.warn(`Failed to fetch balance for ${account.chain}:`, error);
+          return null;
+        }
+      });
       
-      // Filter out zero balances for cleaner UI
-      const nonZeroBalances = realBalances.filter(b => parseFloat(b.balance) > 0);
+      const realBalances = (await Promise.all(balancePromises)).filter((b): b is RealBalance => b !== null);
       
-      setBalances(nonZeroBalances.length > 0 ? nonZeroBalances : realBalances);
+      // Show all balances including zero for demo
+      setBalances(realBalances);
       
-      if (nonZeroBalances.length > 0) {
-        setSelectedAsset(nonZeroBalances[0]);
-      } else if (realBalances.length > 0) {
+      if (realBalances.length > 0) {
         setSelectedAsset(realBalances[0]);
       }
     } catch (error) {
@@ -285,14 +335,14 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
     try {
       switch (chain.toLowerCase()) {
         case 'bitcoin':
-          return hdWallet.getBitcoinAddress();
+          return hdWallet.getAccount('Bitcoin' as any)?.address || '';
         case 'ethereum':
         case 'polygon':
-          return hdWallet.getEthereumAddress();
+          return hdWallet.getAccount('Ethereum' as any)?.address || '';
         case 'solana':
-          return hdWallet.getSolanaAddress();
+          return hdWallet.getAccount('Solana' as any)?.address || '';
         default:
-          return hdWallet.getEthereumAddress();
+          return hdWallet.getAccount('Ethereum' as any)?.address || '';
       }
     } catch (error) {
       console.error('Failed to get wallet address:', error);

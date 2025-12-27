@@ -488,9 +488,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
         }
       }
       
-      // Filter out OP, ARB, BASE, ETH, USDC from cards display only
-      // But keep them in total balance calculation
-      const excludedFromCards = ['OP', 'ARB', 'BASE', 'ETH', 'USDC'];
+      // Filter out only OP, ARB, BASE, USDC from cards display
+      // Keep ETH visible since users want to see their main balance
+      const excludedFromCards = ['OP', 'ARB', 'BASE', 'USDC'];
       const filteredBalances = realBalances.filter(b => 
         !excludedFromCards.includes(b.symbol.toUpperCase())
       );
@@ -499,14 +499,29 @@ export default function ProductionWalletScreen({ navigation }: any) {
       const total = realBalances.reduce((sum, balance) => sum + balance.balanceUSD, 0);
       setTotalUSD(total);
       
-      // Priority order: SOL, BTC should be shown first
-      const priorityTokens = ['SOL', 'BTC'];
+      // Priority order: ETH, SOL, BTC should be shown first
+      const priorityTokens = ['ETH', 'SOL', 'BTC'];
       
-      // Check if SOL, BTC are present, if not add placeholder entries
+      // Check if ETH, SOL, BTC are present, if not add placeholder entries
+      const hasETH = filteredBalances.some(b => b.symbol.toUpperCase() === 'ETH');
       const hasSOL = filteredBalances.some(b => b.symbol.toUpperCase() === 'SOL');
       const hasBTC = filteredBalances.some(b => b.symbol.toUpperCase() === 'BTC');
       
       // Add missing priority tokens as placeholder entries with zero balance
+      if (!hasETH && ethAccount) {
+        filteredBalances.push({
+          chain: 'Ethereum',
+          symbol: 'ETH',
+          address: ethAccount.address,
+          balance: '0',
+          balanceFormatted: '0',
+          balanceUSD: 0,
+          decimals: 18,
+          lastUpdated: Date.now(),
+          blockHeight: 0,
+        });
+      }
+      
       if (!hasSOL && solanaAccount) {
         filteredBalances.push({
           chain: 'Solana',
@@ -650,14 +665,14 @@ export default function ProductionWalletScreen({ navigation }: any) {
       score = Math.min(Math.round(score), 100);
       setPrivacyScore(score);
       
-      logger.info(`✅ Loaded ${filteredBalances.length} balances for cards (excluded OP, ARB, BASE, ETH, USDC from display)`);
+      logger.info(`✅ Loaded ${filteredBalances.length} balances for display`);
       logger.info(`💰 Total portfolio value (including all tokens): $${total.toFixed(2)}`);
       
       setIsLoading(false);
       setIsRefreshing(false);
     } catch (error) {
       logger.error(`❌ Failed to load wallet data:`, error);
-      Alert.alert('Error', `Failed to load wallet data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Don't show alert - just log error and let user see what we have
       setIsLoading(false);
       setIsRefreshing(false);
     }
