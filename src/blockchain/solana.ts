@@ -2,18 +2,12 @@ import { BaseAdapter, TransactionStatus, BlockchainEvent } from './adapter';
 import { Balance, TransactionRequest, Address } from '../types';
 import { CryptoUtils } from '../utils/crypto';
 import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL, SystemProgram, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
-import * as ed25519 from '@noble/ed25519';
 
 export interface SolanaConfig {
   network: 'mainnet' | 'testnet' | 'devnet';
   rpcUrl?: string;
   heliusKey?: string;
 }
-
-/**
- * Real Solana Blockchain Adapter
- * Generates valid Solana addresses (base58-encoded Ed25519 public keys)
- */
 export class SolanaAdapter extends BaseAdapter {
   private connection: Connection;
   private config: SolanaConfig;
@@ -61,9 +55,10 @@ export class SolanaAdapter extends BaseAdapter {
       this.wallet = keypair;
 
       return {
+        chain: this.getChainName(),
         address: keypair.publicKey.toBase58(),
-        publicKey: CryptoUtils.bytesToHex(keypair.publicKey.toBytes()),
-        path: `m/44'/501'/0'/${index}'`, // Solana coin type is 501
+        publicKey: keypair.publicKey.toBytes(),
+        derivationPath: `m/44'/501'/0'/${index}'`, // Solana coin type is 501
       };
     } catch (error) {
       console.error('Solana address generation failed:', error);
@@ -87,7 +82,6 @@ export class SolanaAdapter extends BaseAdapter {
 
       return {
         chain: this.getChainName(),
-        address,
         amount: solBalance,
         token: 'SOL',
         decimals: 9,
@@ -96,7 +90,6 @@ export class SolanaAdapter extends BaseAdapter {
       console.error('Failed to get Solana balance:', error);
       return {
         chain: this.getChainName(),
-        address,
         amount: '0',
         token: 'SOL',
         decimals: 9,
@@ -133,7 +126,7 @@ export class SolanaAdapter extends BaseAdapter {
     }
   }
 
-  async estimateFee(request: TransactionRequest): Promise<string> {
+  async estimateFee(_request: TransactionRequest): Promise<string> {
     try {
       // Solana uses fixed fee per signature (5000 lamports = 0.000005 SOL)
       const { feeCalculator } = await this.connection.getRecentBlockhash();

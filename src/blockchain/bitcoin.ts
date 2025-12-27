@@ -55,9 +55,10 @@ export class BitcoinAdapter extends BaseAdapter {
       }
 
       return {
+        chain: this.getChainName(),
         address: payment.address,
-        publicKey: CryptoUtils.bytesToHex(publicKey),
-        path: `m/84'/0'/0'/0/${index}`, // BIP84 for Native SegWit
+        publicKey: publicKey,
+        derivationPath: `m/84'/0'/0'/0/${index}`, // BIP84 for Native SegWit
       };
     } catch (error) {
       console.error('Bitcoin address generation failed:', error);
@@ -76,7 +77,6 @@ export class BitcoinAdapter extends BaseAdapter {
 
       return {
         chain: this.getChainName(),
-        address,
         amount: btcBalance,
         token: 'BTC',
         decimals: 8,
@@ -85,7 +85,6 @@ export class BitcoinAdapter extends BaseAdapter {
       console.error('Failed to get Bitcoin balance:', error);
       return {
         chain: this.getChainName(),
-        address,
         amount: '0',
         token: 'BTC',
         decimals: 8,
@@ -93,13 +92,13 @@ export class BitcoinAdapter extends BaseAdapter {
     }
   }
 
-  async sendTransaction(request: TransactionRequest): Promise<string> {
+  async sendTransaction(_request: TransactionRequest): Promise<string> {
     // Bitcoin transaction sending requires UTXO management
     // This is a placeholder - full implementation would use bitcoinjs-lib
     throw new Error('Bitcoin transaction sending not yet implemented');
   }
 
-  async estimateFee(request: TransactionRequest): Promise<string> {
+  async estimateFee(_request: TransactionRequest): Promise<string> {
     try {
       const response = await fetch(`${this.nodeUrl}/fee-estimates`);
       const fees = await response.json();
@@ -127,7 +126,7 @@ export class BitcoinAdapter extends BaseAdapter {
     }
   }
 
-  subscribeToEvents(callback: (event: BlockchainEvent) => void): void {
+  subscribeToEvents(_callback: (event: BlockchainEvent) => void): void {
     // WebSocket subscription for new blocks/transactions
     console.log('Bitcoin event subscription not implemented');
   }
