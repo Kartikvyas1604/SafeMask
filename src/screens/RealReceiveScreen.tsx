@@ -276,23 +276,18 @@ const RealReceiveScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.sectionLabel}>QR CODE</Text>
               <View style={styles.qrContainer}>
                 <View style={styles.qrPlaceholder}>
-                  <QRCode
-                    value={selectedAddress.address}
-                    size={200}
-                    backgroundColor="white"
-                    color="black"
-                    logo={require('../../assets/appicon.png')}
-                    logoSize={40}
-                    logoBackgroundColor="white"
-                    logoBorderRadius={8}
-                  />
-                  <Text style={[styles.qrAddressShort, { marginTop: Spacing.md }]}>
-                    {selectedAddress.address.substring(0, 8)}...
-                    {selectedAddress.address.substring(selectedAddress.address.length - 8)}
-                  </Text>
-                  <Text style={styles.qrHint}>
-                    Scan to receive {selectedAddress.symbol}
-                  </Text>
+                  <View style={styles.qrCodeContainer}>
+                    <QRCode
+                      value={selectedAddress.address}
+                      size={200}
+                      backgroundColor="white"
+                      color="black"
+                      logo={require('../../assets/appicon.png')}
+                      logoSize={40}
+                      logoBackgroundColor="white"
+                      logoBorderRadius={8}
+                    />
+                  </View>
                 </View>
               </View>
             </View>
@@ -743,9 +738,12 @@ const styles = StyleSheet.create({
   qrCard: {
     paddingHorizontal: Spacing.xl,
     marginBottom: Spacing['2xl'],
+    alignItems: 'center',
   },
   qrContainer: {
+    width: '100%',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   qrPlaceholder: {
     width: 240,
@@ -758,19 +756,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
+  qrCodeContainer: {
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  qrCodeWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
   qrIconContainer: {
     marginBottom: Spacing.md,
   },
   qrAddressShort: {
     fontSize: Typography.fontSize.sm,
     color: Colors.textTertiary,
+    marginTop: Spacing.md,
     marginBottom: Spacing.xs,
     fontFamily: Typography.fontFamily.mono,
+    textAlign: 'center',
+    width: '100%',
   },
   qrHint: {
     fontSize: Typography.fontSize.xs,
     color: Colors.textTertiary,
     textAlign: 'center',
+    width: '100%',
   },
   
   // Address Card

@@ -381,32 +381,6 @@ export default function PriceChart({
             })()}
           </View>
           
-          {/* Price labels */}
-          <View style={[styles.priceLabels, { height: chartHeight }]}>
-            {(() => {
-              if (prices.length === 0) return null;
-              const maxPrice = Math.max(...prices.map(p => p.price));
-              const minPrice = Math.min(...prices.map(p => p.price));
-              const padding = (maxPrice - minPrice) * 0.1;
-              const adjustedMinPrice = minPrice - padding;
-              const adjustedMaxPrice = maxPrice + padding;
-              const adjustedRange = adjustedMaxPrice - adjustedMinPrice;
-              
-              const labels = [];
-              const numLabels = 3;
-              for (let i = 0; i <= numLabels; i++) {
-                const price = adjustedMaxPrice - (i / numLabels) * adjustedRange;
-                const change = price - (currentPriceData?.price || currentPrice);
-                labels.push(
-                  <Text key={i} style={styles.priceLabel}>
-                    {change >= 0 ? '+' : ''}{formatPrice(change)}
-                  </Text>
-                );
-              }
-              return labels;
-            })()}
-          </View>
-          
           {/* Blue indicator label */}
           {selectedPoint && (
             <View style={[styles.indicatorLabel, { left: selectedPoint.x - 30, top: selectedPoint.y - 30 }]}>
