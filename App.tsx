@@ -10,23 +10,14 @@ import { parseSuperLink } from './src/utils/superLink';
 import { parsePaymentLink } from './src/utils/paymentLink';
 import WalletSelectorModal from './src/components/WalletSelectorModal';
 import { WalletInfo } from './src/utils/walletSchemes';
-import AlertProvider, { AlertRef } from './src/components/AlertProvider';
-import { setAlertRef } from './src/utils/customAlert';
 
 export default function App() {
   const [isLocked, setIsLocked] = useState(true);
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
   const appState = useRef(AppState.currentState);
   const navigationRef = React.useRef<any>(null);
-  const alertRef = useRef<AlertRef>(null);
   const [showWalletSelector, setShowWalletSelector] = useState(false);
   const [pendingLinkParams, setPendingLinkParams] = useState<any>(null);
-
-  useEffect(() => {
-    if (alertRef.current) {
-      setAlertRef(alertRef.current);
-    }
-  }, []);
 
   useEffect(() => {
     checkInitialState();
@@ -310,9 +301,6 @@ export default function App() {
         <AppNavigator />
       </NavigationContainer>
       <Toast />
-      
-      {/* Custom Alert Provider */}
-      <AlertProvider ref={alertRef} />
       
       {/* Wallet Selector Modal */}
       {pendingLinkParams && (
