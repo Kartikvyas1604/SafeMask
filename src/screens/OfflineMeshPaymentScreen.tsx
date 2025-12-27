@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import meshNetwork from '../mesh/MeshNetwork';
 import RealBlockchainService, { RealBalance } from '../blockchain/RealBlockchainService';
 import { SafeMaskWalletCore } from '../core/ZetarisWalletCore';
+import NetworkConnectivity from '../utils/NetworkConnectivity';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
@@ -68,6 +69,24 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
 
   useEffect(() => {
     loadWalletData();
+    
+    // Initialize network connectivity monitoring
+    NetworkConnectivity.initialize();
+    
+    // Set initial status
+    setIsOffline(NetworkConnectivity.isOffline());
+    
+    // Listen for network changes
+    const handleNetworkChange = (info: any) => {
+      setIsOffline(info.status === 'offline');
+      console.log('Network status changed:', info.status);
+    };
+    
+    NetworkConnectivity.on('connectivity:changed', handleNetworkChange);
+    
+    return () => {
+      NetworkConnectivity.off('connectivity:changed', handleNetworkChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -86,12 +105,12 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
 
   useEffect(() => {
     initializeMeshNetwork();
-    checkNetworkStatus();
     
+    // Update mesh stats and check network periodically
     const interval = setInterval(() => {
       updateMeshStats();
       checkNetworkStatus();
-    }, 2000);
+    }, 5000); // Check every 5 seconds instead of 2
     
     return () => clearInterval(interval);
   }, []);
@@ -207,11 +226,10 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
     setQueuedTransactions(meshNetwork.getQueuedTransactions());
   };
 
-  const checkNetworkStatus = () => {
-    // In production: use NetInfo or connectivity check
-    // For now, simulate offline mode
-    const online = Math.random() > 0.7; // 30% chance of being online
-    setIsOffline(!online);
+  const checkNetworkStatus = async () => {
+    // Use real network connectivity check
+    const info = await NetworkConnectivity.getCurrentInfo();
+    setIsOffline(info.status === 'offline');
   };
 
   const handleDiscoverPeers = async () => {
