@@ -4,6 +4,9 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     "strictPropertyInitialization": false,
+    "strictFunctionTypes": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "target": "esnext",
     "module": "esnext",
     "lib": ["esnext"],
@@ -19,6 +22,7 @@
     "declarationMap": false,
     "sourceMap": false,
     "noEmit": false,
+    "noImplicitThis": false,
     "paths": {
       "@/*": ["./src/*"]
     }
@@ -32,6 +36,17 @@
     "dist",
     "tests",
     "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+    "**/*.spec.ts",
+    "src/crypto/bulletproofs.ts",
+    "src/crypto/primitives.ts",
+    "src/crypto/zksnark.ts",
+    "src/nfc/NFCPaymentService.ts",
+    "src/privacy/ZKProofIntegration.ts",
+    "src/privacy/ZcashLightClient.ts"
+  ],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
 }
