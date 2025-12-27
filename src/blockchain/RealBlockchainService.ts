@@ -114,7 +114,7 @@ export class RealBlockchainService {
     ['starknet', {
       name: 'STRK',
       chainId: 0,
-      rpcUrl: 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7',
+      rpcUrl: 'https://free-rpc.nethermind.io/sepolia-juno',
       explorerUrl: 'https://sepolia.starkscan.co',
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     }],
