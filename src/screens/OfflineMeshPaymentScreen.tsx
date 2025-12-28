@@ -306,6 +306,34 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
     setIsOffline(info.status === 'offline');
   };
 
+  const validateAddressFormat = (address: string, chain: string): boolean => {
+    const chainLower = chain.toLowerCase();
+    
+    // Ethereum, Polygon, and other EVM chains - starts with 0x and 42 chars total
+    if (chainLower === 'ethereum' || chainLower === 'polygon' || chainLower === 'base' || 
+        chainLower === 'arbitrum' || chainLower === 'optimism') {
+      return /^0x[a-fA-F0-9]{40}$/.test(address);
+    }
+    
+    // Solana - base58 encoded, 32-44 characters
+    if (chainLower === 'solana') {
+      return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+    }
+    
+    // Bitcoin - starts with 1, 3, or bc1
+    if (chainLower === 'bitcoin') {
+      return /^(1|3|bc1)[a-zA-HJ-NP-Z0-9]{25,62}$/.test(address);
+    }
+    
+    // Zcash - starts with t or z
+    if (chainLower === 'zcash') {
+      return /^(t|z)[a-zA-Z0-9]{34,95}$/.test(address);
+    }
+    
+    // Default: allow any non-empty address
+    return address.length > 0;
+  };
+
   const handleDiscoverPeers = async () => {
     setIsDiscovering(true);
     try {
@@ -325,6 +353,30 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
   const validateTransaction = (): boolean => {
     if (!recipientAddress) {
       Alert.alert('Missing Recipient', 'Please enter recipient address');
+      return false;
+    }
+
+    // Validate address format matches the chain
+    if (!validateAddressFormat(recipientAddress, selectedAsset?.chain || '')) {
+      const chainName = selectedAsset?.chain || 'this chain';
+      let expectedFormat = '';
+      
+      const chainLower = chainName.toLowerCase();
+      if (chainLower === 'ethereum' || chainLower === 'polygon' || chainLower === 'base' || 
+          chainLower === 'arbitrum' || chainLower === 'optimism') {
+        expectedFormat = 'EVM address (0x...)';
+      } else if (chainLower === 'solana') {
+        expectedFormat = 'Solana address (base58)';
+      } else if (chainLower === 'bitcoin') {
+        expectedFormat = 'Bitcoin address (1..., 3..., or bc1...)';
+      } else if (chainLower === 'zcash') {
+        expectedFormat = 'Zcash address (t... or z...)';
+      }
+      
+      Alert.alert(
+        'Invalid Address Format', 
+        `The address you entered is not a valid ${chainName} address.\n\nExpected format: ${expectedFormat}\n\nPlease check and try again.`
+      );
       return false;
     }
 
