@@ -15,9 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import meshNetwork from '../mesh/MeshNetwork';
 import RealBlockchainService, { RealBalance } from '../blockchain/RealBlockchainService';
-import { SafeMaskWalletCore } from '../core/ZetarisWalletCore';
+import { SafeMaskWalletCore, ChainType } from '../core/ZetarisWalletCore';
 import NetworkConnectivity from '../utils/NetworkConnectivity';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ProductionTransactionService from '../services/ProductionTransactionService';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
@@ -359,11 +360,45 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
     setIsSending(true);
 
     try {
-      // Create transaction object
+      // Get wallet data to access private key
+      const walletDataStr = await AsyncStorage.getItem('SafeMask_wallet_data') || 
+                            await AsyncStorage.getItem('SafeMask_wallet');
+      
+      if (!walletDataStr) {
+        throw new Error('Wallet not found');
+      }
+
+      const walletData = JSON.parse(walletDataStr);
+      const tempWallet = new SafeMaskWalletCore();
+      await tempWallet.importWallet(walletData.seedPhrase);
+
+      // Get the appropriate account for the chain
+      let account;
+      const chain = selectedAsset!.chain.toLowerCase();
+      
+      if (chain === 'ethereum') {
+        account = tempWallet.getAccount(ChainType.ETHEREUM);
+      } else if (chain === 'solana') {
+        account = tempWallet.getAccount(ChainType.SOLANA);
+      } else if (chain === 'polygon') {
+        account = tempWallet.getAccount(ChainType.POLYGON);
+      } else if (chain === 'bitcoin') {
+        account = tempWallet.getAccount(ChainType.BITCOIN);
+      } else if (chain === 'zcash') {
+        account = tempWallet.getAccount(ChainType.ZCASH);
+      } else {
+        throw new Error(`Unsupported chain: ${selectedAsset!.chain}`);
+      }
+
+      if (!account) {
+        throw new Error(`Failed to get ${selectedAsset!.chain} account`);
+      }
+
+      // Create transaction object for tracking
       const transaction = {
         id: generateTxId(),
         type: 'transfer' as const,
-        from: await getWalletAddress(selectedAsset!.chain),
+        from: account.address,
         to: recipientAddress,
         amount: amount,
         asset: selectedAsset!.symbol,
@@ -375,7 +410,7 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
       };
 
       if (meshEnabled && isOffline) {
-        // Broadcast via mesh network
+        // Broadcast via mesh network (will be sent when online)
         const txId = await meshNetwork.broadcastOfflineTransaction(transaction);
         
         Alert.alert(
@@ -390,19 +425,56 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
           ]
         );
       } else {
-        // Normal online transaction
+        // Send REAL transaction on the blockchain
         Alert.alert(
-          'Online Transaction',
-          'You are online. This transaction will be sent directly to the blockchain.',
+          'Confirm Transaction',
+          `Send ${amount} ${selectedAsset!.symbol} to ${recipientAddress.substring(0, 12)}...?\n\nThis will be a REAL transaction on ${selectedAsset!.chain} blockchain.`,
           [
-            { text: 'Send via Mesh', onPress: async () => {
-              const txId = await meshNetwork.broadcastOfflineTransaction(transaction);
-              navigation.goBack();
-            }},
-            { text: 'Send Directly', onPress: () => {
-              // In production: call blockchain service directly
-              Alert.alert('Transaction Sent', 'Transaction submitted to blockchain');
-              navigation.goBack();
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Send', onPress: async () => {
+              try {
+                let txResult;
+                
+                // Send real transaction based on chain type
+                if (chain === 'ethereum' || chain === 'polygon') {
+                  // EVM chains - use RealBlockchainService
+                  txResult = await RealBlockchainService.sendRealTransaction(
+                    chain,
+                    account.address,
+                    recipientAddress,
+                    amount,
+                    account.privateKey
+                  );
+                } else if (chain === 'solana') {
+                  // Solana - use ProductionTransactionService
+                  txResult = await ProductionTransactionService.sendTransaction({
+                    chain: 'solana',
+                    from: account.address,
+                    to: recipientAddress,
+                    amount: amount,
+                    privateKey: account.privateKey,
+                    memo: memo,
+                  });
+                } else {
+                  throw new Error(`Chain ${selectedAsset!.chain} not yet supported for real transactions`);
+                }
+                
+                // Reload balances after successful transaction
+                await loadWalletData();
+                
+                Alert.alert(
+                  '✓ Transaction Sent!',
+                  `Transaction successfully broadcast to ${selectedAsset!.chain} blockchain.\n\n` +
+                  `TX Hash: ${txResult.hash || txResult.txHash}\n\n` +
+                  `View on explorer: ${txResult.explorerUrl}`,
+                  [{ text: 'Done', onPress: () => navigation.goBack() }]
+                );
+              } catch (txError) {
+                Alert.alert(
+                  'Transaction Failed',
+                  txError instanceof Error ? txError.message : 'Failed to send transaction'
+                );
+              }
             }}
           ]
         );
@@ -604,7 +676,7 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
             />
             <TouchableOpacity 
               style={styles.maxButton}
-              onPress={() => setAmount(selectedAsset?.balance || '0')}
+              onPress={() => setAmount(selectedAsset?.balanceFormatted || '0')}
             >
               <Text style={styles.maxButtonText}>MAX</Text>
             </TouchableOpacity>
