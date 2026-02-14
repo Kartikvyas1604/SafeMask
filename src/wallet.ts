@@ -5,6 +5,7 @@ import { KeyManager } from './core/keyManager';
 import { BlockchainAdapter } from './blockchain/adapter';
 import { EthereumAdapter } from './blockchain/ethereum';
 import { ZcashAdapter } from './blockchain/zcash';
+import { SolanaAdapter } from './blockchain/solana';
 import { MeshNetwork, MeshConfig } from './mesh/network';
 import { NFCTransactionManager, NFCConfig } from './nfc/handler';
 import { UnifiedAddressResolver, CrossChainResolver } from './address/resolver';
@@ -85,6 +86,15 @@ export class SafeMaskWallet {
     );
     this.adapters.set('zcash', zcashAdapter);
 
+    // Add Solana adapter
+    const solanaAdapter = new SolanaAdapter({
+      network: this.config.network === 'mainnet' ? 'mainnet' : 'devnet',
+      rpcUrl: this.config.network === 'mainnet'
+        ? 'https://api.mainnet-beta.solana.com'
+        : 'https://api.devnet.solana.com'
+    });
+    this.adapters.set('solana', solanaAdapter);
+
     for (const [, adapter] of this.adapters) {
       await adapter.sync();
     }
@@ -123,7 +133,7 @@ export class SafeMaskWallet {
 
     const encryptionKey = this.keyManager.getEncryptionKey();
 
-    for (const chain of ['ethereum', 'zcash', 'polygon']) {
+    for (const chain of ['ethereum', 'zcash', 'polygon', 'solana']) {
       const addressNode = await this.keyManager.deriveAddressKey(chain, 0, 0);
       const adapter = this.adapters.get(chain);
       
