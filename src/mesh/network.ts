@@ -1,9 +1,7 @@
-/* eslint-disable no-console */
-
 import { MeshPeer, MeshMessage } from '../types';
 import { CryptoUtils } from '../utils/crypto';
 import { secp256k1 } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { randomBytes } from '@noble/hashes/utils';
 
 export interface MeshConfig {
@@ -11,10 +9,10 @@ export interface MeshConfig {
   maxHops: number;
   storageLimit: number;
   broadcastInterval: number;
-  gossipFanout?: number;           // Number of peers to gossip to (default: 3)
-  maxPeers?: number;               // Maximum connected peers (default: 20)
-  discoveryInterval?: number;      // Discovery scan interval ms (default: 30000)
-  cleanupInterval?: number;        // Cleanup interval ms (default: 60000)
+  gossipFanout?: number;           
+  maxPeers?: number;               
+  discoveryInterval?: number;      
+  cleanupInterval?: number;        
 }
 
 interface GossipState {
@@ -26,6 +24,17 @@ interface GossipState {
 interface PeerSecrets {
   sharedSecret: Uint8Array;        // ECDH shared secret
   encryptionKey: Uint8Array;       // Derived encryption key
+}
+
+type MessageHandler = (msg: any, peer: MeshPeer) => void;
+
+interface NetworkStats {
+  peerId: string;
+  totalPeers: number;
+  activeMessages: number;
+  messagesSent: number;
+  messagesReceived: number;
+  uptime: number;
 }
 
 export class MeshNetwork {
@@ -40,14 +49,26 @@ export class MeshNetwork {
   private peerId: string;
   private discoveryTimer?: NodeJS.Timeout;
   private cleanupTimer?: NodeJS.Timeout;
+  private messageHandlers: Map<string, Set<MessageHandler>> = new Map();
+  private startTime: number = Date.now();
+  private stats = {
+    messagesSent: 0,
+    messagesReceived: 0
+  };
 
-  constructor(config: MeshConfig, privateKey?: Uint8Array) {
+  constructor(config: MeshConfig, privateKey?: Uint8Array);
+  constructor(config?: Partial<MeshConfig>, privateKey?: Uint8Array);
+  constructor(config?: MeshConfig | Partial<MeshConfig>, privateKey?: Uint8Array) {
     this.config = {
+      protocols: ['bluetooth', 'wifi'],
+      maxHops: 10,
+      storageLimit: 10000,
+      broadcastInterval: 5000,
       gossipFanout: 3,
       maxPeers: 20,
       discoveryInterval: 30000,
       cleanupInterval: 60000,
-      ...config
+      ...(config || {})
     };
 
     // Generate identity keys
@@ -285,6 +306,11 @@ export class MeshNetwork {
     // Sign message
     message.signature = await this.signMessage(message);
     this.messages.set(message.id, message);
+    this.gossipState.seenMessages.add(message.id);
+    this.gossipState.messageTimestamps.set(message.id, Date.now());
+    
+    // Track stats
+    this.stats.messagesSent++;
     
     await this.routeMessage(message, destinationId);
     
@@ -307,6 +333,11 @@ export class MeshNetwork {
     // Sign message
     message.signature = await this.signMessage(message);
     this.messages.set(message.id, message);
+    this.gossipState.seenMessages.add(message.id);
+    this.gossipState.messageTimestamps.set(message.id, Date.now());
+    
+    // Track stats
+    this.stats.messagesSent++;
 
     // Gossip to subset of peers
     await this.gossipMessage(message);
@@ -394,6 +425,9 @@ export class MeshNetwork {
         this.gossipState.peerLastSeen.set(senderId, Date.now());
       }
     }
+
+    // Process message and emit to handlers
+    await this.processReceivedMessage(message, senderId || undefined);
 
     // Gossip to other peers if TTL > 0
     if (message.hops < message.maxHops) {
@@ -495,6 +529,188 @@ export class MeshNetwork {
 
     for (const id of expiredMessages) {
       this.messages.delete(id);
+      this.gossipState.seenMessages.delete(id);
+      this.gossipState.messageTimestamps.delete(id);
+    }
+
+    console.log(`[MeshNetwork] Cleaned up ${expiredMessages.length} expired messages`);
+  }
+
+  // ==========================================================================
+  // Message Handler Registration & Event System
+  // ==========================================================================
+
+  /**
+   * Register handler for specific message type
+   */
+  onMessage(type: string, handler: MessageHandler): void {
+    if (!this.messageHandlers.has(type)) {
+      this.messageHandlers.set(type, new Set());
+    }
+    this.messageHandlers.get(type)!.add(handler);
+    console.log(`[MeshNetwork] Registered handler for '${type}' messages`);
+  }
+
+  /**
+   * Remove message handler
+   */
+  offMessage(type: string, handler: MessageHandler): void {
+    const handlers = this.messageHandlers.get(type);
+    if (handlers) {
+      handlers.delete(handler);
     }
   }
+
+  /**
+   * Emit message to all registered handlers
+   */
+  private emitMessage(type: string, payload: any, peer: MeshPeer): void {
+    const handlers = this.messageHandlers.get(type);
+    if (handlers && handlers.size > 0) {
+      for (const handler of handlers) {
+        try {
+          handler(payload, peer);
+        } catch (error) {
+          console.error(`[MeshNetwork] Handler error for '${type}':`, error);
+        }
+      }
+    }
+  }
+
+  /**
+   * Process received message and emit to handlers
+   */
+  private async processReceivedMessage(message: MeshMessage, senderId?: string): Promise<void> {
+    this.stats.messagesReceived++;
+
+    // Decode payload
+    let payload: any;
+    try {
+      const payloadStr = new TextDecoder().decode(message.payload);
+      payload = JSON.parse(payloadStr);
+    } catch (error) {
+      // Binary payload - use as is
+      payload = message.payload;
+    }
+
+    // Determine message type
+    let messageType = 'unknown';
+    if (typeof payload === 'object' && payload !== null) {
+      if (payload.type) {
+        messageType = payload.type;
+      } else if (payload.from && payload.to && payload.amount) {
+        messageType = 'transaction';
+      } else if (payload.blockNumber || payload.hash) {
+        messageType = 'block';
+      } else if (payload.requestBlocks || payload.lastBlock !== undefined) {
+        messageType = 'sync';
+      }
+    }
+
+    // Get peer info
+    const peer = senderId ? this.peers.get(senderId) : null;
+    if (!peer) {
+      console.warn(`[MeshNetwork] Message from unknown peer ${senderId}`);
+      return;
+    }
+
+    // Emit to handlers
+    console.log(`[MeshNetwork] Processing '${messageType}' message from ${peer.id}`);
+    this.emitMessage(messageType, payload, peer);
+  }
+
+  // ==========================================================================
+  // Enhanced Message Broadcasting with Type Support
+  // ==========================================================================
+
+  /**
+   * Broadcast typed message (transaction, block, sync, etc.)
+   */
+  async broadcastTypedMessage(type: string, payload: any): Promise<string> {
+    const messagePayload = {
+      type,
+      data: payload,
+      timestamp: Date.now()
+    };
+
+    const payloadBytes = new TextEncoder().encode(JSON.stringify(messagePayload));
+    return await this.broadcastMessage(payloadBytes);
+  }
+
+  /**
+   * Send transaction to network
+   */
+  async sendTransaction(tx: any): Promise<string> {
+    return await this.broadcastTypedMessage('transaction', tx);
+  }
+
+  /**
+   * Get network statistics
+   */
+  getStats(): NetworkStats {
+    return {
+      peerId: this.peerId,
+      totalPeers: this.peers.size,
+      activeMessages: this.messages.size,
+      messagesSent: this.stats.messagesSent,
+      messagesReceived: this.stats.messagesReceived,
+      uptime: Date.now() - this.startTime
+    };
+  }
+
+  /**
+   * Encrypt message payload for specific peer
+   */
+  private encryptForPeer(peerId: string, data: Uint8Array): Uint8Array {
+    const secrets = this.peerSecrets.get(peerId);
+    if (!secrets) {
+      throw new Error(`No shared secret with peer ${peerId}`);
+    }
+
+    const iv = CryptoUtils.randomBytes(24);
+    const encrypted = CryptoUtils.encrypt(data, secrets.encryptionKey, iv);
+    
+    // Prepend IV to encrypted data
+    const result = new Uint8Array(iv.length + encrypted.length);
+    result.set(iv, 0);
+    result.set(encrypted, iv.length);
+    
+    return result;
+  }
+
+  /**
+   * Decrypt message payload from specific peer
+   */
+  private decryptFromPeer(peerId: string, encryptedData: Uint8Array): Uint8Array {
+    const secrets = this.peerSecrets.get(peerId);
+    if (!secrets) {
+      throw new Error(`No shared secret with peer ${peerId}`);
+    }
+
+    // Extract IV and encrypted data
+    const iv = encryptedData.slice(0, 24);
+    const encrypted = encryptedData.slice(24);
+    
+    return CryptoUtils.decrypt(encrypted, secrets.encryptionKey, iv);
+  }
+}
+
+// ==========================================================================
+// Helper Functions for Testing & External Use
+// ==========================================================================
+
+/**
+ * Helper function to broadcast transaction through mesh network
+ */
+export async function broadcastTransaction(network: MeshNetwork, tx: any): Promise<string> {
+  const payload = {
+    type: 'transaction',
+    from: tx.from,
+    to: tx.to,
+    amount: tx.amount,
+    timestamp: tx.timestamp || Date.now(),
+    signature: tx.signature || ''
+  };
+
+  return await network.broadcastTypedMessage('transaction', payload);
 }

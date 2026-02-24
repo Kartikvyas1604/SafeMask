@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import * as logger from '../utils/logger';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { randomBytes } from '@noble/hashes/utils';
 
 export interface HTLCParams {

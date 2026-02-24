@@ -474,7 +474,7 @@ export class CrossChainBridge {
       return { zkProof: proof, inputs };
     } catch (error) {
       logger.warn('⚠️  ZK proof unavailable, using deterministic placeholder');
-      const { sha256 } = await import('@noble/hashes/sha256');
+      const { sha256 } = await import('@noble/hashes/sha2');
       const hash = Buffer.from(sha256(new TextEncoder().encode(JSON.stringify(inputs)))).toString('hex');
       return { zkProof: { proof: hash, publicSignals: [inputs.lockId] }, inputs };
     }

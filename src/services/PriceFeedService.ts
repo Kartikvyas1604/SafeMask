@@ -118,31 +118,83 @@ class PriceFeedService {
         'ADA': 'cardano',
         'DOT': 'polkadot',
         'AVAX': 'avalanche-2',
+        'ARB': 'arbitrum',
+        'OP': 'optimism',
+        'BASE': 'base',
+        'STRK': 'starknet',
+        'MINA': 'mina-protocol',
+        'NEAR': 'near',
+        'ZEC': 'zcash',
+        'DAI': 'dai',
+        'WETH': 'weth',
+        'FTM': 'fantom',
+        'ATOM': 'cosmos',
+        'ALGO': 'algorand',
+        'XRP': 'ripple',
+        'DOGE': 'dogecoin',
+        'LTC': 'litecoin',
+        'BCH': 'bitcoin-cash',
+        'UNI': 'uniswap',
+        'AAVE': 'aave',
+        'MKR': 'maker',
+        'CRV': 'curve-dao-token',
+        'SNX': 'havven',
+        'COMP': 'compound-governance-token',
+        'SUSHI': 'sushi',
+        'YFI': 'yearn-finance',
       };
 
-      const coinId = coinIds[symbol];
+      // Fallback tokens to try if primary token not found
+      const fallbackTokens = ['solana', 'bitcoin', 'ethereum'];
+      
+      let coinId = coinIds[symbol.toUpperCase()];
+      
+      // If not found, try lowercase symbol as CoinGecko ID
       if (!coinId) {
+        coinId = symbol.toLowerCase();
+      }
+
+      // Try the primary coinId first
+      let response = await this.rateLimitedFetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`
+      );
+
+      // If primary fails, try fallback tokens
+      if (!response.ok && response.status !== 429) {
+        for (const fallbackId of fallbackTokens) {
+          try {
+            response = await this.rateLimitedFetch(
+              `https://api.coingecko.com/api/v3/simple/price?ids=${fallbackId}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`
+            );
+            if (response.ok) {
+              coinId = fallbackId;
+              logger.warn(`[PriceFeed] Using fallback token ${fallbackId} for ${symbol}`);
+              break;
+            }
+          } catch (err) {
+            continue;
+          }
+        }
+      }
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          logger.warn(`[PriceFeed] Rate limited for ${symbol}, using cache`);
+          return null;
+        }
+        logger.error(`[PriceFeed] CoinGecko API error for ${symbol} (${coinId}): ${response.status}`);
         return null;
       }
 
-    const response = await this.rateLimitedFetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`
-    );
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        logger.warn(`[PriceFeed] Rate limited for ${symbol}, using cache`);
-        return null;
-      }
-      throw new Error(`CoinGecko API error: ${response.status}`);
-    }      const data = await response.json();
+      const data = await response.json();
       const coinData = data[coinId];
 
       if (!coinData) {
+        logger.warn(`[PriceFeed] No data found for ${symbol} (${coinId})`);
         return null;
       }
 
-      logger.info(`[PriceFeed] CoinGecko ${symbol}/USD: $${coinData.usd}`);
+      logger.info(`[PriceFeed] CoinGecko ${symbol}/USD: $${coinData.usd} (${coinId})`);
 
       return {
         price: coinData.usd,
@@ -266,32 +318,108 @@ class PriceFeedService {
         'ADA': 'cardano',
         'DOT': 'polkadot',
         'AVAX': 'avalanche-2',
+        'ARB': 'arbitrum',
+        'OP': 'optimism',
+        'BASE': 'base',
+        'STRK': 'starknet',
+        'MINA': 'mina-protocol',
+        'NEAR': 'near',
+        'ZEC': 'zcash',
+        'DAI': 'dai',
+        'WETH': 'weth',
+        'FTM': 'fantom',
+        'ATOM': 'cosmos',
+        'ALGO': 'algorand',
+        'XRP': 'ripple',
+        'DOGE': 'dogecoin',
+        'LTC': 'litecoin',
+        'BCH': 'bitcoin-cash',
+        'UNI': 'uniswap',
+        'AAVE': 'aave',
+        'MKR': 'maker',
+        'CRV': 'curve-dao-token',
+        'SNX': 'havven',
+        'COMP': 'compound-governance-token',
+        'SUSHI': 'sushi',
+        'YFI': 'yearn-finance',
       };
 
-      const coinId = coinIds[symbol];
+      // Fallback tokens to try if primary token not found
+      const fallbackTokens = ['solana', 'bitcoin', 'ethereum'];
+      
+      let coinId = coinIds[symbol.toUpperCase()];
+      
+      // If not found, try lowercase symbol as CoinGecko ID
       if (!coinId) {
-        return [];
+        coinId = symbol.toLowerCase();
+      }
+      
+      // Map days to CoinGecko's supported intervals
+      // CoinGecko supports: 1, 7, 14, 30, 90, 180, 365, max
+      let apiDays = days;
+      if (days <= 1) {
+        apiDays = 1; // Minimum 1 day
+      } else if (days <= 7) {
+        apiDays = 7;
+      } else if (days <= 30) {
+        apiDays = 30;
+      } else if (days <= 90) {
+        apiDays = 90;
+      } else if (days <= 180) {
+        apiDays = 180;
+      } else if (days <= 365) {
+        apiDays = 365;
+      } else {
+        apiDays = 365; // Max 1 year
       }
 
-      const response = await this.rateLimitedFetch(
-        `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`
+      // Try the primary coinId first
+      let response = await this.rateLimitedFetch(
+        `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${apiDays}`
       );
+
+      // If primary fails and it's not a rate limit, try fallback tokens
+      if (!response.ok && response.status !== 429) {
+        logger.warn(`[PriceFeed] Failed to fetch ${symbol} (${coinId}), trying fallback tokens`);
+        for (const fallbackId of fallbackTokens) {
+          try {
+            response = await this.rateLimitedFetch(
+              `https://api.coingecko.com/api/v3/coins/${fallbackId}/market_chart?vs_currency=usd&days=${apiDays}`
+            );
+            if (response.ok) {
+              coinId = fallbackId;
+              logger.warn(`[PriceFeed] Using fallback token ${fallbackId} for ${symbol} historical data`);
+              break;
+            }
+          } catch (err) {
+            continue;
+          }
+        }
+      }
 
       if (!response.ok) {
         if (response.status === 429) {
           logger.warn(`[PriceFeed] Rate limited for historical ${symbol}, returning empty`);
           return [];
         }
-        throw new Error(`CoinGecko API error: ${response.status}`);
+        logger.error(`[PriceFeed] Failed to fetch historical prices for ${symbol} (${coinId}): ${response.status}`);
+        return [];
       }
 
       const data = await response.json();
+      
+      // Validate response has prices array
+      if (!data.prices || !Array.isArray(data.prices)) {
+        logger.error(`[PriceFeed] Invalid response format for ${symbol} (${coinId})`);
+        return [];
+      }
+      
       const prices: HistoricalPrice[] = data.prices.map(([timestamp, price]: [number, number]) => ({
         timestamp,
         price,
       }));
 
-      logger.info(`[PriceFeed] Fetched ${prices.length} historical prices for ${symbol}`);
+      logger.info(`[PriceFeed] Fetched ${prices.length} historical prices for ${symbol} (${coinId})`);
       return prices;
     } catch (error) {
       logger.error(`[PriceFeed] Failed to fetch historical prices for ${symbol}:`, error);

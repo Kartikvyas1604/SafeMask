@@ -393,12 +393,25 @@ export class ProductionTransactionService {
       throw new Error(`Unsupported chain: ${chain}`);
     }
 
-    if (chainConfig.type === 'evm') {
-      return await this.realBlockchain.getRealTransactionHistory(chain, address, page);
+    try {
+      if (chainConfig.type === 'evm') {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise<any[]>((_, reject) => 
+          setTimeout(() => reject(new Error('Transaction history request timed out')), 10000)
+        );
+        
+        const historyPromise = this.realBlockchain.getRealTransactionHistory(chain, address, page);
+        
+        return await Promise.race([historyPromise, timeoutPromise]);
+      }
+      
+      logger.warn(`Transaction history for ${chain} not yet implemented`);
+      return [];
+    } catch (error) {
+      logger.error(`Failed to fetch transaction history for ${chain}:`, error);
+      // Return empty array instead of throwing - allows app to continue working
+      return [];
     }
-    
-    logger.warn(`Transaction history for ${chain} not yet implemented`);
-    return [];
   }
 
   private async getCryptoPrice(symbol: string): Promise<number> {

@@ -11,6 +11,7 @@ import {
   Animated,
   Modal,
   FlatList,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,10 +39,13 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [language, setLanguage] = useState('English');
   const [gasFee, setGasFee] = useState('Standard');
   const [developerMode, setDeveloperMode] = useState(false);
+  const [username, setUsername] = useState('');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showGasFeeModal, setShowGasFeeModal] = useState(false);
   const [showNetworkModal, setShowNetworkModal] = useState(false);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
 
   const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'INR'];
   const languages = ['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Korean', 'Portuguese'];
@@ -99,6 +103,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
       const savedPrivacy = await AsyncStorage.getItem('SafeMask_privacyMode');
       const savedBalances = await AsyncStorage.getItem('SafeMask_showBalances');
       const savedDevMode = await AsyncStorage.getItem('SafeMask_developerMode');
+      const savedUsername = await AsyncStorage.getItem('SafeMask_username');
 
       if (savedCurrency) setCurrency(savedCurrency);
       if (savedLanguage) setLanguage(savedLanguage);
@@ -108,9 +113,37 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
       if (savedPrivacy) setPrivacyMode(savedPrivacy === 'true');
       if (savedBalances) setShowBalances(savedBalances === 'true');
       if (savedDevMode) setDeveloperMode(savedDevMode === 'true');
+      if (savedUsername) setUsername(savedUsername);
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
+  };
+
+  const handleUsernameSave = async () => {
+    const trimmedUsername = usernameInput.trim();
+    if (!trimmedUsername) {
+      Alert.alert('Error', 'Username cannot be empty');
+      return;
+    }
+    if (trimmedUsername.length > 30) {
+      Alert.alert('Error', 'Username must be 30 characters or less');
+      return;
+    }
+    try {
+      await AsyncStorage.setItem('SafeMask_username', trimmedUsername);
+      setUsername(trimmedUsername);
+      setShowUsernameModal(false);
+      setUsernameInput('');
+      Alert.alert('Success', 'Username updated successfully');
+    } catch (error) {
+      console.error('Failed to save username:', error);
+      Alert.alert('Error', 'Failed to save username');
+    }
+  };
+
+  const handleUsernamePress = () => {
+    setUsernameInput(username);
+    setShowUsernameModal(true);
   };
 
   const handleBiometricToggle = async (value: boolean) => {
@@ -292,6 +325,28 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
+        {/* Profile Section */}
+        <Animated.View style={[styles.section, getAnimatedStyle(itemIndex++)]}>
+          <Text style={styles.sectionTitle}>PROFILE</Text>
+          
+          <Animated.View style={getAnimatedStyle(itemIndex++)}>
+            <TouchableOpacity style={styles.settingItem} onPress={handleUsernamePress}>
+              <View style={styles.settingLeft}>
+                <View style={styles.iconContainer}>
+                  <Ionicons name="person-outline" size={20} color={Colors.textSecondary} />
+                </View>
+                <View>
+                  <Text style={styles.settingLabel}>Username</Text>
+                  <Text style={styles.settingDescription}>
+                    {username || 'Tap to set your username'}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+
         {/* Security Section */}
         <Animated.View style={[styles.section, getAnimatedStyle(itemIndex++)]}>
           <Text style={styles.sectionTitle}>SECURITY</Text>
@@ -689,6 +744,65 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         </View>
       </Modal>
 
+      {/* Username Edit Modal */}
+      <Modal
+        visible={showUsernameModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowUsernameModal(false);
+          setUsernameInput('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Username</Text>
+              <TouchableOpacity onPress={() => {
+                setShowUsernameModal(false);
+                setUsernameInput('');
+              }}>
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={styles.modalLabel}>Username</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={usernameInput}
+                onChangeText={setUsernameInput}
+                placeholder="Enter your username"
+                placeholderTextColor={Colors.textTertiary}
+                maxLength={30}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Text style={styles.modalHint}>
+                This will be displayed on your home screen greeting
+              </Text>
+              <View style={styles.modalButtonContainer}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => {
+                    setShowUsernameModal(false);
+                    setUsernameInput('');
+                  }}
+                >
+                  <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonSave]}
+                  onPress={handleUsernameSave}
+                >
+                  <Text style={styles.modalButtonSaveText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Network Management Modal */}
       <Modal
         visible={showNetworkModal}
@@ -960,5 +1074,55 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+  modalLabel: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
+  modalInput: {
+    backgroundColor: Colors.cardHover,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderRadius: 12,
+    padding: Spacing.md,
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
+  modalHint: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textTertiary,
+    marginBottom: Spacing.lg,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    padding: Spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: Colors.cardHover,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  modalButtonSave: {
+    backgroundColor: Colors.accent,
+  },
+  modalButtonCancelText: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.textPrimary,
+  },
+  modalButtonSaveText: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.white,
   },
 });

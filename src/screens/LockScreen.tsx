@@ -96,6 +96,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
       if (result.success) {
         onUnlock();
+      // @ts-ignore - error property exists in failure case
       } else if (result.error === 'user_cancel') {
         // User cancelled, do nothing
       } else {

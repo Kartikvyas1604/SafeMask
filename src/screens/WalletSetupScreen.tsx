@@ -4,11 +4,12 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
+import SafeMaskLogo from '../../assets/appicon.png';
 
 interface WalletSetupScreenProps {
   navigation: {
@@ -18,12 +19,44 @@ interface WalletSetupScreenProps {
 
 export default function WalletSetupScreen({ navigation }: WalletSetupScreenProps) {
   const insets = useSafeAreaInsets();
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(30)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
-      <View style={styles.content}>
+      <Animated.View 
+        style={[
+          styles.content,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
         {/* Logo/Title */}
         <View style={styles.header}>
+          {/* Wallet Logo */}
+          <View style={styles.iconContainer}>
+            <View style={styles.iconCircle}>
+              <Image source={SafeMaskLogo} style={styles.logoImage} resizeMode="contain" />
+            </View>
+          </View>
           <Text style={styles.title}>SafeMask</Text>
           <Text style={styles.subtitle}>Privacy-First Multi-Chain Wallet</Text>
         </View>
@@ -49,7 +82,7 @@ export default function WalletSetupScreen({ navigation }: WalletSetupScreenProps
         <Text style={styles.footer}>
           Your keys, your crypto. Always.
         </Text>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -68,6 +101,24 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: Spacing['5xl'],
+  },
+  iconContainer: {
+    marginBottom: Spacing['2xl'],
+  },
+  iconCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: Colors.card,
+    borderWidth: 2,
+    borderColor: Colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
   },
   title: {
     fontSize: Typography.fontSize['3xl'],

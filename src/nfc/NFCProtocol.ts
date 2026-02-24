@@ -1,6 +1,6 @@
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 import { Buffer } from '@craftzdog/react-native-buffer';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { ed25519 } from '@noble/curves/ed25519';
 import * as logger from '../utils/logger';
 import { EventEmitter } from '../utils/EventEmitter';

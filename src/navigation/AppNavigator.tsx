@@ -34,6 +34,9 @@ import LockScreen from '../screens/LockScreen';
 import ViewingKeyScreen from '../screens/ViewingKeyScreen';
 import CrossChainBridgeScreen from '../screens/CrossChainBridgeScreen';
 import NFCPaymentScreen from '../screens/NFCPaymentScreen';
+import BuyTokenScreen from '../screens/BuyTokenScreen';
+import SellTokenScreen from '../screens/SellTokenScreen';
+import OfflineMeshPaymentScreen from '../screens/OfflineMeshPaymentScreen';
 
 export type RootStackParamList = {
   CalculatorMode: undefined;
@@ -60,8 +63,11 @@ export type RootStackParamList = {
   RealSwap: { walletAddress?: string; balances?: any[] };
   TokenChart: { symbol: string; name: string };
   MultiChainChart: undefined;
+  BuyToken: { symbol: string; name: string };
+  SellToken: { symbol: string; name: string };
   Bridge: undefined;
   MeshNetwork: undefined;
+  OfflineMeshPayment: { asset?: any } | undefined;
   Settings: undefined;
   BackupWallet: undefined;
   Browser: undefined;
@@ -185,6 +191,7 @@ export default function AppNavigator() {
       <Stack.Screen name="CrossChainBridge" component={CrossChainBridgeScreen} />
       <Stack.Screen name="ViewingKey" component={ViewingKeyScreen} />
       <Stack.Screen name="NFCPayment" component={NFCPaymentScreen} />
+      <Stack.Screen name="OfflineMeshPayment" component={OfflineMeshPaymentScreen} />
       <Stack.Screen name="MeshNetwork" component={MeshNetworkScreen} />
       <Stack.Screen name="BackupWallet" component={BackupWalletScreen} />
       <Stack.Screen name="Browser" component={BrowserScreen} />
@@ -193,6 +200,8 @@ export default function AppNavigator() {
       <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
       <Stack.Screen name="TokenChart" component={TokenChartScreen} />
       <Stack.Screen name="MultiChainChart" component={MultiChainChartScreen} />
+      <Stack.Screen name="BuyToken" component={BuyTokenScreen} />
+      <Stack.Screen name="SellToken" component={SellTokenScreen} />
       <Stack.Screen name="PaymentClaim" component={PaymentClaimScreen} />
     </Stack.Navigator>
   );

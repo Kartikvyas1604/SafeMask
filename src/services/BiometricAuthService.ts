@@ -122,10 +122,11 @@ export class BiometricAuthService {
           biometricType: this.availableBiometrics[0],
         };
       } else {
-        logger.warn('⚠️ Biometric authentication failed:', result.error);
+        const error = 'error' in result ? result.error : 'Authentication failed';
+        logger.warn('⚠️ Biometric authentication failed:', error);
         return {
           success: false,
-          error: result.error || 'Authentication failed',
+          error: error || 'Authentication failed',
         };
       }
     } catch (error) {

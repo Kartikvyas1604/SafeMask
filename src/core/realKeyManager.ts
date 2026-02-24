@@ -10,7 +10,7 @@ import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from '@scure/b
 // @ts-ignore - wordlist is a JS module
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 import { HDKey } from '@scure/bip32';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
 import { getAddress } from 'ethers';

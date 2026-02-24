@@ -1,7 +1,7 @@
 import { EventEmitter } from '../utils/EventEmitter';
 import * as logger from '../utils/logger';
 import { Buffer } from '@craftzdog/react-native-buffer';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { randomBytes } from '@noble/hashes/utils';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { MeshPeer, MeshMessage } from '../types';

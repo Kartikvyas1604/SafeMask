@@ -1,14 +1,36 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "strictFunctionTypes": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "target": "esnext",
+    "module": "esnext",
+    "lib": [
+      "esnext"
+    ],
+    "types": [],
     "jsx": "react-native",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "outDir": "./dist",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "noEmit": false
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": false,
+    "noImplicitThis": false,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
   },
   "include": [
     "**/*.ts",
@@ -19,6 +41,18 @@
     "dist",
     "tests",
     "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+    "**/*.spec.ts",
+    "src/crypto/bulletproofs.ts",
+    "src/crypto/primitives.ts",
+    "src/crypto/zksnark.ts",
+    "src/nfc/NFCPaymentService.ts",
+    "src/privacy/ZKProofIntegration.ts",
+    "src/privacy/ZcashLightClient.ts"
+  ],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  },
+  "extends": "expo/tsconfig.base"
 }

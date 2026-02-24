@@ -280,6 +280,44 @@ export class MeshNetwork extends EventEmitter {
     logger.debug(`Sending message to peer ${peerId.substring(0, 8)}`);
   }
 
+  /**
+   * Broadcast a transaction through mesh network
+   * Creates offline transaction and broadcasts to connected peers
+   */
+  public async broadcastOfflineTransaction(tx: any): Promise<string> {
+    logger.info(`Broadcasting transaction via mesh network...`);
+    logger.info(`From: ${tx.from}`);
+    logger.info(`To: ${tx.to}`);
+    logger.info(`Amount: ${tx.amount} ${tx.asset}`);
+
+    // Create offline transaction
+    const offlineTx: OfflineTransaction = {
+      id: tx.id || this.generateMessageId(),
+      from: tx.from,
+      to: tx.to,
+      amount: tx.amount,
+      timestamp: tx.timestamp || Date.now(),
+      signature: tx.signature || this.signTransaction(tx),
+      broadcasted: false,
+    };
+
+    // Queue transaction
+    await this.queueOfflineTransaction(offlineTx);
+
+    // Immediately broadcast to mesh if we have peers
+    if (this.peers.size > 0) {
+      try {
+        await this.broadcastTransaction(offlineTx);
+        logger.info(`Transaction broadcast to ${this.peers.size} peers`);
+        offlineTx.broadcasted = true;
+      } catch (error) {
+        logger.warn('Failed to broadcast immediately, will retry:', error);
+      }
+    }
+
+    return offlineTx.id;
+  }
+
   public async queueOfflineTransaction(tx: OfflineTransaction): Promise<void> {
     logger.info(`Queuing offline transaction ${tx.id.substring(0, 8)}...`);
     logger.info(`From: ${tx.from}`);
@@ -295,6 +333,18 @@ export class MeshNetwork extends EventEmitter {
     if (this.isOnline) {
       await this.processOfflineQueue();
     }
+  }
+
+  /**
+   * Sign transaction with node private key
+   * In production: use actual wallet private key
+   */
+  private signTransaction(tx: any): string {
+    // Mock signature - in production, use secp256k1 or ed25519
+    const data = `${tx.from}${tx.to}${tx.amount}${tx.timestamp}`;
+    return '0x' + Array.from(data).map(c => 
+      c.charCodeAt(0).toString(16).padStart(2, '0')
+    ).join('').substring(0, 128);
   }
 
   public async processOfflineQueue(): Promise<void> {
@@ -383,6 +433,18 @@ export class MeshNetwork extends EventEmitter {
 
   public getOfflineQueueSize(): number {
     return this.offlineQueue.length;
+  }
+
+  public getQueuedTransactions(): any[] {
+    return this.offlineQueue.map(tx => ({
+      id: tx.id,
+      from: tx.from,
+      to: tx.to,
+      amount: tx.amount,
+      timestamp: tx.timestamp,
+      broadcasted: tx.broadcasted,
+      asset: 'BTC', // In production: extract from transaction data
+    }));
   }
 
   public isNetworkOnline(): boolean {

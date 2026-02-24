@@ -15,7 +15,9 @@
     "ios": {
       "bundleIdentifier": "com.kartikvyas.SafeMask",
       "supportsTablet": true,
-      "associatedDomains": ["applinks:safemask.app"],
+      "associatedDomains": [
+        "applinks:safemask.app"
+      ],
       "infoPlist": {
         "NSCameraUsageDescription": "Allow SafeMask to use the camera for QR code scanning",
         "NSLocationWhenInUseUsageDescription": "Allow SafeMask to access your location for mesh network features"
@@ -57,11 +59,18 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "NFC",
+        "VIBRATE"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0af17de4-13f8-4e99-be3c-b88705299216"
+      }
     }
   }
 }

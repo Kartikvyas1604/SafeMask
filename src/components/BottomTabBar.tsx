@@ -1,9 +1,10 @@
 /**
  * Floating Bottom Tab Bar
  * Clean, reliable navigation with proper state management
+ * Optimized for quick response and smooth animations
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,9 +41,9 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
   const currentRoute = hookRoute.name;
   const [showSendReceiveModal, setShowSendReceiveModal] = useState(false);
 
-  // Get the currently active route name
-  const getActiveRouteName = (): string => {
-    // If we have Tab Navigator state, use it
+  // Memoize active route calculation to avoid expensive recalculations
+  const activeRoute = useMemo((): string => {
+    // If we have Tab Navigator state, use it (fastest path)
     if (tabState && tabState.routes && tabState.index !== undefined) {
       return tabState.routes[tabState.index]?.name || '';
     }
@@ -62,12 +63,10 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
     }
     
     return currentRoute;
-  };
+  }, [tabState, navigationState, currentRoute]);
 
-  const activeRoute = getActiveRouteName();
-
-  // Handle tab press
-  const handlePress = (tab: TabItem) => {
+  // Memoize handlers to prevent unnecessary re-renders
+  const handlePress = useCallback((tab: TabItem) => {
     // Handle send/receive modal
     if (tab.name === 'sendReceive') {
       setShowSendReceiveModal(true);
@@ -116,11 +115,18 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
     } catch (err) {
       console.error('Navigation error:', err);
     }
-  };
+  }, [activeRoute, navigation, tabState]);
 
   // Handle send/receive modal actions
-  const handleSendReceiveAction = (action: 'send' | 'receive') => {
+  const handleSendReceiveAction = useCallback((action: 'send' | 'receive' | 'nfc') => {
     setShowSendReceiveModal(false);
+    
+    if (action === 'nfc') {
+      // Navigate to NFC Payment screen
+      navigation.navigate('NFCPayment');
+      return;
+    }
+    
     const targetRoute = action === 'send' ? 'RealSend' : 'RealReceive';
     
     // Check if we're in Tab Navigator or Stack screen
@@ -137,13 +143,13 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
     } catch (err) {
       console.error('Navigation error:', err);
     }
-  };
+  }, [navigation, tabState]);
 
-  // Check if a tab is active
-  const isActive = (tab: TabItem): boolean => {
-    // Special case: sendReceive is active when on RealSend or RealReceive
+  // Memoize active state calculation
+  const isActive = useCallback((tab: TabItem): boolean => {
+    // Special case: sendReceive is active when on RealSend, RealReceive, or NFCPayment
     if (tab.name === 'sendReceive') {
-      return activeRoute === 'RealSend' || activeRoute === 'RealReceive';
+      return activeRoute === 'RealSend' || activeRoute === 'RealReceive' || activeRoute === 'NFCPayment';
     }
 
     // Special case: graph is active when on TokenChart
@@ -172,62 +178,68 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
     }
 
     return false;
-  };
+  }, [activeRoute, tabState]);
 
   // Create animated values for each tab
   const scaleAnims = useRef(tabs.map(() => new Animated.Value(1))).current;
 
-  const handleTabPress = (tab: TabItem, index: number) => {
-    // Animate scale on press
+  // Optimized tab press handler - navigation happens immediately, animation is non-blocking
+  const handleTabPress = useCallback((tab: TabItem, index: number) => {
+    // Handle navigation immediately (no delay)
+    handlePress(tab);
+
+    // Fast, lightweight animation that doesn't block
     Animated.sequence([
-      Animated.spring(scaleAnims[index], {
-        toValue: 1.3,
+      Animated.timing(scaleAnims[index], {
+        toValue: 1.2,
+        duration: 100,
         useNativeDriver: true,
-        tension: 300,
-        friction: 10,
       }),
-      Animated.spring(scaleAnims[index], {
+      Animated.timing(scaleAnims[index], {
         toValue: 1,
+        duration: 150,
         useNativeDriver: true,
-        tension: 300,
-        friction: 10,
       }),
     ]).start();
+  }, [handlePress]);
 
-    // Handle the actual navigation
-    handlePress(tab);
-  };
+  // Memoize tab items to prevent unnecessary re-renders
+  // Re-compute when activeRoute or tabState changes
+  const tabItems = useMemo(() => {
+    return tabs.map((tab, index) => {
+      const active = isActive(tab);
+      return (
+        <TouchableOpacity
+          key={tab.name}
+          style={styles.tabItem}
+          onPress={() => handleTabPress(tab, index)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Animated.View
+            style={[
+              active ? styles.activeIconContainer : styles.inactiveIconContainer,
+              {
+                transform: [{ scale: scaleAnims[index] }],
+              },
+            ]}
+          >
+            <Ionicons
+              name={tab.icon}
+              size={active ? 24 : 22}
+              color={active ? Colors.white : Colors.textTertiary}
+            />
+          </Animated.View>
+        </TouchableOpacity>
+      );
+    });
+  }, [activeRoute, tabState, isActive, handleTabPress]);
 
   return (
     <>
-      <View style={styles.container}>
-        <BlurView intensity={80} tint="dark" style={styles.tabBar}>
-          {tabs.map((tab, index) => {
-            const active = isActive(tab);
-            return (
-              <TouchableOpacity
-                key={tab.name}
-                style={styles.tabItem}
-                onPress={() => handleTabPress(tab, index)}
-                activeOpacity={0.7}
-              >
-                <Animated.View
-                  style={[
-                    active ? styles.activeIconContainer : styles.inactiveIconContainer,
-                    {
-                      transform: [{ scale: scaleAnims[index] }],
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={tab.icon}
-                    size={active ? 24 : 22}
-                    color={active ? Colors.white : Colors.textTertiary}
-                  />
-                </Animated.View>
-              </TouchableOpacity>
-            );
-          })}
+      <View style={styles.container} pointerEvents="box-none">
+        <BlurView intensity={60} tint="dark" style={styles.tabBar}>
+          {tabItems}
         </BlurView>
       </View>
 
@@ -287,6 +299,21 @@ export default function BottomTabBar(props?: Partial<BottomTabBarProps>) {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalActionButton}
+                onPress={() => handleSendReceiveAction('nfc')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.modalIconContainer, styles.modalIconContainerNFC]}>
+                  <Ionicons name="card" size={26} color={Colors.white} />
+                </View>
+                <View style={styles.modalActionTextContainer}>
+                  <Text style={styles.modalActionText}>NFC Pay</Text>
+                  <Text style={styles.modalActionSubtext}>Contactless payments</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
+              </TouchableOpacity>
             </View>
           </View>
         </TouchableOpacity>
@@ -307,7 +334,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(42, 42, 42, 0.7)',
+    backgroundColor: 'rgba(42, 42, 42, 0.85)', // Increased opacity for better performance vs blur
     borderRadius: 50,
     paddingVertical: 0,
     paddingHorizontal: 20,
@@ -414,6 +441,9 @@ const styles = StyleSheet.create({
   },
   modalIconContainerReceive: {
     backgroundColor: Colors.success,
+  },
+  modalIconContainerNFC: {
+    backgroundColor: Colors.accent,
   },
   modalActionTextContainer: {
     flex: 1,
