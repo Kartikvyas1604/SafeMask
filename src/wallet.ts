@@ -5,10 +5,7 @@ import { KeyManager } from './core/keyManager';
 import { BlockchainAdapter } from './blockchain/adapter';
 import { EthereumAdapter } from './blockchain/ethereum';
 import { ZcashAdapter } from './blockchain/zcash';
-<<<<<<< HEAD
-=======
 import { BitcoinAdapter } from './blockchain/bitcoin';
->>>>>>> origin/htf
 import { SolanaAdapter } from './blockchain/solana';
 import { MeshNetwork, MeshConfig } from './mesh/network';
 import { NFCTransactionManager, NFCConfig } from './nfc/handler';
@@ -77,28 +74,54 @@ export class SafeMaskWallet {
     // Ethereum / EVM chains
     const ethAdapter = new EthereumAdapter({
       network: this.config.network,
-      rpcUrl: this.config.network === 'mainnet' 
-        ? 'https://eth.llamarpc.com'
-        : 'https://rpc.ankr.com/eth_sepolia'
+      rpcUrl:
+        this.config.network === 'mainnet'
+          ? 'https://eth.llamarpc.com'
+          : 'https://rpc.ankr.com/eth_sepolia',
     });
     this.adapters.set('ethereum', ethAdapter);
 
-    // Polygon (EVM-compatible)
-    const polygonAdapter = new EthereumAdapter({
-      network: 'polygon',
-      rpcUrl: 'https://polygon-rpc.com'
+    // Arbitrum
+    const arbitrumAdapter = new EthereumAdapter({
+      network: 'arbitrum',
+      rpcUrl: 'https://arb1.arbitrum.io/rpc',
     });
-    this.adapters.set('polygon', polygonAdapter);
+    this.adapters.set('arbitrum', arbitrumAdapter);
+
+    // Optimism
+    const optimismAdapter = new EthereumAdapter({
+      network: 'optimism',
+      rpcUrl: 'https://mainnet.optimism.io',
+    });
+    this.adapters.set('optimism', optimismAdapter);
+
+    // Base
+    const baseAdapter = new EthereumAdapter({
+      network: 'base',
+      rpcUrl: 'https://mainnet.base.org',
+    } as any);
+    this.adapters.set('base', baseAdapter);
+
+    // BSC (BNB Chain)
+    const bscAdapter = new EthereumAdapter({
+      network: 'bsc',
+      rpcUrl: 'https://bsc-dataseed.binance.org',
+    } as any);
+    this.adapters.set('bsc', bscAdapter);
 
     // Bitcoin
     const btcAdapter = new BitcoinAdapter({
-      network: this.config.network === 'mainnet' ? 'mainnet' : 'testnet'
+      network: this.config.network === 'mainnet' ? 'mainnet' : 'testnet',
     });
     this.adapters.set('bitcoin', btcAdapter);
 
     // Solana
     const solanaAdapter = new SolanaAdapter({
-      network: this.config.network === 'mainnet' ? 'mainnet' : 'devnet'
+      network: this.config.network === 'mainnet' ? 'mainnet' : 'devnet',
+      rpcUrl:
+        this.config.network === 'mainnet'
+          ? 'https://api.mainnet-beta.solana.com'
+          : 'https://api.devnet.solana.com',
     });
     this.adapters.set('solana', solanaAdapter);
 
@@ -111,19 +134,6 @@ export class SafeMaskWallet {
     );
     this.adapters.set('zcash', zcashAdapter);
 
-<<<<<<< HEAD
-    // Add Solana adapter
-    const solanaAdapter = new SolanaAdapter({
-      network: this.config.network === 'mainnet' ? 'mainnet' : 'devnet',
-      rpcUrl: this.config.network === 'mainnet'
-        ? 'https://api.mainnet-beta.solana.com'
-        : 'https://api.devnet.solana.com'
-    });
-    this.adapters.set('solana', solanaAdapter);
-
-    for (const [, adapter] of this.adapters) {
-      await adapter.sync();
-=======
     // Sync all adapters
     for (const [name, adapter] of this.adapters) {
       try {
@@ -132,7 +142,6 @@ export class SafeMaskWallet {
       } catch (error) {
         console.error(`✗ ${name} adapter failed:`, error);
       }
->>>>>>> origin/htf
     }
   }
 
@@ -169,30 +178,16 @@ export class SafeMaskWallet {
 
     const encryptionKey = this.keyManager.getEncryptionKey();
 
-<<<<<<< HEAD
-    for (const chain of ['ethereum', 'zcash', 'polygon', 'solana']) {
-      const addressNode = await this.keyManager.deriveAddressKey(chain, 0, 0);
-      const adapter = this.adapters.get(chain);
-      
-      if (adapter) {
-        const address = await adapter.generateAddress(addressNode.publicKey, 0);
-        await this.addressResolver.registerChainAddress(
-          this.metaAddress,
-          chain,
-          address.address,
-          encryptionKey
-        );
-=======
     // Generate addresses for all supported chains
-    const chains = ['bitcoin', 'ethereum', 'solana', 'polygon', 'zcash'];
-    
+    const chains = ['bitcoin', 'ethereum', 'arbitrum', 'optimism', 'base', 'bsc', 'solana', 'zcash'];
+
     for (const chain of chains) {
       try {
         const addressNode = await this.keyManager.deriveAddressKey(chain, 0, 0);
         const adapter = this.adapters.get(chain);
-        
+
         if (adapter) {
-          const address = await adapter.generateAddress(addressNode.privateKey, 0);
+          const address = await adapter.generateAddress(addressNode.publicKey, 0);
           await this.addressResolver.registerChainAddress(
             this.metaAddress,
             chain,
@@ -203,7 +198,6 @@ export class SafeMaskWallet {
         }
       } catch (error) {
         console.error(`✗ Failed to generate ${chain} address:`, error);
->>>>>>> origin/htf
       }
     }
   }

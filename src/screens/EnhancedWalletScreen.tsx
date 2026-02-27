@@ -14,6 +14,8 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../design/colors';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -139,7 +141,7 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
           </Text>
         </View>
         <TouchableOpacity onPress={navigateToSettings} style={styles.settingsButton}>
-          <Text style={styles.settingsIcon}>⚙️</Text>
+          <Ionicons name="settings-outline" size={22} color={Colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -155,14 +157,22 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
       >
         {/* Balance Card */}
         <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Total Portfolio Value</Text>
-          <TouchableOpacity onPress={() => setBalanceHidden(!balanceHidden)}>
-            <Text style={styles.balanceAmount}>
-              {balanceHidden ? '••••••' : `$${totalBalance.toFixed(2)}`}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.balanceHeaderRow}>
+            <View>
+              <Text style={styles.balanceLabel}>Total portfolio value</Text>
+              <TouchableOpacity onPress={() => setBalanceHidden(!balanceHidden)}>
+                <Text style={styles.balanceAmount}>
+                  {balanceHidden ? '••••••' : `$${totalBalance.toFixed(2)}`}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.balancePill}>
+              <Ionicons name="shield-checkmark" size={16} color={Colors.accent} />
+              <Text style={styles.balancePillText}>Secure • Live data</Text>
+            </View>
+          </View>
           <Text style={styles.balanceSubtext}>
-            Real-time data from blockchain networks
+            Aggregated across Bitcoin, Ethereum, L2s, Solana & Zcash
           </Text>
         </View>
 
@@ -172,7 +182,9 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
             style={styles.actionButton}
             onPress={() => (navigation as any).navigate('Send')}
           >
-            <Text style={styles.actionIcon}>↑</Text>
+            <View style={[styles.actionIconCircle, styles.actionIconPrimary]}>
+              <Ionicons name="arrow-up" size={20} color="#ffffff" />
+            </View>
             <Text style={styles.actionText}>Send</Text>
           </TouchableOpacity>
           
@@ -180,7 +192,9 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
             style={styles.actionButton}
             onPress={() => (navigation as any).navigate('Receive')}
           >
-            <Text style={styles.actionIcon}>↓</Text>
+            <View style={[styles.actionIconCircle, styles.actionIconSecondary]}>
+              <Ionicons name="arrow-down" size={20} color="#ffffff" />
+            </View>
             <Text style={styles.actionText}>Receive</Text>
           </TouchableOpacity>
 
@@ -188,7 +202,9 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
             style={styles.actionButton}
             onPress={() => (navigation as any).navigate('Swap')}
           >
-            <Text style={styles.actionIcon}>⇄</Text>
+            <View style={[styles.actionIconCircle, styles.actionIconTertiary]}>
+              <Ionicons name="swap-horizontal" size={20} color="#ffffff" />
+            </View>
             <Text style={styles.actionText}>Swap</Text>
           </TouchableOpacity>
         </View>
@@ -218,13 +234,21 @@ const EnhancedWalletScreen: React.FC<Props> = ({ navigation }) => {
               >
                 <View style={styles.assetInfo}>
                   <View style={styles.assetIconContainer}>
-                    <Text style={styles.assetIcon}>
-                      {balance.chain === 'Ethereum' ? '⟠' : 
-                       balance.chain === 'Polygon' ? '⬡' :
-                       balance.chain === 'Solana' ? '◎' :
-                       balance.chain === 'Bitcoin' ? '₿' :
-                       balance.chain === 'Zcash' ? 'ⓩ' : '●'}
-                    </Text>
+                    <Ionicons
+                      name={
+                        balance.chain === 'Ethereum'
+                          ? 'logo-ethereum'
+                          : balance.chain === 'Solana'
+                          ? 'sparkles-outline'
+                          : balance.chain === 'Bitcoin'
+                          ? 'logo-bitcoin'
+                          : balance.chain === 'Zcash'
+                          ? 'shield-checkmark-outline'
+                          : 'ellipse-outline'
+                      }
+                      size={22}
+                      color={Colors.textPrimary}
+                    />
                   </View>
                   <View style={styles.assetDetails}>
                     <Text style={styles.assetName}>{balance.chain}</Text>
@@ -322,6 +346,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1f1f1f',
   },
+  balanceHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   balanceLabel: {
     color: '#666',
     fontSize: 14,
@@ -337,6 +367,21 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 12,
   },
+  balancePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#141414',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#222222',
+  },
+  balancePillText: {
+    marginLeft: 6,
+    color: '#aaa',
+    fontSize: 12,
+  },
   actionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -345,12 +390,30 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     backgroundColor: '#111111',
-    borderRadius: 12,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: '#1f1f1f',
     minWidth: 80,
+  },
+  actionIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  actionIconPrimary: {
+    backgroundColor: '#7C3AED',
+  },
+  actionIconSecondary: {
+    backgroundColor: '#10B981',
+  },
+  actionIconTertiary: {
+    backgroundColor: '#2563EB',
   },
   actionIcon: {
     fontSize: 24,
