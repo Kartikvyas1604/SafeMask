@@ -12,7 +12,7 @@
     "lib": [
       "esnext"
     ],
-    "types": [],
+    "types": ["mocha", "jest", "node"],
     "jsx": "react-native",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
