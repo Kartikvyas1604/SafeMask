@@ -13,6 +13,7 @@ import {
   Modal,
   FlatList,
   TextInput,
+  InteractionManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -160,6 +161,18 @@ const SparklineGraph = ({
   );
 };
 
+type HomeCacheV1 = {
+  cachedAt: number;
+  walletAddress?: string;
+  totalUSD?: number;
+  balances?: RealBalance[];
+  privacyScore?: number;
+  tokenPriceData?: [string, PriceData][];
+  tokenPriceHistory?: [string, HistoricalPrice[]][];
+};
+
+const HOME_CACHE_KEY = 'SafeMask_home_cache_v1';
+
 export default function ProductionWalletScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
@@ -186,6 +199,53 @@ export default function ProductionWalletScreen({ navigation }: any) {
   // Use ref to track if wallet has been loaded (persists across re-renders and re-mounts)
   const hasLoadedWallet = useRef(false);
   const isInitializing = useRef(false);
+
+  const persistHomeCache = async (data: Omit<HomeCacheV1, 'cachedAt'>) => {
+    try {
+      const payload: HomeCacheV1 = {
+        ...data,
+        cachedAt: Date.now(),
+      };
+      await AsyncStorage.setItem(HOME_CACHE_KEY, JSON.stringify(payload));
+    } catch (error) {
+      logger.error('Failed to persist home cache:', error);
+    }
+  };
+
+  const hydrateFromCache = async () => {
+    try {
+      const cachedStr = await AsyncStorage.getItem(HOME_CACHE_KEY);
+      if (!cachedStr) return;
+      const cached: HomeCacheV1 = JSON.parse(cachedStr);
+
+      if (cached.walletAddress) {
+        setWalletAddress(cached.walletAddress);
+        setWalletInitialized(true);
+      }
+      if (typeof cached.totalUSD === 'number') setTotalUSD(cached.totalUSD);
+      if (Array.isArray(cached.balances)) setBalances(cached.balances);
+      if (typeof cached.privacyScore === 'number') setPrivacyScore(cached.privacyScore);
+
+      if (Array.isArray(cached.tokenPriceData)) {
+        setTokenPriceData(new Map(cached.tokenPriceData));
+      }
+      if (Array.isArray(cached.tokenPriceHistory)) {
+        setTokenPriceHistory(new Map(cached.tokenPriceHistory));
+      }
+
+      // If we have cached data, render immediately and refresh in background.
+      if (
+        cached.walletAddress ||
+        (Array.isArray(cached.balances) && cached.balances.length > 0) ||
+        typeof cached.totalUSD === 'number'
+      ) {
+        setLastBalanceUpdate(cached.cachedAt || 0);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      logger.error('Failed to hydrate home cache:', error);
+    }
+  };
   
   // Animation values for scroll-based animations (reduced for performance)
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -240,6 +300,11 @@ export default function ProductionWalletScreen({ navigation }: any) {
     loadStoredPreferences();
   }, []);
 
+  // Hydrate UI from cache ASAP (fast home render), then refresh in background.
+  useEffect(() => {
+    hydrateFromCache();
+  }, []);
+
   /**
    * Initialize wallet only once when component first mounts
    * Tab Navigator keeps this screen mounted, so useEffect only runs once
@@ -248,8 +313,10 @@ export default function ProductionWalletScreen({ navigation }: any) {
     // Prevent multiple simultaneous initializations
     if (!hasLoadedWallet.current && !isInitializing.current) {
       isInitializing.current = true;
-      initializeWallet().finally(() => {
-        isInitializing.current = false;
+      InteractionManager.runAfterInteractions(() => {
+        initializeWallet().finally(() => {
+          isInitializing.current = false;
+        });
       });
       hasLoadedWallet.current = true;
       
@@ -292,23 +359,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
         const pricePromises = uniqueTokensToRefresh.map(async (symbol) => {
           try {
             const priceData = await PriceFeedService.getPrice(symbol);
-            
-            // Fetch historical prices for sparkline (last 1 hour only)
-            const dayData = await PriceFeedService.getHistoricalPrices(symbol, 1);
-            const oneHourAgo = Date.now() - (60 * 60 * 1000); // 1 hour ago in milliseconds
-            let historicalPrices = dayData.filter(p => p.timestamp >= oneHourAgo);
-            
-            // Sample the data to reduce detail
-            if (historicalPrices.length < 5) {
-              historicalPrices = dayData.slice(-15);
-            } else {
-              historicalPrices = historicalPrices.filter((_, index) => index % 3 === 0 || index === historicalPrices.length - 1);
-            }
-            
             return {
               symbol,
               priceData,
-              historicalPrices,
             };
           } catch (error) {
             logger.error(`Failed to refresh price for ${symbol}:`, error);
@@ -318,20 +371,16 @@ export default function ProductionWalletScreen({ navigation }: any) {
 
         const priceResults = await Promise.allSettled(pricePromises);
         const newPriceData = new Map<string, PriceData>();
-        const newPriceHistory = new Map<string, HistoricalPrice[]>();
+        // Keep historical data as-is; it's expensive and doesn't need 30s refresh.
 
         priceResults.forEach((result) => {
           if (result.status === 'fulfilled' && result.value && result.value.priceData) {
             newPriceData.set(result.value.symbol, result.value.priceData);
-            if (result.value.historicalPrices.length > 0) {
-              newPriceHistory.set(result.value.symbol, result.value.historicalPrices);
-            }
           }
         });
 
         if (newPriceData.size > 0) {
           setTokenPriceData(newPriceData);
-          setTokenPriceHistory(newPriceHistory);
           logger.info(`✅ Refreshed prices for ${newPriceData.size} tokens`);
         }
       } catch (error) {
@@ -339,9 +388,9 @@ export default function ProductionWalletScreen({ navigation }: any) {
       }
     };
 
-    // Refresh immediately, then every 30 seconds
+    // Refresh immediately, then periodically (keep network light for mobile UX)
     refreshPrices();
-    const intervalId = setInterval(refreshPrices, 30000); // 30 seconds
+    const intervalId = setInterval(refreshPrices, 60000); // 60 seconds
 
     return () => clearInterval(intervalId);
   }, [walletInitialized, balances]);
@@ -412,7 +461,11 @@ export default function ProductionWalletScreen({ navigation }: any) {
    */
   const loadWalletData = async () => {
     try {
-      setIsLoading(true);
+      // If UI was hydrated from cache, don't block rendering.
+      // Still show spinner if there's nothing rendered yet.
+      if (balances.length === 0 && totalUSD === 0) {
+        setIsLoading(true);
+      }
       
       // Get wallet data
       const walletData = hdWallet.getWalletData();
@@ -461,32 +514,21 @@ export default function ProductionWalletScreen({ navigation }: any) {
           )
         ]);
       };
-      
-      const balancePromises = [
-        ethAccount ? fetchWithTimeout(blockchainService.getRealBalance('ethereum', ethAccount.address), 8000) : null,
-        polyAccount ? fetchWithTimeout(blockchainService.getRealBalance('polygon', polyAccount.address), 8000) : null,
-        zcashAccount ? fetchWithTimeout(blockchainService.getRealBalance('zcash', zcashAccount.address), 8000) : null,
-        solanaAccount ? fetchWithTimeout(blockchainService.getRealBalance('solana', solanaAccount.address), 8000) : null,
-        bitcoinAccount ? fetchWithTimeout(blockchainService.getRealBalance('bitcoin', bitcoinAccount.address), 8000) : null,
-        starknetAccount ? fetchWithTimeout(blockchainService.getRealBalance('starknet', starknetAccount.address), 8000) : null,
-        aztecAccount ? fetchWithTimeout(blockchainService.getRealBalance('aztec', aztecAccount.address), 8000) : null,
-        minaAccount ? fetchWithTimeout(blockchainService.getRealBalance('mina', minaAccount.address), 8000) : null,
-        arbitrumAccount ? fetchWithTimeout(blockchainService.getRealBalance('arbitrum', arbitrumAccount.address), 8000) : null,
-        optimismAccount ? fetchWithTimeout(blockchainService.getRealBalance('optimism', optimismAccount.address), 8000) : null,
-        baseAccount ? fetchWithTimeout(blockchainService.getRealBalance('base', baseAccount.address), 8000) : null,
-        nearAccount ? fetchWithTimeout(blockchainService.getRealBalance('near', nearAccount.address), 8000) : null,
-      ];
-      
-      const results = await Promise.allSettled(balancePromises);
+
+      // Phase 1: fetch only primary chains for faster first paint.
+      const priorityPromises = [
+        ethAccount ? fetchWithTimeout(blockchainService.getRealBalance('ethereum', ethAccount.address), 6000) : null,
+        solanaAccount ? fetchWithTimeout(blockchainService.getRealBalance('solana', solanaAccount.address), 6000) : null,
+        bitcoinAccount ? fetchWithTimeout(blockchainService.getRealBalance('bitcoin', bitcoinAccount.address), 6000) : null,
+        zcashAccount ? fetchWithTimeout(blockchainService.getRealBalance('zcash', zcashAccount.address), 6000) : null,
+      ].filter(Boolean) as Promise<RealBalance>[];
+
+      const priorityResults = await Promise.allSettled(priorityPromises);
+      const realBalances: RealBalance[] = priorityResults
+        .filter((r): r is PromiseFulfilledResult<RealBalance> => r.status === 'fulfilled')
+        .map((r) => r.value);
+
       setLastBalanceUpdate(now);
-      
-      const realBalances: RealBalance[] = [];
-      
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value) {
-          realBalances.push(result.value);
-        }
-      }
       
       // Filter out only OP, ARB, BASE, USDC from cards display
       // Keep ETH visible since users want to see their main balance
@@ -568,7 +610,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
       
       setBalances(filteredBalances);
       
-      // Fetch price data for all tokens in parallel (including favorite tokens)
+      // Fetch price data for visible tokens (current price only; historical is deferred)
       const tokensToFetch = [
         ...filteredBalances.map(b => ({ symbol: b.symbol, isFavorite: false })),
         ...favoriteTokens.map(fav => ({ symbol: fav.symbol, isFavorite: true })),
@@ -584,33 +626,15 @@ export default function ProductionWalletScreen({ navigation }: any) {
         try {
           // Fetch current price data
           const priceData = await PriceFeedService.getPrice(symbol);
-          
-          // Fetch historical prices for sparkline (last 1 hour only)
-          // Fetch 1 day of data, then filter to last hour and sample for less detail
-          const dayData = await PriceFeedService.getHistoricalPrices(symbol, 1);
-          const oneHourAgo = Date.now() - (60 * 60 * 1000); // 1 hour ago in milliseconds
-          let historicalPrices = dayData.filter(p => p.timestamp >= oneHourAgo);
-          
-          // If we don't have enough recent data, use the last 12-15 data points (sampled)
-          if (historicalPrices.length < 5) {
-            // Take last 12-15 points from the day data for a simple sparkline
-            historicalPrices = dayData.slice(-15);
-          } else {
-            // Sample the data to reduce detail - take every 3rd point for simpler chart
-            historicalPrices = historicalPrices.filter((_, index) => index % 3 === 0 || index === historicalPrices.length - 1);
-          }
-          
           return {
             symbol,
             priceData,
-            historicalPrices,
           };
         } catch (error) {
           logger.error(`Failed to fetch price data for ${symbol}:`, error);
           return {
             symbol,
             priceData: null,
-            historicalPrices: [],
           };
         }
       });
@@ -619,19 +643,14 @@ export default function ProductionWalletScreen({ navigation }: any) {
       
       // Update price data maps
       const newPriceData = new Map<string, PriceData>();
-      const newPriceHistory = new Map<string, HistoricalPrice[]>();
       
       priceResults.forEach((result) => {
         if (result.status === 'fulfilled' && result.value.priceData) {
           newPriceData.set(result.value.symbol, result.value.priceData);
-          if (result.value.historicalPrices.length > 0) {
-            newPriceHistory.set(result.value.symbol, result.value.historicalPrices);
-          }
         }
       });
       
       setTokenPriceData(newPriceData);
-      setTokenPriceHistory(newPriceHistory);
       
       logger.info(`✅ Loaded price data for ${newPriceData.size} tokens`);
       
@@ -670,6 +689,72 @@ export default function ProductionWalletScreen({ navigation }: any) {
       
       setIsLoading(false);
       setIsRefreshing(false);
+
+      // Persist what we have so the next home render is instant.
+      persistHomeCache({
+        walletAddress: ethAccount.address,
+        totalUSD: total,
+        balances: filteredBalances,
+        privacyScore: score,
+        tokenPriceData: Array.from(newPriceData.entries()),
+        tokenPriceHistory: Array.from(tokenPriceHistory.entries()),
+      });
+
+      // Phase 2 (background): load remaining chains without blocking UX.
+      InteractionManager.runAfterInteractions(async () => {
+        try {
+          const remainingPromises = [
+            polyAccount ? fetchWithTimeout(blockchainService.getRealBalance('polygon', polyAccount.address), 8000) : null,
+            starknetAccount ? fetchWithTimeout(blockchainService.getRealBalance('starknet', starknetAccount.address), 8000) : null,
+            aztecAccount ? fetchWithTimeout(blockchainService.getRealBalance('aztec', aztecAccount.address), 8000) : null,
+            minaAccount ? fetchWithTimeout(blockchainService.getRealBalance('mina', minaAccount.address), 8000) : null,
+            arbitrumAccount ? fetchWithTimeout(blockchainService.getRealBalance('arbitrum', arbitrumAccount.address), 8000) : null,
+            optimismAccount ? fetchWithTimeout(blockchainService.getRealBalance('optimism', optimismAccount.address), 8000) : null,
+            baseAccount ? fetchWithTimeout(blockchainService.getRealBalance('base', baseAccount.address), 8000) : null,
+            nearAccount ? fetchWithTimeout(blockchainService.getRealBalance('near', nearAccount.address), 8000) : null,
+          ];
+
+          const remainingResults = await Promise.allSettled(remainingPromises);
+          const remainingBalances: RealBalance[] = remainingResults
+            .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && !!r.value)
+            .map((r) => r.value);
+
+          if (remainingBalances.length === 0) return;
+
+          // Merge and re-apply UI rules using a combined balance list.
+          const combined = [...realBalances, ...remainingBalances];
+
+          const excludedFromCards2 = ['OP', 'ARB', 'BASE', 'USDC'];
+          const filteredBalances2 = combined.filter(b => !excludedFromCards2.includes(b.symbol.toUpperCase()));
+
+          const total2 = combined.reduce((sum, b) => sum + b.balanceUSD, 0);
+          setTotalUSD(total2);
+
+          // Sort by existing rules (priority tokens first, then USD)
+          const priorityTokens2 = ['ETH', 'SOL', 'BTC'];
+          filteredBalances2.sort((a, b) => {
+            const aPriority = priorityTokens2.indexOf(a.symbol.toUpperCase());
+            const bPriority = priorityTokens2.indexOf(b.symbol.toUpperCase());
+            if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
+            if (aPriority !== -1) return -1;
+            if (bPriority !== -1) return 1;
+            return b.balanceUSD - a.balanceUSD;
+          });
+
+          setBalances(filteredBalances2);
+
+          persistHomeCache({
+            walletAddress: ethAccount.address,
+            totalUSD: total2,
+            balances: filteredBalances2,
+            privacyScore: score,
+            tokenPriceData: Array.from(newPriceData.entries()),
+            tokenPriceHistory: Array.from(tokenPriceHistory.entries()),
+          });
+        } catch (error) {
+          logger.error('Background balance refresh failed:', error);
+        }
+      });
     } catch (error) {
       logger.error(`❌ Failed to load wallet data:`, error);
       // Don't show alert - just log error and let user see what we have

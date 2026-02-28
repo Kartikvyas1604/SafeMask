@@ -150,9 +150,10 @@ export class RealBlockchainService {
   private readonly MAX_PRICE_RETRIES = 3;
   private readonly RATE_LIMIT_BACKOFF_MS = 60000; // 1 minute backoff on 429
   
-  private constructor() {
-    this.initializeProviders();
-  }
+  // Important for startup performance:
+  // Do NOT initialize providers eagerly at import time.
+  // Providers are created lazily the first time a network is actually used.
+  private constructor() {}
   
   public static getInstance(): RealBlockchainService {
     if (!RealBlockchainService.instance) {
@@ -161,19 +162,27 @@ export class RealBlockchainService {
     return RealBlockchainService.instance;
   }
 
-  private initializeProviders(): void {
-    for (const [networkName, config] of this.networks.entries()) {
-      try {
-        const provider = new ethers.JsonRpcProvider(config.rpcUrl, {
-          chainId: config.chainId,
-          name: config.name,
-        });
-        this.providers.set(networkName, provider);
-        logger.info(`✅ Connected to ${config.name} (Chain ID: ${config.chainId})`);
-      } catch (error) {
-        logger.error(`❌ Failed to connect to ${networkName}:`, error);
-      }
+  private getEvmProvider(network: string): ethers.JsonRpcProvider {
+    const existing = this.providers.get(network);
+    if (existing) return existing;
+
+    const config = this.networks.get(network);
+    if (!config) {
+      throw new Error(`Network ${network} not configured`);
     }
+
+    // Only EVM-style chains should use ethers provider
+    const evmChains = ['ethereum', 'polygon', 'arbitrum', 'optimism', 'base', 'aztec'];
+    if (!evmChains.includes(network.toLowerCase())) {
+      throw new Error(`Network ${network} is not an EVM chain`);
+    }
+
+    const provider = new ethers.JsonRpcProvider(config.rpcUrl, {
+      chainId: config.chainId,
+      name: config.name,
+    });
+    this.providers.set(network, provider);
+    return provider;
   }
   
   /**
@@ -329,13 +338,13 @@ export class RealBlockchainService {
       }
     }
     
-    // EVM chains - use ethers provider
-    const provider = this.providers.get(network);
+    // EVM chains - use ethers provider (created lazily)
     const config = this.networks.get(network);
-    
-    if (!provider || !config) {
+    if (!config) {
       throw new Error(`Network ${network} not supported`);
     }
+
+    const provider = this.getEvmProvider(network);
     
     // Validate address format based on network type
     // Skip validation for non-EVM chains (they have different address formats)
@@ -483,12 +492,13 @@ export class RealBlockchainService {
     logger.info(`   To: ${to}`);
     logger.info(`   Amount: ${value}`);
     
-    const provider = this.providers.get(network);
     const config = this.networks.get(network);
-    
-    if (!provider || !config) {
+
+    if (!config) {
       throw new Error(`Network ${network} not supported`);
     }
+
+    const provider = this.getEvmProvider(network);
     
     try {
       // Create wallet from private key
@@ -580,10 +590,7 @@ export class RealBlockchainService {
     
     // Note: For production, you would use Etherscan API or similar
     // This is a simplified version using the RPC provider
-    const provider = this.providers.get(network);
-    if (!provider) {
-      throw new Error(`Provider not initialized for ${network}`);
-    }
+    const provider = this.getEvmProvider(network);
     
     try {
       // Get recent blocks and scan for transactions involving this address
@@ -650,12 +657,13 @@ export class RealBlockchainService {
     to: string,
     value: string
   ): Promise<{ gasLimit: bigint; gasPrice: bigint; totalCost: string; totalCostUSD: number }> {
-    const provider = this.providers.get(network);
     const config = this.networks.get(network);
-    
-    if (!provider || !config) {
+
+    if (!config) {
       throw new Error(`Network ${network} not supported`);
     }
+
+    const provider = this.getEvmProvider(network);
     
     const gasLimit = await provider.estimateGas({
       from,
@@ -690,10 +698,8 @@ export class RealBlockchainService {
     gasPrice: string;
     isConnected: boolean;
   }> {
-    const provider = this.providers.get(network);
-    if (!provider) {
-      throw new Error(`Network ${network} not supported`);
-    }
+    // Only EVM networks have an ethers provider here
+    const provider = this.getEvmProvider(network);
     
     try {
       const blockNumber = await provider.getBlockNumber();

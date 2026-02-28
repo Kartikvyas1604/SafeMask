@@ -1,3 +1,6 @@
+# Avoid adding nested repo / branch-named folder
+/master/
+
 # Dependencies
 node_modules/
 bower_components/

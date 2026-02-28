@@ -47,6 +47,7 @@ interface HistoricalPrice {
 
 class PriceFeedService {
   private provider: ethers.JsonRpcProvider | null = null;
+  private providerInitPromise: Promise<void> | null = null;
   private priceCache: Map<string, PriceData> = new Map();
   private cacheDuration = 300000; // 5 minute cache (increased to avoid 429)
   private lastRequestTime = 0;
@@ -54,7 +55,8 @@ class PriceFeedService {
   private requestQueue: Promise<any> = Promise.resolve();
 
   constructor() {
-    this.initializeProvider();
+    // Startup performance: avoid doing network/provider work at import time.
+    // Provider is initialized lazily on first Chainlink call.
   }
 
   private async initializeProvider() {
@@ -66,11 +68,20 @@ class PriceFeedService {
     }
   }
 
+  private async ensureProvider(): Promise<void> {
+    if (this.provider) return;
+    if (!this.providerInitPromise) {
+      this.providerInitPromise = this.initializeProvider();
+    }
+    await this.providerInitPromise;
+  }
+
   /**
    * Get price from Chainlink oracle
    */
   private async getChainlinkPrice(symbol: string): Promise<number | null> {
     try {
+      await this.ensureProvider();
       const feedAddress = PRICE_FEED_ADDRESSES[`${symbol}/USD` as keyof typeof PRICE_FEED_ADDRESSES];
       if (!feedAddress || !this.provider) {
         return null;
