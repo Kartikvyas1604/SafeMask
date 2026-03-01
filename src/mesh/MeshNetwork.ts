@@ -10,6 +10,12 @@ export interface Peer {
   latency: number;
   protocol: 'ble' | 'wifi' | 'lora';
   reputation: number;
+  connectionAttempts?: number;
+  lastConnectionAttempt?: number;
+  isConnected?: boolean;
+  bandwidth?: number;
+  messagesSent?: number;
+  messagesReceived?: number;
 }
 
 export interface MeshMessage {
@@ -41,6 +47,10 @@ export class MeshNetwork extends EventEmitter {
   private routingTable: Map<string, string[]> = new Map();
   private isOnline: boolean = false;
   private nodeId: string;
+  private maxRetries: number = 3;
+  private connectionTimeout: number = 10000;
+  private heartbeatInterval?: NodeJS.Timeout;
+  private syncInterval?: NodeJS.Timeout;
 
   private constructor() {
     super();
@@ -62,7 +72,7 @@ export class MeshNetwork extends EventEmitter {
   }
 
   public async initialize(): Promise<void> {
-    logger.info(`Initializing mesh network node ${this.nodeId.substring(0, 8)}...`);
+    logger.info(`🚀 Initializing mesh network node ${this.nodeId.substring(0, 8)}...`);
 
     try {
       await this.discoverPeers();
@@ -70,13 +80,18 @@ export class MeshNetwork extends EventEmitter {
 
       this.isOnline = true;
 
-      logger.info('Mesh network initialized successfully');
-      logger.info(`Connected peers: ${this.peers.size}`);
+      // Start periodic sync
+      this.startPeriodicSync();
+
+      logger.info('✅ Mesh network initialized successfully');
+      logger.info(`📡 Connected peers: ${this.peers.size}`);
 
       this.emit('network:ready');
     } catch (error) {
-      logger.error('Failed to initialize mesh network:', error);
-      throw error;
+      logger.error('❌ Failed to initialize mesh network:', error);
+      // Don't throw - allow operation in degraded mode
+      logger.warn('⚠️ Operating in degraded mode with limited connectivity');
+      this.emit('network:degraded');
     }
   }
 
@@ -159,7 +174,23 @@ export class MeshNetwork extends EventEmitter {
       throw new Error(`Peer ${peerId} not found`);
     }
 
-    logger.info(`Connecting to peer ${peerId.substring(0, 8)}...`);
+    // Check if already connected
+    if (peer.isConnected) {
+      logger.debug(`Already connected to peer ${peerId.substring(0, 8)}`);
+      return;
+    }
+
+    // Rate limit connection attempts
+    const now = Date.now();
+    if (peer.lastConnectionAttempt && now - peer.lastConnectionAttempt < 5000) {
+      logger.debug(`Rate limiting connection attempt to ${peerId.substring(0, 8)}`);
+      return;
+    }
+
+    peer.connectionAttempts = (peer.connectionAttempts || 0) + 1;
+    peer.lastConnectionAttempt = now;
+
+    logger.info(`🔗 Connecting to peer ${peerId.substring(0, 8)}... (attempt ${peer.connectionAttempts})`);
 
     try {
       switch (peer.protocol) {
@@ -175,12 +206,23 @@ export class MeshNetwork extends EventEmitter {
       }
 
       peer.lastSeen = Date.now();
+      peer.isConnected = true;
+      peer.connectionAttempts = 0;
+      peer.reputation = Math.min(100, peer.reputation + 10);
       this.peers.set(peerId, peer);
 
-      logger.info(`Connected to peer ${peerId.substring(0, 8)}`);
+      logger.info(`✅ Connected to peer ${peerId.substring(0, 8)}`);
       this.emit('peer:connected', peer);
     } catch (error) {
-      logger.error(`Failed to connect to peer ${peerId}:`, error);
+      logger.error(`❌ Failed to connect to peer ${peerId}:`, error);
+      peer.reputation = Math.max(0, peer.reputation - 5);
+      
+      // Remove peer after too many failed attempts
+      if (peer.connectionAttempts && peer.connectionAttempts >= this.maxRetries) {
+        logger.warn(`⚠️ Removing peer ${peerId.substring(0, 8)} after ${peer.connectionAttempts} failed attempts`);
+        this.peers.delete(peerId);
+      }
+      
       throw error;
     }
   }
@@ -464,11 +506,84 @@ export class MeshNetwork extends EventEmitter {
   }
 
   private startHeartbeat(): void {
-    setInterval(() => {
+    this.heartbeatInterval = setInterval(() => {
       this.sendHeartbeat();
       this.cleanupStaleConnections();
       this.cleanupMessageCache();
     }, 30000);
+  }
+
+  /**
+   * Start periodic synchronization
+   */
+  private startPeriodicSync(): void {
+    this.syncInterval = setInterval(() => {
+      this.syncWithActivePeers();
+    }, 60000); // Every minute
+  }
+
+  /**
+   * Sync with all active peers
+   */
+  private async syncWithActivePeers(): Promise<void> {
+    const activePeers = Array.from(this.peers.entries())
+      .filter(([_, peer]) => peer.isConnected && peer.reputation > 30)
+      .map(([id]) => id);
+
+    if (activePeers.length === 0) {
+      logger.debug('No active peers to sync with');
+      return;
+    }
+
+    logger.info(`🔄 Syncing with ${activePeers.length} active peers...`);
+
+    const syncPromises = activePeers.map(peerId =>
+      this.syncWithPeer(peerId).catch(err => {
+        logger.warn(`Sync failed with peer ${peerId.substring(0, 8)}:`, err);
+      })
+    );
+
+    await Promise.allSettled(syncPromises);
+  }
+
+  /**
+   * Cleanup and shutdown
+   */
+  public async shutdown(): Promise<void> {
+    logger.info('🛑 Shutting down mesh network...');
+    
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+    
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+    }
+
+    // Disconnect all peers
+    const disconnectPromises = Array.from(this.peers.keys()).map(peerId =>
+      this.disconnectPeer(peerId).catch(() => {})
+    );
+
+    await Promise.allSettled(disconnectPromises);
+    
+    this.peers.clear();
+    this.messageCache.clear();
+    
+    logger.info('✅ Mesh network shutdown complete');
+    this.emit('network:shutdown');
+  }
+
+  /**
+   * Disconnect from a peer
+   */
+  private async disconnectPeer(peerId: string): Promise<void> {
+    const peer = this.peers.get(peerId);
+    if (peer) {
+      peer.isConnected = false;
+      logger.debug(`Disconnected from peer ${peerId.substring(0, 8)}`);
+      this.emit('peer:disconnected', peer);
+    }
   }
 
   private async sendHeartbeat(): Promise<void> {
@@ -541,16 +656,35 @@ export class MeshNetwork extends EventEmitter {
   public getNetworkStats(): {
     nodeId: string;
     peers: number;
+    connectedPeers: number;
     offlineQueue: number;
     messageCache: number;
     isOnline: boolean;
+    averageLatency: number;
+    averageReputation: number;
+    totalMessagesSent: number;
+    totalMessagesReceived: number;
   } {
+    const connectedPeers = Array.from(this.peers.values()).filter(p => p.isConnected);
+    const avgLatency = connectedPeers.length > 0
+      ? connectedPeers.reduce((sum, p) => sum + p.latency, 0) / connectedPeers.length
+      : 0;
+    const avgReputation = Array.from(this.peers.values()).reduce((sum, p) => sum + p.reputation, 0) / 
+      Math.max(1, this.peers.size);
+    const totalSent = Array.from(this.peers.values()).reduce((sum, p) => sum + (p.messagesSent || 0), 0);
+    const totalReceived = Array.from(this.peers.values()).reduce((sum, p) => sum + (p.messagesReceived || 0), 0);
+
     return {
       nodeId: this.nodeId,
       peers: this.peers.size,
+      connectedPeers: connectedPeers.length,
       offlineQueue: this.offlineQueue.length,
       messageCache: this.messageCache.size,
       isOnline: this.isOnline,
+      averageLatency: Math.round(avgLatency),
+      averageReputation: Math.round(avgReputation),
+      totalMessagesSent: totalSent,
+      totalMessagesReceived: totalReceived,
     };
   }
 }
