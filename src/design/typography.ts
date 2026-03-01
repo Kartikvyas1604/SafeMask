@@ -18,11 +18,19 @@ export const Typography = {
     '3xl': 32,
     '4xl': 48,
   },
+  // Alias for fontSize
+  get size() {
+    return this.fontSize;
+  },
   fontWeight: {
     regular: '400' as const,
     medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
+  },
+  // Alias for fontWeight
+  get weight() {
+    return this.fontWeight;
   },
   lineHeight: {
     tight: 1.2,

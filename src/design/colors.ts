@@ -10,11 +10,16 @@ export const Colors = {
   blue: '#1460f7',
   white: '#ffffff',
 
+  // Primary brand colors (aliases for semantic use)
+  primary: '#1460f7',
+  secondary: '#ef50af',
+
   // Background colors
   background: '#070707',
   backgroundSecondary: '#0a0a0a', // Slightly lighter for compatibility
   card: '#111111',
   cardHover: '#1a1a1a',
+  cardHighlight: '#1a1a1a', // Alias for compatibility
   cardBorder: '#1a1a1a',
   cardBorderSecondary: '#1f1f1f', // Keep for existing borders
 

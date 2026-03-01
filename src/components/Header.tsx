@@ -1,88 +1,97 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 
 export default function Header() {
   return (
-    <View style={styles.header}>
-      <View style={styles.left}>
-        <View style={styles.logo}>
-          <Ionicons name="lock-closed" size={24} color={Colors.white} />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <View style={styles.left}>
+          <View style={styles.logoContainer}>
+            <Ionicons name="shield-checkmark" size={24} color={Colors.primary} />
+          </View>
+          <View>
+            <Text style={styles.greeting}>Good Evening</Text>
+            <Text style={styles.title}>SafeMask</Text>
+          </View>
         </View>
-        <Text style={styles.title}>SafeMask</Text>
-      </View>
 
-      <View style={styles.right}>
-        <View style={styles.peersBadge}>
-          <View style={styles.greenDot} />
-          <Text style={styles.peersText}>12 Peers</Text>
+        <View style={styles.right}>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="scan-outline" size={24} color={Colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="notifications-outline" size={24} color={Colors.text} />
+            <View style={styles.notificationBadge} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={20} color={Colors.textPrimary} />
-        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: Colors.background,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorderSecondary,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: Spacing.screenPadding,
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.background,
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
-  logo: {
+  logoContainer: {
     width: 40,
     height: 40,
-    backgroundColor: Colors.accent,
-    borderRadius: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(20, 96, 247, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  greeting: {
+    fontSize: Typography.size.xs,
+    color: Colors.textSecondary,
+    fontFamily: Typography.fontFamily.primary,
+  },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text,
+    fontFamily: Typography.fontFamily.primary,
   },
   right: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
-  peersBadge: {
-    flexDirection: 'row',
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
+    borderColor: Colors.border,
   },
-  greenDot: {
+  notificationBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
     width: 8,
     height: 8,
-    backgroundColor: Colors.success,
     borderRadius: 4,
-  },
-  peersText: {
-    fontSize: 13,
-    color: Colors.textPrimary,
-  },
-  settingsButton: {
-    padding: 8,
-    borderRadius: 8,
+    backgroundColor: Colors.secondary,
+    borderWidth: 1,
+    borderColor: Colors.card,
   },
 });
