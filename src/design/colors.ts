@@ -32,6 +32,12 @@ export const Colors = {
 
   // Border colors
   border: '#1f1f1f',
+  
+  // Glassmorphism
+  glass: 'rgba(255, 255, 255, 0.05)',
+  glassHover: 'rgba(255, 255, 255, 0.1)',
+  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  glassText: 'rgba(255, 255, 255, 0.7)',
 
   // Status colors
   success: '#10b981',

@@ -15,6 +15,8 @@ import {
   TextInput,
   InteractionManager,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
@@ -908,6 +910,12 @@ export default function ProductionWalletScreen({ navigation }: any) {
         
         {/* MY WALLET Section */}
         <Animated.View style={[styles.walletSection, getAnimatedStyle(0)]}>
+        <LinearGradient
+          colors={[Colors.card, 'rgba(20, 96, 247, 0.05)']} // Subtle blue tint
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.walletGradient}
+        >
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionLabel}>MY WALLET</Text>
             <TouchableOpacity 
@@ -939,6 +947,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
               <Text style={styles.actionButtonText}>Deposit</Text>
             </TouchableOpacity>
           </View>
+        </LinearGradient>
         </Animated.View>
         
         {/* FUNDS Section */}
@@ -992,6 +1001,12 @@ export default function ProductionWalletScreen({ navigation }: any) {
                     }
                     onLongPress={() => handleCardLongPress(balance.symbol, balance.chain, false)}
                   >
+                    <LinearGradient
+                      colors={[Colors.cardHighlight, 'rgba(255, 255, 255, 0.05)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ padding: Spacing.lg, width: '100%', height: '100%' }}
+                    >
                     <View style={styles.fundCardHeader}>
                       <ChainIcon chain={balance.chain.toLowerCase()} size={40} />
                       <View style={styles.fundCardInfo}>
@@ -1011,6 +1026,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
                           : '$0.00'}
                       </Text>
                     </View>
+                    </LinearGradient>
                   </TouchableOpacity>
                 );
               })}
@@ -1035,6 +1051,12 @@ export default function ProductionWalletScreen({ navigation }: any) {
                     }
                     onLongPress={() => handleCardLongPress(fav.symbol, fav.chain, true)}
                   >
+                    <LinearGradient
+                      colors={[Colors.cardHighlight, 'rgba(255, 255, 255, 0.05)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ padding: Spacing.lg, width: '100%', height: '100%' }}
+                    >
                     <View style={styles.fundCardHeader}>
                       <ChainIcon chain={fav.chain.toLowerCase()} size={40} />
                       <View style={styles.fundCardInfo}>
@@ -1052,6 +1074,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
                           : '—'}
                       </Text>
                     </View>
+                    </LinearGradient>
                   </TouchableOpacity>
                 );
               })}
@@ -1423,8 +1446,17 @@ const styles = StyleSheet.create({
   
   // MY WALLET Section
   walletSection: {
-    paddingHorizontal: Spacing.xl,
+    marginHorizontal: Spacing.xl,
     marginBottom: Spacing['2xl'],
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  walletGradient: {
+    padding: Spacing.xl,
+    paddingTop: Spacing['2xl'],
+    paddingBottom: Spacing['2xl'],
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -1515,12 +1547,17 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.xl,
   },
   fundCard: {
-    width: 180,
-    padding: Spacing.lg,
-    backgroundColor: Colors.card,
-    borderRadius: 16,
+    width: 160,
+    marginRight: Spacing.md,
+    borderRadius: 20,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  fundCardGradient: {
+    padding: Spacing.lg,
+    width: '100%',
+    height: '100%',
   },
   addFundCard: {
     width: 100, // Thinner width for Add Funds card

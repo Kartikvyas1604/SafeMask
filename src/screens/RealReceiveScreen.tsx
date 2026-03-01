@@ -16,6 +16,7 @@ import {
   Modal,
   Share,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -749,12 +750,17 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderWidth: 2,
+    borderColor: Colors.primary, // Cyber Blue
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
   },
   qrCodeContainer: {
     width: 200,

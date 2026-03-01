@@ -11,6 +11,7 @@ import {
   StatusBar,
   Switch,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import meshNetwork from '../mesh/MeshNetwork';
@@ -610,52 +611,59 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         
         {/* Network Status Card */}
-        <View style={styles.statusCard}>
-          <View style={styles.statusHeader}>
-            <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
-            <Text style={styles.statusText}>{getStatusText()}</Text>
-          </View>
-          
-          <View style={styles.statusRow}>
-            <View style={styles.statusItem}>
-              <Ionicons name="globe-outline" size={20} color="#9CA3AF" />
-              <Text style={styles.statusLabel}>Internet</Text>
-              <Text style={[styles.statusValue, { color: isOffline ? '#EF4444' : '#10B981' }]}>
-                {isOffline ? 'Offline' : 'Online'}
-              </Text>
+        <LinearGradient
+            colors={[Colors.card, 'rgba(31, 41, 55, 0.4)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.statusCard}
+        >
+          <View style={styles.statusCardGradient}>
+            <View style={styles.statusHeader}>
+                <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
+                <Text style={styles.statusText}>{getStatusText()}</Text>
             </View>
             
-            <View style={styles.statusItem}>
-              <Ionicons name="people-outline" size={20} color="#9CA3AF" />
-              <Text style={styles.statusLabel}>Peers</Text>
-              <Text style={styles.statusValue}>{connectedPeers}</Text>
+            <View style={styles.statusRow}>
+                <View style={styles.statusItem}>
+                <Ionicons name="globe-outline" size={20} color={isOffline ? Colors.error : Colors.success} />
+                <Text style={styles.statusLabel}>Internet</Text>
+                <Text style={[styles.statusValue, { color: isOffline ? Colors.error : Colors.success }]}>
+                    {isOffline ? 'Offline' : 'Online'}
+                </Text>
+                </View>
+                
+                <View style={styles.statusItem}>
+                <Ionicons name="people-outline" size={20} color={Colors.primary} />
+                <Text style={styles.statusLabel}>Peers</Text>
+                <Text style={styles.statusValue}>{connectedPeers}</Text>
+                </View>
+                
+                <View style={styles.statusItem}>
+                <Ionicons name="list-outline" size={20} color={Colors.warning} />
+                <Text style={styles.statusLabel}>Queue</Text>
+                <Text style={styles.statusValue}>{queuedTransactions.length}</Text>
+                </View>
             </View>
-            
-            <View style={styles.statusItem}>
-              <Ionicons name="list-outline" size={20} color="#9CA3AF" />
-              <Text style={styles.statusLabel}>Queue</Text>
-              <Text style={styles.statusValue}>{queuedTransactions.length}</Text>
-            </View>
-          </View>
 
-          <View style={styles.meshToggleRow}>
-            <Text style={styles.meshToggleLabel}>Use Mesh Network</Text>
-            <Switch
-              value={meshEnabled}
-              onValueChange={setMeshEnabled}
-              trackColor={{ false: '#374151', true: '#A855F7' }}
-              thumbColor={meshEnabled ? '#FFFFFF' : '#9CA3AF'}
-            />
+            <View style={styles.meshToggleRow}>
+                <Text style={styles.meshToggleLabel}>Use Mesh Network</Text>
+                <Switch
+                value={meshEnabled}
+                onValueChange={setMeshEnabled}
+                trackColor={{ false: Colors.cardBorder, true: Colors.primary }}
+                thumbColor={meshEnabled ? Colors.white : Colors.textSecondary}
+                />
+            </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Asset Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Asset</Text>
+          <Text style={styles.sectionLabel}>Select Asset</Text>
           {isLoadingBalances ? (
             <View style={styles.assetSelector}>
-              <ActivityIndicator size="small" color="#A855F7" />
-              <Text style={styles.assetName}>Loading balances...</Text>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={[styles.assetName, { marginLeft: Spacing.md }]}>Loading balances...</Text>
             </View>
           ) : balances.length === 0 ? (
             <View style={styles.assetSelector}>
@@ -681,16 +689,24 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
                 );
               }}
             >
-              <View style={[styles.assetIcon, { backgroundColor: selectedAsset?.symbol === 'BTC' ? '#F7931A' : selectedAsset?.symbol === 'ETH' ? '#627EEA' : selectedAsset?.symbol === 'SOL' ? '#00FFA3' : '#8247E5' }]}>
+              <LinearGradient
+                colors={
+                    selectedAsset?.symbol === 'BTC' ? ['#F7931A', '#F7931A80'] : 
+                    selectedAsset?.symbol === 'ETH' ? ['#627EEA', '#627EEA80'] : 
+                    selectedAsset?.symbol === 'SOL' ? ['#00FFA3', '#00FFA380'] : 
+                    [Colors.primary, Colors.primary + '80']
+                }
+                style={styles.assetIcon}
+              >
                 <Text style={styles.assetIconText}>{selectedAsset?.symbol.charAt(0)}</Text>
-              </View>
+              </LinearGradient>
               <View style={styles.assetInfo}>
                 <Text style={styles.assetName}>{selectedAsset?.chain}</Text>
                 <Text style={styles.assetBalance}>
                   Balance: {selectedAsset?.balanceFormatted} {selectedAsset?.symbol}
                 </Text>
               </View>
-              <Ionicons name="chevron-down" size={24} color="#9CA3AF" />
+              <Ionicons name="chevron-down" size={24} color={Colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -703,13 +719,13 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
               style={styles.input}
               value={recipientAddress}
               onChangeText={setRecipientAddress}
-              placeholder="Enter wallet address"
-              placeholderTextColor="#6B7280"
+              placeholder="0x..."
+              placeholderTextColor={Colors.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}
             />
             <TouchableOpacity onPress={handleScanQR} style={styles.inputIcon}>
-              <Ionicons name="qr-code-outline" size={24} color="#A855F7" />
+              <Ionicons name="qr-code-outline" size={24} color={Colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -723,7 +739,7 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
               value={amount}
               onChangeText={setAmount}
               placeholder="0.00"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={Colors.textSecondary}
               keyboardType="decimal-pad"
             />
             <TouchableOpacity 
@@ -738,23 +754,25 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
         {/* Memo */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Memo (Optional)</Text>
-          <TextInput
-            style={[styles.input, styles.memoInput]}
-            value={memo}
-            onChangeText={setMemo}
-            placeholder="Add a note..."
-            placeholderTextColor="#6B7280"
-            multiline
-          />
+          <View style={[styles.inputContainer, styles.memoInput]}>
+            <TextInput
+                style={[styles.input, { height: '100%', textAlignVertical: 'top' }]}
+                value={memo}
+                onChangeText={setMemo}
+                placeholder="Add a secure note..."
+                placeholderTextColor={Colors.textSecondary}
+                multiline
+            />
+          </View>
         </View>
 
         {/* Info Box */}
         <View style={styles.infoBox}>
-          <Ionicons name="information-circle" size={20} color="#A855F7" />
+          <Ionicons name="information-circle" size={20} color={Colors.primary} />
           <Text style={styles.infoText}>
             {meshEnabled 
-              ? 'This transaction will be broadcast through the mesh network and submitted to the blockchain when any connected peer gets internet access.'
-              : 'Enable mesh network to send transactions offline via nearby devices.'
+              ? 'Transaction will be routed through the secure mesh network until an internet gateway is found.'
+              : 'Enable mesh network to send transactions securely offline via nearby devices.'
             }
           </Text>
         </View>
@@ -768,16 +786,23 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
           onPress={handleSendTransaction}
           disabled={!recipientAddress || !amount || isSending}
         >
-          {isSending ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <>
-              <Ionicons name="send" size={20} color="#FFFFFF" />
-              <Text style={styles.sendButtonText}>
-                {meshEnabled ? 'Send via Mesh Network' : 'Send Transaction'}
-              </Text>
-            </>
-          )}
+          <LinearGradient
+            colors={[Colors.primary, '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.sendButtonGradient}
+          >
+            {isSending ? (
+                <ActivityIndicator color={Colors.white} />
+            ) : (
+                <>
+                <Ionicons name={meshEnabled ? "wifi" : "send"} size={20} color={Colors.white} />
+                <Text style={styles.sendButtonText}>
+                    {meshEnabled ? 'Send via Mesh' : 'Send Transaction'}
+                </Text>
+                </>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* Queued Transactions */}
@@ -786,9 +811,9 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
             <Text style={styles.queueTitle}>Queued Transactions ({queuedTransactions.length})</Text>
             {queuedTransactions.slice(0, 3).map((tx, index) => (
               <View key={index} style={styles.queueItem}>
-                <Ionicons name="time-outline" size={16} color="#F59E0B" />
+                <Ionicons name="time-outline" size={16} color={Colors.warning} />
                 <Text style={styles.queueItemText}>
-                  {tx.amount} {tx.asset} → {tx.to.substring(0, 12)}...
+                  {tx.amount} {tx.asset} → {tx.to.substring(0, 8)}...
                 </Text>
               </View>
             ))}
@@ -803,211 +828,272 @@ export default function OfflineMeshPaymentScreen({ navigation, route }: OfflineM
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111827',
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1F2937',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
+    backgroundColor: 'transparent',
   },
   backButton: {
-    padding: Spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.cardHighlight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   headerTitle: {
-    fontSize: Typography.fontSize.xl,
+    fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.bold,
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
+    letterSpacing: 0.5,
   },
   content: {
     flex: 1,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
   },
   statusCard: {
-    backgroundColor: '#1F2937',
-    borderRadius: 16,
-    padding: Spacing.lg,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.md,
+    marginVertical: Spacing.xl,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+  },
+  statusCardGradient: {
+    padding: Spacing.xl,
   },
   statusHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     marginRight: Spacing.sm,
+    shadowColor: '#14F195',
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
   },
   statusText: {
-    fontSize: Typography.fontSize.md,
+    fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
   },
   statusRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: Spacing.md,
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.lg,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#374151',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   statusItem: {
     alignItems: 'center',
+    flex: 1,
   },
   statusLabel: {
     fontSize: Typography.fontSize.xs,
-    color: '#9CA3AF',
-    marginTop: 4,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   statusValue: {
     fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semibold,
-    color: '#FFFFFF',
-    marginTop: 2,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
+    fontFamily: Typography.fontFamily.mono,
   },
   meshToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: Spacing.md,
+    marginTop: Spacing.lg,
   },
   meshToggleLabel: {
     fontSize: Typography.fontSize.md,
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
+    fontWeight: Typography.fontWeight.medium,
   },
   section: {
-    marginTop: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   sectionLabel: {
-    fontSize: Typography.fontSize.md,
-    color: '#9CA3AF',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
     marginBottom: Spacing.sm,
+    fontWeight: Typography.fontWeight.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   assetSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
-    padding: Spacing.md,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   assetIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   assetIconText: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize.xl,
     fontWeight: Typography.fontWeight.bold,
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   assetInfo: {
     flex: 1,
   },
   assetName: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.textPrimary,
   },
   assetBalance: {
-    fontSize: Typography.fontSize.xs,
-    color: '#9CA3AF',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    fontFamily: Typography.fontFamily.mono,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
-    paddingHorizontal: Spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 16,
+    paddingHorizontal: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    height: 64,
   },
   input: {
     flex: 1,
-    fontSize: Typography.fontSize.md,
-    color: '#FFFFFF',
+    fontSize: Typography.fontSize.lg,
+    color: Colors.textPrimary,
     paddingVertical: Spacing.md,
+    fontFamily: Typography.fontFamily.mono,
   },
   memoInput: {
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
-    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    height: 'auto',
   },
   inputIcon: {
     padding: Spacing.sm,
+    backgroundColor: Colors.cardHover,
+    borderRadius: 8,
   },
   maxButton: {
-    backgroundColor: '#A855F7',
+    backgroundColor: 'rgba(20, 96, 247, 0.2)', // Blue tint
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 6,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(20, 96, 247, 0.4)',
   },
   maxButtonText: {
     fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.primary,
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
-    padding: Spacing.md,
-    marginTop: Spacing.lg,
-    borderLeftWidth: 3,
-    borderLeftColor: '#A855F7',
+    backgroundColor: 'rgba(20, 96, 247, 0.1)',
+    borderRadius: 16,
+    padding: Spacing.lg,
+    marginBottom: Spacing['2xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(20, 96, 247, 0.3)',
   },
   infoText: {
-    fontSize: Typography.fontSize.xs,
-    color: '#9CA3AF',
-    marginLeft: Spacing.sm,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.primary,
+    marginLeft: Spacing.md,
     flex: 1,
+    lineHeight: 20,
   },
   sendButton: {
-    backgroundColor: '#A855F7',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginTop: Spacing.md,
+    marginBottom: Spacing['4xl'],
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  sendButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.lg,
-    borderRadius: 12,
-    marginTop: Spacing.xl,
-    marginBottom: Spacing.xl,
+    paddingVertical: Spacing.xl,
   },
   sendButtonDisabled: {
-    backgroundColor: '#374151',
     opacity: 0.5,
+    shadowOpacity: 0,
   },
   sendButtonText: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semibold,
-    color: '#FFFFFF',
-    marginLeft: Spacing.sm,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.white,
+    marginLeft: Spacing.md,
   },
   queueSection: {
     marginTop: Spacing.lg,
     marginBottom: Spacing.xl,
+    padding: Spacing.lg,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
   queueTitle: {
     fontSize: Typography.fontSize.md,
-    color: '#9CA3AF',
-    marginBottom: Spacing.sm,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
   },
   queueItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F2937',
+    backgroundColor: Colors.background,
     padding: Spacing.md,
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: Spacing.sm,
   },
   queueItemText: {
-    fontSize: Typography.fontSize.xs,
-    color: '#FFFFFF',
-    marginLeft: Spacing.sm,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textPrimary,
+    marginLeft: Spacing.md,
+    fontFamily: Typography.fontFamily.mono,
   },
 });
