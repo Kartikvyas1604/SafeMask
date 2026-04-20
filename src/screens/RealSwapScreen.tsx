@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Modal,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -315,6 +316,12 @@ export default function RealSwapScreen() {
         
         {/* Amount Input Card */}
         <View style={styles.inputCard}>
+          <LinearGradient
+            colors={[Colors.card, 'rgba(255, 255, 255, 0.05)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.inputCardGradient}
+          >
           <View style={styles.inputRow}>
             <View style={styles.inputLeft}>
               <TextInput
@@ -329,6 +336,7 @@ export default function RealSwapScreen() {
               <Text style={styles.tokenSymbol}>{inputTokenSymbol || 'TOKEN'}</Text>
             </View>
           </View>
+          </LinearGradient>
         </View>
         
         {/* Swapping Icon */}
@@ -384,6 +392,12 @@ export default function RealSwapScreen() {
         {quote && (
           <View style={styles.section}>
             <View style={styles.outputCard}>
+              <LinearGradient
+                colors={[Colors.card, 'rgba(239, 80, 175, 0.05)']} // Pink accent
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.outputCardGradient}
+              >
               <Text style={styles.outputLabel}>You will receive</Text>
               {isLoadingQuote ? (
                 <ActivityIndicator size="small" color={Colors.accent} />
@@ -397,6 +411,7 @@ export default function RealSwapScreen() {
                   Min: {parseFloat(quote.outputAmountMin).toFixed(6)} {currentOutputTokenSymbol}
                 </Text>
               )}
+            </LinearGradient>
             </View>
           </View>
         )}
@@ -684,11 +699,15 @@ const styles = StyleSheet.create({
   inputCard: {
     marginHorizontal: Spacing.xl,
     marginBottom: Spacing.lg,
-    padding: Spacing.xl,
-    backgroundColor: Colors.card,
+    padding: 0,
+    backgroundColor: 'transparent',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+  },
+  inputCardGradient: {
+    padding: Spacing.xl,
   },
   inputRow: {
     flexDirection: 'row',
@@ -741,11 +760,15 @@ const styles = StyleSheet.create({
   
   // Output Card
   outputCard: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.card,
-    borderRadius: 12,
+    padding: 0,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+  },
+  outputCardGradient: {
+    padding: Spacing.lg,
   },
   outputLabel: {
     fontSize: Typography.fontSize.sm,

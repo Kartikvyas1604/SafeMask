@@ -1,43 +1,27 @@
-/**
- * Enhanced Wallet Screen
- * 
- * Integrates all SafeMask features:
- * - Multi-chain balances (Ethereum, Zcash, Polygon)
- * - Confidential transactions
- * - NFC tap-to-pay
- * - Mesh network status
- * - Privacy indicators
- * - Real-time updates
- */
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
   RefreshControl,
-  ActivityIndicator,
   Animated,
+  StatusBar,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/Header';
 import BalanceCard from '../components/BalanceCard';
-import AssetCard from '../components/AssetCard';
 import ActionButton from '../components/ActionButton';
 import TransactionItem from '../components/TransactionItem';
-import PrivacyStatus from '../components/PrivacyStatus';
-import MeshNetwork from '../components/MeshNetwork';
-import Statistics from '../components/Statistics';
+import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 
 type WalletScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Wallet'>;
-
-// Wallet integration (would be passed via context/props in production)
-// import { useWallet } from '../contexts/WalletContext';
 
 interface Asset {
   name: string;
@@ -61,107 +45,49 @@ interface Transaction {
   color: string;
   isPrivate: boolean;
   confirmations?: number;
-  hash?: string;
-  chain?: string;
-  timestamp?: number;
 }
 
 export default function WalletScreen() {
   const navigation = useNavigation<WalletScreenNavigationProp>();
   
-  // State
   const [balanceHidden, setBalanceHidden] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [totalBalance, setTotalBalance] = useState('$0.00');
-  const [balanceChange, setBalanceChange] = useState('+$0.00 (0%)');
+  const [totalBalance, setTotalBalance] = useState('\$0.00');
+  const [balanceChange, setBalanceChange] = useState('+\$0.00 (0%)');
   const [privacyScore, setPrivacyScore] = useState('0%');
   
-  // Animations
   const fadeAnim = useState(new Animated.Value(0))[0];
-  const slideAnim = useState(new Animated.Value(50))[0];
 
-  // Initialize wallet data
   useEffect(() => {
     loadWalletData();
-    animateIn();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
-  const animateIn = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
   const loadWalletData = async () => {
-    try {
-      setLoading(true);
+    const mockAssets: Asset[] = [
+      { name: 'Ethereum', symbol: 'ETH', amount: '1.45', value: '\$2,850.12', icon: 'server-outline', color: '#627EEA', chain: 'ETH', privacyEnabled: false },
+      { name: 'SafeMask Token', symbol: 'MASK', amount: '10,500', value: '\$840.50', icon: 'shield-checkmark-outline', color: '#1460f7', chain: 'ETH', privacyEnabled: true },
+      { name: 'Bitcoin', symbol: 'BTC', amount: '0.042', value: '\$1,920.80', icon: 'logo-bitcoin', color: '#F7931A', chain: 'BTC', privacyEnabled: false },
+    ];
+    
+    const mockTransactions: Transaction[] = [
+      { id: '1', type: 'receive', token: 'ETH', amount: '0.5', time: '2 mins ago', color: '#627EEA', isPrivate: true },
+      { id: '2', type: 'send', token: 'BTC', amount: '0.001', time: '1 hour ago', color: '#F7931A', isPrivate: false },
+      { id: '3', type: 'swap', token: 'USDT', amount: '200', time: 'Yesterday', color: '#26A17B', isPrivate: true },
+    ];
 
-      // Import real wallet balance service
-      const WalletBalanceService = (await import('../services/WalletBalanceService')).default;
-      
-      // Get wallet addresses from secure storage
-      // In production: retrieve from encrypted keystore
-      const addresses = new Map<string, string>();
-      
-      // For now, use addresses from wallet context or props
-      // These should be actual addresses from the user's wallet
-      addresses.set('ETH', '0x...');  // Replace with actual address
-      addresses.set('MATIC', '0x...'); // Replace with actual address
-      addresses.set('SOL', '...');     // Replace with actual address
-      addresses.set('BTC', '...');     // Replace with actual address
-      addresses.set('ZEC', 'zs1...');  // Replace with actual address
-      addresses.set('NEAR', '...');    // Replace with actual address
-      addresses.set('MINA', '...');    // Replace with actual address
-      addresses.set('STRK', '0x...');  // Replace with actual address
-      addresses.set('ARB', '0x...');   // Replace with actual address
-      addresses.set('OP', '0x...');    // Replace with actual address
-      addresses.set('BASE', '0x...');  // Replace with actual address
-
-      // Fetch real balances from blockchain
-      const realAssets = await WalletBalanceService.getAllBalances(addresses);
-      
-      // Fetch real transactions
-      const realTransactions = await WalletBalanceService.getAllTransactions(addresses);
-
-      setAssets(realAssets);
-      setTransactions(realTransactions);
-      
-      // Calculate total balance
-      const total = realAssets.reduce((sum, a) => sum + a.usdValue, 0);
-      setTotalBalance(`$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-      
-      // Calculate 24h change (would need historical data)
-      setBalanceChange('+$0.00 (0%)'); // TODO: Calculate from historical prices
-      
-      // Calculate privacy score
-      const privateAssetValue = realAssets
-        .filter(a => a.privacyEnabled)
-        .reduce((sum, a) => sum + a.usdValue, 0);
-      const totalValue = realAssets.reduce((sum, a) => sum + a.usdValue, 0);
-      const score = totalValue > 0 ? Math.round((privateAssetValue / totalValue) * 100) : 0;
-      setPrivacyScore(`${score}%`);
-
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load wallet data:', error);
-      Alert.alert('Error', 'Failed to load wallet data');
-    } finally {
-      setLoading(false);
-    }
+    setAssets(mockAssets);
+    setTransactions(mockTransactions);
+    setTotalBalance('\$5,611.42');
+    setBalanceChange('+\$124.50 (2.4%)');
+    setPrivacyScore('85%');
   };
 
   const onRefresh = async () => {
@@ -170,74 +96,11 @@ export default function WalletScreen() {
     setRefreshing(false);
   };
 
-  const handleSend = () => {
-    (navigation as any).navigate('Send');
-  };
+  const handleSend = () => (navigation as any).navigate('Send');
+  const handleReceive = () => (navigation as any).navigate('Receive');
+  const handleSwap = () => (navigation as any).navigate('Swap');
+  const handleNFCPay = () => (navigation as any).navigate('MeshNetwork');
 
-  const handleReceive = () => {
-    (navigation as any).navigate('Receive');
-  };
-
-  const handleSwap = () => {
-    (navigation as any).navigate('Swap');
-  };
-
-  const handleNFCPay = () => {
-    Alert.alert(
-      'NFC Payment',
-      'Tap your device to another phone to send crypto',
-      [
-        {
-          text: 'Start NFC Session',
-          onPress: () => Alert.alert('NFC', 'Waiting for tap... (Requires react-native-nfc-manager)'),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
-
-  const handleAssetPress = (asset: Asset) => {
-    Alert.alert(
-      asset.name,
-      `${asset.amount} ${asset.symbol}\n` +
-      `Value: ${asset.value}\n` +
-      `Chain: ${asset.chain}\n` +
-      `Privacy: ${asset.privacyEnabled ? 'Enabled ✓' : 'Disabled'}`,
-      [
-        {
-          text: asset.privacyEnabled ? 'Disable Privacy' : 'Enable Privacy',
-          onPress: () => {
-            // Toggle privacy for this asset
-            setAssets(prev => prev.map(a =>
-              a.symbol === asset.symbol
-                ? { ...a, privacyEnabled: !a.privacyEnabled }
-                : a
-            ));
-          },
-        },
-        { text: 'View Details', onPress: () => {} },
-        { text: 'Close', style: 'cancel' },
-      ]
-    );
-  };
-
-  const handleTransactionPress = (tx: Transaction) => {
-    Alert.alert(
-      `Transaction ${tx.type.toUpperCase()}`,
-      `Amount: ${tx.amount} ${tx.token}\n` +
-      `${tx.address ? `Address: ${tx.address}\n` : ''}` +
-      `${tx.description ? `Description: ${tx.description}\n` : ''}` +
-      `Time: ${tx.time}\n` +
-      `Privacy: ${tx.isPrivate ? 'Private (Shielded)' : 'Public'}\n` +
-      `Confirmations: ${tx.confirmations || 0}`,
-      [
-        { text: 'View on Explorer', onPress: () => {} },
-        { text: 'Close', style: 'cancel' },
-      ]
-    );
-  };
-
-  // Filter transactions
   const filteredTransactions = transactions.filter(tx => {
     if (activeFilter === 'All') return true;
     if (activeFilter === 'Sent') return tx.type === 'send';
@@ -245,39 +108,23 @@ export default function WalletScreen() {
     return true;
   });
 
-  if (loading && assets.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A855F7" />
-          <Text style={styles.loadingText}>Loading wallet...</Text>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
       <ScrollView
-        
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#A855F7"
+            tintColor={Colors.primary}
           />
         }
       >
         <Header />
 
-        <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          }}
-        >
-          {/* Balance Section */}
-          <View style={styles.section}>
+        <Animated.View style={{ opacity: fadeAnim, paddingHorizontal: Spacing.screenPadding }}>
+          <View style={styles.sectionHeader}>
             <BalanceCard
               totalBalance={totalBalance}
               change={balanceChange}
@@ -285,111 +132,62 @@ export default function WalletScreen() {
               balanceHidden={balanceHidden}
               onToggleBalance={() => setBalanceHidden(!balanceHidden)}
             />
-
-            {/* Assets Grid */}
-            <View style={styles.assetsGrid}>
-              {assets.map((asset, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => handleAssetPress(asset)}
-                  activeOpacity={0.8}
-                >
-                  <AssetCard {...asset} />
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
 
-          {/* Action Buttons */}
-          <View style={styles.section}>
-            <View style={styles.actionsGrid}>
-              <ActionButton
-                icon="send"
-                label="Send"
-                color="#A855F7"
-                onPress={handleSend}
-              />
-              <ActionButton
-                icon="receive"
-                label="Receive"
-                color="#10B981"
-                onPress={handleReceive}
-              />
-              <ActionButton
-                icon="swap"
-                label="Swap"
-                color="#3B82F6"
-                onPress={handleSwap}
-              />
-              <ActionButton
-                icon="nfc"
-                label="NFC Pay"
-                color="#F59E0B"
-                onPress={handleNFCPay}
-              />
-            </View>
+          <View style={styles.actionContainer}>
+            <ActionButton icon="arrow-up" label="Send" color={Colors.card} onPress={handleSend} />
+            <ActionButton icon="arrow-down" label="Receive" color={Colors.card} onPress={handleReceive} />
+            <ActionButton icon="swap-horizontal" label="Swap" color={Colors.card} onPress={handleSwap} />
+            <ActionButton icon="radio-outline" label="Network" color={Colors.primary} onPress={handleNFCPay} />
           </View>
 
-          {/* Bottom Content */}
-          <View style={styles.bottomContent}>
-            {/* Transactions */}
-            <View style={styles.transactionsCard}>
-              <View style={styles.transactionsHeader}>
-                <Text style={styles.sectionTitle}>Recent Activity</Text>
-                <View style={styles.filterButtons}>
-                  {['All', 'Sent', 'Received'].map((filter) => (
-                    <TouchableOpacity
-                      key={filter}
-                      style={[
-                        styles.filterButton,
-                        activeFilter === filter && styles.filterButtonActive,
-                      ]}
-                      onPress={() => setActiveFilter(filter)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.filterButtonText,
-                          activeFilter === filter && styles.filterButtonTextActive,
-                        ]}
-                      >
-                        {filter}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+          <Text style={styles.sectionTitle}>Assets</Text>
+          <View style={styles.assetsList}>
+            {assets.map((asset, index) => (
+              <TouchableOpacity key={index} style={styles.assetItem}>
+                <View style={[styles.assetIcon, { backgroundColor: asset.color + '20' }]}>
+                   <Ionicons name={asset.icon as any} size={24} color={asset.color} />
                 </View>
-              </View>
-
-              <View style={styles.transactionsList}>
-                {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map((tx) => (
-                    <TouchableOpacity
-                      key={tx.id}
-                      onPress={() => handleTransactionPress(tx)}
-                      activeOpacity={0.7}
-                    >
-                      <TransactionItem {...tx} />
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateText}>
-                      No {activeFilter.toLowerCase()} transactions
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Sidebar Cards */}
-            <View style={styles.sidebar}>
-              <PrivacyStatus />
-              <MeshNetwork />
-              <Statistics />
-            </View>
+                <View style={styles.assetInfo}>
+                  <Text style={styles.assetName}>{asset.name}</Text>
+                  <Text style={styles.assetAmount}>{asset.amount} {asset.symbol}</Text>
+                </View>
+                <View style={styles.assetValueCol}>
+                  <Text style={styles.assetValue}>{asset.value}</Text>
+                  {asset.privacyEnabled && (
+                    <View style={styles.privacyTag}>
+                      <Ionicons name="shield-checkmark" size={10} color={Colors.success} />
+                      <Text style={styles.privacyTagText}>Private</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
           </View>
+
+          <View style={styles.transactionsHeader}>
+            <Text style={styles.sectionTitle}>History</Text>
+            <TouchableOpacity onPress={() => {}}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.transactionsList}>
+            {filteredTransactions.map((tx) => (
+              <TransactionItem key={tx.id} {...tx} />
+            ))}
+          </View>
+
         </Animated.View>
       </ScrollView>
+
+      <TouchableOpacity 
+        style={styles.fab} 
+        onPress={() => (navigation as any).navigate('MeshNetwork')}
+        activeOpacity={0.9}
+      >
+        <Ionicons name="wifi" size={24} color={Colors.white} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -397,86 +195,111 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.background,
   },
-  loadingContainer: {
-    flex: 1,
+  scrollContent: {
+    paddingBottom: 100, 
+  },
+  sectionHeader: {
+    marginBottom: Spacing.xl,
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing['2xl'],
+    gap: Spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text,
+    marginBottom: Spacing.md,
+  },
+  assetsList: {
+    marginBottom: Spacing['2xl'],
+    gap: Spacing.md,
+  },
+  assetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    padding: Spacing.lg,
+    borderRadius: Spacing.radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  assetIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: Spacing.md,
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#9ca3af',
+  assetInfo: {
+    flex: 1,
   },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
+  assetName: {
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text,
+    marginBottom: 2,
   },
-  assetsGrid: {
+  assetAmount: {
+    fontSize: Typography.size.sm,
+    color: Colors.textSecondary,
+  },
+  assetValueCol: {
+    alignItems: 'flex-end',
+  },
+  assetValue: {
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  privacyTag: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 2,
   },
-  actionsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  bottomContent: {
-    paddingHorizontal: 16,
-    gap: 16,
-    marginBottom: 32,
-  },
-  transactionsCard: {
-    backgroundColor: '#111111',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#1f1f1f',
+  privacyTagText: {
+    fontSize: 10,
+    color: Colors.success,
+    fontWeight: '600',
   },
   transactionsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  filterButtonActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  filterButtonText: {
-    fontSize: 13,
-    color: '#9ca3af',
-  },
-  filterButtonTextActive: {
-    color: '#ffffff',
+  seeAllText: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
   transactionsList: {
-    gap: 12,
+    gap: Spacing.sm,
   },
-  emptyState: {
-    paddingVertical: 32,
+  fab: {
+    position: 'absolute',
+    bottom: Spacing['2xl'],
+    right: Spacing.screenPadding,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  sidebar: {
-    gap: 16,
+    elevation: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 });
 

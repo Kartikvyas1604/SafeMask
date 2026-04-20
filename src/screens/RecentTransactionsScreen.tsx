@@ -144,7 +144,8 @@ export default function RecentTransactionsScreen() {
               setTransactions(combined);
             } catch (error) {
               logger.error('Failed to fetch blockchain transactions:', error);
-              // If blockchain fetch fails, we already showed savedTransactions above
+              // If blockchain fetch fails, continue with saved transactions
+              // Don't show error to user as saved transactions are already displayed
             }
           } else {
             // No valid account, just keep whatever we loaded from storage

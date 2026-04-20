@@ -22,7 +22,7 @@ export class SolanaAdapter extends BaseAdapter {
 
     const rpcUrl = config.rpcUrl || defaultRpcUrls[config.network];
     super(config.network, rpcUrl);
-    
+
     this.connection = new Connection(rpcUrl, 'confirmed');
   }
 
@@ -34,7 +34,7 @@ export class SolanaAdapter extends BaseAdapter {
     return this.executeRpc(async () => {
       const publicKey = new PublicKey(address);
       const balance = await this.connection.getBalance(publicKey);
-      
+
       return {
         chain: 'solana',
         token: 'SOL',
@@ -83,7 +83,7 @@ export class SolanaAdapter extends BaseAdapter {
   async getTransactionStatus(txHash: string): Promise<TransactionStatus> {
     return this.executeRpc(async () => {
       const status = await this.connection.getSignatureStatus(txHash);
-      
+
       if (!status.value) {
         return {
           hash: txHash,
@@ -94,7 +94,7 @@ export class SolanaAdapter extends BaseAdapter {
 
       const confirmationStatus = status.value.confirmationStatus;
       let txStatus: 'pending' | 'confirmed' | 'failed' = 'pending';
-      
+
       if (status.value.err) {
         txStatus = 'failed';
       } else if (confirmationStatus === 'confirmed' || confirmationStatus === 'finalized') {
@@ -104,8 +104,8 @@ export class SolanaAdapter extends BaseAdapter {
       return {
         hash: txHash,
         status: txStatus,
-        confirmations: status.value.confirmations || 0,
-        blockNumber: status.context.slot,
+        confirmations: status.value.confirmations ?? 0,
+        blockNumber: status.value.slot ?? status.context?.slot,
       };
     });
   }
@@ -115,7 +115,7 @@ export class SolanaAdapter extends BaseAdapter {
       // For Solana, we derive using ed25519
       // The publicKey parameter should be 32 bytes for Solana
       const solanaPublicKey = new PublicKey(publicKey.slice(0, 32));
-      
+
       return {
         chain: 'solana',
         address: solanaPublicKey.toBase58(),
@@ -128,7 +128,7 @@ export class SolanaAdapter extends BaseAdapter {
   subscribeToEvents(callback: (event: BlockchainEvent) => void): void {
     // Solana websocket subscription for account changes
     this.connection.onAccountChange(
-      this.keypair?.publicKey || Keypair.generate().publicKey,
+      this.keypair?.publicKey ?? Keypair.generate().publicKey,
       (accountInfo, context) => {
         callback({
           type: 'transaction',
@@ -162,7 +162,7 @@ export class SolanaAdapter extends BaseAdapter {
 
   // Get public key from current keypair
   getPublicKey(): string | null {
-    return this.keypair?.publicKey.toBase58() || null;
+    return this.keypair?.publicKey.toBase58() ?? null;
   }
 
   // Request airdrop (devnet/testnet only)

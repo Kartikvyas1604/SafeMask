@@ -5,7 +5,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from '@craftzdog/react-native-buffer';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import * as logger from '../utils/logger';
 import { EventEmitter } from '../utils/EventEmitter';
 import MeshNetworkProtocol, { MeshTransaction } from '../mesh/MeshNetworkProtocol';
@@ -64,6 +64,25 @@ export class OfflineTransactionQueue extends EventEmitter {
     super();
     this.meshNetwork = meshNetwork;
     logger.info('📦 Offline Transaction Queue initialized');
+
+    // If a mesh network is provided, listen for incoming mesh transactions.
+    // When this device is online, it will relay them on-chain using its internet connection.
+    if (this.meshNetwork) {
+      this.meshNetwork.on('transaction_received', async (meshTx: MeshTransaction) => {
+        try {
+          if (!this.isOnline) {
+            logger.info(
+              '📥 Received mesh transaction but device is offline, will not broadcast to chain yet.'
+            );
+            return;
+          }
+
+          await this.broadcastMeshTransactionToBlockchain(meshTx);
+        } catch (error) {
+          logger.error('❌ Failed to broadcast mesh transaction to blockchain:', error);
+        }
+      });
+    }
   }
 
   /**
@@ -244,6 +263,33 @@ export class OfflineTransactionQueue extends EventEmitter {
     };
 
     await this.meshNetwork.broadcastTransaction(meshTx);
+  }
+
+  /**
+   * When a transaction arrives via mesh on a device that is online,
+   * immediately broadcast it to the blockchain using this device's internet.
+   */
+  private async broadcastMeshTransactionToBlockchain(meshTx: MeshTransaction): Promise<void> {
+    const tempTx: QueuedTransaction = {
+      id: meshTx.txHash || this.generateTxId(),
+      chainId: meshTx.chainId,
+      from: '',
+      to: '',
+      value: '0',
+      status: TransactionStatus.BROADCASTED,
+      createdAt: meshTx.timestamp,
+      updatedAt: Date.now(),
+      attempts: 1,
+      rawTx: meshTx.rawTx,
+      txHash: meshTx.txHash,
+    };
+
+    logger.info('🌐 Relaying mesh transaction to blockchain using local internet...', {
+      txHash: meshTx.txHash,
+      chainId: meshTx.chainId,
+    });
+
+    await this.broadcastToBlockchain(tempTx);
   }
 
   /**

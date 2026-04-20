@@ -12,7 +12,11 @@ import {
   Animated,
   Modal,
   FlatList,
+  TextInput,
+  InteractionManager,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
@@ -26,14 +30,42 @@ import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
 import { Spacing } from '../design/spacing';
 import { KNOWN_TOKENS } from '../blockchain/TokenService';
+import PriceFeedService, { PriceData, HistoricalPrice } from '../services/PriceFeedService';
 import * as logger from '../utils/logger';
 
 // Sparkline graph component with smooth curves
-const SparklineGraph = ({ isPositive }: { isPositive: boolean }) => {
-  // Data points (normalized 0-1 range)
-  const data = isPositive 
-    ? [0.3, 0.25, 0.35, 0.2, 0.4, 0.3, 0.45, 0.35, 0.5, 0.4, 0.55, 0.5, 0.6]
-    : [0.5, 0.45, 0.4, 0.5, 0.35, 0.3, 0.25, 0.3, 0.2, 0.25, 0.15, 0.2, 0.1];
+const SparklineGraph = ({ 
+  isPositive, 
+  priceHistory 
+}: { 
+  isPositive: boolean;
+  priceHistory?: HistoricalPrice[];
+}) => {
+  // Use real price history if available, otherwise use mock data
+  let data: number[] = [];
+  
+  let actualIsPositive = isPositive;
+  
+  if (priceHistory && priceHistory.length > 1) {
+    // Normalize price history to 0-1 range for display
+    const prices = priceHistory.map(p => p.price);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice || 1;
+    
+    // Normalize to 0-1 range
+    data = prices.map(price => (price - minPrice) / priceRange);
+    
+    // Determine if trend is positive based on actual price movement
+    const firstPrice = prices[0];
+    const lastPrice = prices[prices.length - 1];
+    actualIsPositive = lastPrice >= firstPrice;
+  } else {
+    // Fallback to mock data
+    data = isPositive 
+      ? [0.3, 0.25, 0.35, 0.2, 0.4, 0.3, 0.45, 0.35, 0.5, 0.4, 0.55, 0.5, 0.6]
+      : [0.5, 0.45, 0.4, 0.5, 0.35, 0.3, 0.25, 0.3, 0.2, 0.25, 0.15, 0.2, 0.1];
+  }
   
   const width = 140;
   const height = 60;
@@ -112,7 +144,7 @@ const SparklineGraph = ({ isPositive }: { isPositive: boolean }) => {
     return path;
   };
   
-  const lineColor = isPositive ? Colors.accent : Colors.accentSecondary;
+  const lineColor = actualIsPositive ? Colors.accent : Colors.accentSecondary;
   const pathData = createCubicPath();
   
   return (
@@ -131,6 +163,18 @@ const SparklineGraph = ({ isPositive }: { isPositive: boolean }) => {
   );
 };
 
+type HomeCacheV1 = {
+  cachedAt: number;
+  walletAddress?: string;
+  totalUSD?: number;
+  balances?: RealBalance[];
+  privacyScore?: number;
+  tokenPriceData?: [string, PriceData][];
+  tokenPriceHistory?: [string, HistoricalPrice[]][];
+};
+
+const HOME_CACHE_KEY = 'SafeMask_home_cache_v1';
+
 export default function ProductionWalletScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
@@ -141,11 +185,15 @@ export default function ProductionWalletScreen({ navigation }: any) {
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [balanceHidden, setBalanceHidden] = useState(false);
   const [showTokenPicker, setShowTokenPicker] = useState(false);
+  const [tokenSearchQuery, setTokenSearchQuery] = useState('');
   const [favoriteTokens, setFavoriteTokens] = useState<{ symbol: string; chain: string }[]>([]);
+  const [hiddenCards, setHiddenCards] = useState<Set<string>>(new Set()); // Format: "SYMBOL-CHAIN"
   const [privacyScore, setPrivacyScore] = useState(0);
   const [privacyScoreVisible, setPrivacyScoreVisible] = useState(false);
   const [hdWallet] = useState(() => new SafeMaskWalletCore());
   const [lastBalanceUpdate, setLastBalanceUpdate] = useState(0);
+  const [tokenPriceData, setTokenPriceData] = useState<Map<string, PriceData>>(new Map());
+  const [tokenPriceHistory, setTokenPriceHistory] = useState<Map<string, HistoricalPrice[]>>(new Map());
   
   const blockchainService = RealBlockchainService;
   const BALANCE_CACHE_TIME = 30000; // 30 seconds cache
@@ -153,6 +201,53 @@ export default function ProductionWalletScreen({ navigation }: any) {
   // Use ref to track if wallet has been loaded (persists across re-renders and re-mounts)
   const hasLoadedWallet = useRef(false);
   const isInitializing = useRef(false);
+
+  const persistHomeCache = async (data: Omit<HomeCacheV1, 'cachedAt'>) => {
+    try {
+      const payload: HomeCacheV1 = {
+        ...data,
+        cachedAt: Date.now(),
+      };
+      await AsyncStorage.setItem(HOME_CACHE_KEY, JSON.stringify(payload));
+    } catch (error) {
+      logger.error('Failed to persist home cache:', error);
+    }
+  };
+
+  const hydrateFromCache = async () => {
+    try {
+      const cachedStr = await AsyncStorage.getItem(HOME_CACHE_KEY);
+      if (!cachedStr) return;
+      const cached: HomeCacheV1 = JSON.parse(cachedStr);
+
+      if (cached.walletAddress) {
+        setWalletAddress(cached.walletAddress);
+        setWalletInitialized(true);
+      }
+      if (typeof cached.totalUSD === 'number') setTotalUSD(cached.totalUSD);
+      if (Array.isArray(cached.balances)) setBalances(cached.balances);
+      if (typeof cached.privacyScore === 'number') setPrivacyScore(cached.privacyScore);
+
+      if (Array.isArray(cached.tokenPriceData)) {
+        setTokenPriceData(new Map(cached.tokenPriceData));
+      }
+      if (Array.isArray(cached.tokenPriceHistory)) {
+        setTokenPriceHistory(new Map(cached.tokenPriceHistory));
+      }
+
+      // If we have cached data, render immediately and refresh in background.
+      if (
+        cached.walletAddress ||
+        (Array.isArray(cached.balances) && cached.balances.length > 0) ||
+        typeof cached.totalUSD === 'number'
+      ) {
+        setLastBalanceUpdate(cached.cachedAt || 0);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      logger.error('Failed to hydrate home cache:', error);
+    }
+  };
   
   // Animation values for scroll-based animations (reduced for performance)
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -183,6 +278,36 @@ export default function ProductionWalletScreen({ navigation }: any) {
   };
   
   /**
+   * Load hidden cards and favorite tokens from storage
+   */
+  useEffect(() => {
+    const loadStoredPreferences = async () => {
+      try {
+        // Load favorite tokens
+        const storedFavorites = await AsyncStorage.getItem('SafeMask_favorite_tokens');
+        if (storedFavorites) {
+          setFavoriteTokens(JSON.parse(storedFavorites));
+        }
+        
+        // Load hidden cards
+        const storedHiddenCards = await AsyncStorage.getItem('SafeMask_hidden_cards');
+        if (storedHiddenCards) {
+          setHiddenCards(new Set(JSON.parse(storedHiddenCards)));
+        }
+      } catch (error) {
+        logger.error('Failed to load stored preferences:', error);
+      }
+    };
+    
+    loadStoredPreferences();
+  }, []);
+
+  // Hydrate UI from cache ASAP (fast home render), then refresh in background.
+  useEffect(() => {
+    hydrateFromCache();
+  }, []);
+
+  /**
    * Initialize wallet only once when component first mounts
    * Tab Navigator keeps this screen mounted, so useEffect only runs once
    */
@@ -190,8 +315,10 @@ export default function ProductionWalletScreen({ navigation }: any) {
     // Prevent multiple simultaneous initializations
     if (!hasLoadedWallet.current && !isInitializing.current) {
       isInitializing.current = true;
-      initializeWallet().finally(() => {
-        isInitializing.current = false;
+      InteractionManager.runAfterInteractions(() => {
+        initializeWallet().finally(() => {
+          isInitializing.current = false;
+        });
       });
       hasLoadedWallet.current = true;
       
@@ -214,6 +341,61 @@ export default function ProductionWalletScreen({ navigation }: any) {
       ).start();
     }
   }, []);
+
+  /**
+   * Auto-refresh prices every 30 seconds for real-time updates
+   */
+  useEffect(() => {
+    if (!walletInitialized || balances.length === 0) return;
+
+    const refreshPrices = async () => {
+      try {
+        logger.info('🔄 Auto-refreshing token prices...');
+        // Include both balances and favorite tokens for price refresh
+        const tokensToRefresh = [
+          ...balances.map(b => b.symbol),
+          ...favoriteTokens.map(fav => fav.symbol),
+        ];
+        const uniqueTokensToRefresh = Array.from(new Set(tokensToRefresh));
+        
+        const pricePromises = uniqueTokensToRefresh.map(async (symbol) => {
+          try {
+            const priceData = await PriceFeedService.getPrice(symbol);
+            return {
+              symbol,
+              priceData,
+            };
+          } catch (error) {
+            logger.error(`Failed to refresh price for ${symbol}:`, error);
+            return null;
+          }
+        });
+
+        const priceResults = await Promise.allSettled(pricePromises);
+        const newPriceData = new Map<string, PriceData>();
+        // Keep historical data as-is; it's expensive and doesn't need 30s refresh.
+
+        priceResults.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value && result.value.priceData) {
+            newPriceData.set(result.value.symbol, result.value.priceData);
+          }
+        });
+
+        if (newPriceData.size > 0) {
+          setTokenPriceData(newPriceData);
+          logger.info(`✅ Refreshed prices for ${newPriceData.size} tokens`);
+        }
+      } catch (error) {
+        logger.error('Failed to refresh prices:', error);
+      }
+    };
+
+    // Refresh immediately, then periodically (keep network light for mobile UX)
+    refreshPrices();
+    const intervalId = setInterval(refreshPrices, 60000); // 60 seconds
+
+    return () => clearInterval(intervalId);
+  }, [walletInitialized, balances]);
   
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -281,7 +463,11 @@ export default function ProductionWalletScreen({ navigation }: any) {
    */
   const loadWalletData = async () => {
     try {
-      setIsLoading(true);
+      // If UI was hydrated from cache, don't block rendering.
+      // Still show spinner if there's nothing rendered yet.
+      if (balances.length === 0 && totalUSD === 0) {
+        setIsLoading(true);
+      }
       
       // Get wallet data
       const walletData = hdWallet.getWalletData();
@@ -330,38 +516,145 @@ export default function ProductionWalletScreen({ navigation }: any) {
           )
         ]);
       };
-      
-      const balancePromises = [
-        ethAccount ? fetchWithTimeout(blockchainService.getRealBalance('ethereum', ethAccount.address), 8000) : null,
-        polyAccount ? fetchWithTimeout(blockchainService.getRealBalance('polygon', polyAccount.address), 8000) : null,
-        zcashAccount ? fetchWithTimeout(blockchainService.getRealBalance('zcash', zcashAccount.address), 8000) : null,
-        solanaAccount ? fetchWithTimeout(blockchainService.getRealBalance('solana', solanaAccount.address), 8000) : null,
-        bitcoinAccount ? fetchWithTimeout(blockchainService.getRealBalance('bitcoin', bitcoinAccount.address), 8000) : null,
-        starknetAccount ? fetchWithTimeout(blockchainService.getRealBalance('starknet', starknetAccount.address), 8000) : null,
-        aztecAccount ? fetchWithTimeout(blockchainService.getRealBalance('aztec', aztecAccount.address), 8000) : null,
-        minaAccount ? fetchWithTimeout(blockchainService.getRealBalance('mina', minaAccount.address), 8000) : null,
-        arbitrumAccount ? fetchWithTimeout(blockchainService.getRealBalance('arbitrum', arbitrumAccount.address), 8000) : null,
-        optimismAccount ? fetchWithTimeout(blockchainService.getRealBalance('optimism', optimismAccount.address), 8000) : null,
-        baseAccount ? fetchWithTimeout(blockchainService.getRealBalance('base', baseAccount.address), 8000) : null,
-        nearAccount ? fetchWithTimeout(blockchainService.getRealBalance('near', nearAccount.address), 8000) : null,
-      ];
-      
-      const results = await Promise.allSettled(balancePromises);
+
+      // Phase 1: fetch only primary chains for faster first paint.
+      const priorityPromises = [
+        ethAccount ? fetchWithTimeout(blockchainService.getRealBalance('ethereum', ethAccount.address), 6000) : null,
+        solanaAccount ? fetchWithTimeout(blockchainService.getRealBalance('solana', solanaAccount.address), 6000) : null,
+        bitcoinAccount ? fetchWithTimeout(blockchainService.getRealBalance('bitcoin', bitcoinAccount.address), 6000) : null,
+        zcashAccount ? fetchWithTimeout(blockchainService.getRealBalance('zcash', zcashAccount.address), 6000) : null,
+      ].filter(Boolean) as Promise<RealBalance>[];
+
+      const priorityResults = await Promise.allSettled(priorityPromises);
+      const realBalances: RealBalance[] = priorityResults
+        .filter((r): r is PromiseFulfilledResult<RealBalance> => r.status === 'fulfilled')
+        .map((r) => r.value);
+
       setLastBalanceUpdate(now);
       
-      const realBalances: RealBalance[] = [];
+      // Filter out only OP, ARB, BASE, USDC from cards display
+      // Keep ETH visible since users want to see their main balance
+      const excludedFromCards = ['OP', 'ARB', 'BASE', 'USDC'];
+      const filteredBalances = realBalances.filter(b => 
+        !excludedFromCards.includes(b.symbol.toUpperCase())
+      );
       
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value) {
-          realBalances.push(result.value);
-        }
-      }
-      
-      setBalances(realBalances);
-      
-      // Calculate total USD value
+      // Calculate total USD value from ALL balances (including ETH, USDC, etc.)
       const total = realBalances.reduce((sum, balance) => sum + balance.balanceUSD, 0);
       setTotalUSD(total);
+      
+      // Priority order: ETH, SOL, BTC should be shown first
+      const priorityTokens = ['ETH', 'SOL', 'BTC'];
+      
+      // Check if ETH, SOL, BTC are present, if not add placeholder entries
+      const hasETH = filteredBalances.some(b => b.symbol.toUpperCase() === 'ETH');
+      const hasSOL = filteredBalances.some(b => b.symbol.toUpperCase() === 'SOL');
+      const hasBTC = filteredBalances.some(b => b.symbol.toUpperCase() === 'BTC');
+      
+      // Add missing priority tokens as placeholder entries with zero balance
+      if (!hasETH && ethAccount) {
+        filteredBalances.push({
+          chain: 'Ethereum',
+          symbol: 'ETH',
+          address: ethAccount.address,
+          balance: '0',
+          balanceFormatted: '0',
+          balanceUSD: 0,
+          decimals: 18,
+          lastUpdated: Date.now(),
+          blockHeight: 0,
+        });
+      }
+      
+      if (!hasSOL && solanaAccount) {
+        filteredBalances.push({
+          chain: 'Solana',
+          symbol: 'SOL',
+          address: solanaAccount.address,
+          balance: '0',
+          balanceFormatted: '0',
+          balanceUSD: 0,
+          decimals: 9,
+          lastUpdated: Date.now(),
+          blockHeight: 0,
+        });
+      }
+      
+      if (!hasBTC && bitcoinAccount) {
+        filteredBalances.push({
+          chain: 'Bitcoin',
+          symbol: 'BTC',
+          address: bitcoinAccount.address,
+          balance: '0',
+          balanceFormatted: '0',
+          balanceUSD: 0,
+          decimals: 8,
+          lastUpdated: Date.now(),
+          blockHeight: 0,
+        });
+      }
+      
+      // Sort balances: Priority tokens (SOL, BTC) first, then others
+      filteredBalances.sort((a, b) => {
+        const aPriority = priorityTokens.indexOf(a.symbol.toUpperCase());
+        const bPriority = priorityTokens.indexOf(b.symbol.toUpperCase());
+        
+        // If both are priority tokens, maintain their order
+        if (aPriority !== -1 && bPriority !== -1) {
+          return aPriority - bPriority;
+        }
+        // Priority tokens come first
+        if (aPriority !== -1) return -1;
+        if (bPriority !== -1) return 1;
+        // For non-priority tokens, sort by USD value (highest first)
+        return b.balanceUSD - a.balanceUSD;
+      });
+      
+      setBalances(filteredBalances);
+      
+      // Fetch price data for visible tokens (current price only; historical is deferred)
+      const tokensToFetch = [
+        ...filteredBalances.map(b => ({ symbol: b.symbol, isFavorite: false })),
+        ...favoriteTokens.map(fav => ({ symbol: fav.symbol, isFavorite: true })),
+      ];
+      
+      // Remove duplicates
+      const uniqueTokens = Array.from(
+        new Map(tokensToFetch.map(t => [t.symbol, t])).values()
+      );
+      
+      logger.info(`📊 Fetching price data for ${uniqueTokens.length} tokens`);
+      const pricePromises = uniqueTokens.map(async ({ symbol }) => {
+        try {
+          // Fetch current price data
+          const priceData = await PriceFeedService.getPrice(symbol);
+          return {
+            symbol,
+            priceData,
+          };
+        } catch (error) {
+          logger.error(`Failed to fetch price data for ${symbol}:`, error);
+          return {
+            symbol,
+            priceData: null,
+          };
+        }
+      });
+      
+      const priceResults = await Promise.allSettled(pricePromises);
+      
+      // Update price data maps
+      const newPriceData = new Map<string, PriceData>();
+      
+      priceResults.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value.priceData) {
+          newPriceData.set(result.value.symbol, result.value.priceData);
+        }
+      });
+      
+      setTokenPriceData(newPriceData);
+      
+      logger.info(`✅ Loaded price data for ${newPriceData.size} tokens`);
       
       // Calculate overall privacy score based on asset types and privacy features
       // Privacy coins (ZEC) = 100 points
@@ -370,9 +663,10 @@ export default function ProductionWalletScreen({ navigation }: any) {
       // Zero-knowledge proofs = +10 points
       // Mixing/obfuscation = +5 points
       
+      // Use ALL balances (including ETH) for privacy score calculation
       const privacyCoins = realBalances.filter(b => ['ZEC'].includes(b.symbol));
       const privacyCoinValue = privacyCoins.reduce((sum, b) => sum + b.balanceUSD, 0);
-      const totalValue = realBalances.reduce((sum, b) => sum + b.balanceUSD, 0);
+      const totalValue = total; // Use the total calculated from all balances
       
       let score = 0;
       
@@ -392,14 +686,80 @@ export default function ProductionWalletScreen({ navigation }: any) {
       score = Math.min(Math.round(score), 100);
       setPrivacyScore(score);
       
-      logger.info(`✅ Loaded ${realBalances.length} real balances`);
-      logger.info(`💰 Total portfolio value: $${total.toFixed(2)}`);
+      logger.info(`✅ Loaded ${filteredBalances.length} balances for display`);
+      logger.info(`💰 Total portfolio value (including all tokens): $${total.toFixed(2)}`);
       
       setIsLoading(false);
       setIsRefreshing(false);
+
+      // Persist what we have so the next home render is instant.
+      persistHomeCache({
+        walletAddress: ethAccount.address,
+        totalUSD: total,
+        balances: filteredBalances,
+        privacyScore: score,
+        tokenPriceData: Array.from(newPriceData.entries()),
+        tokenPriceHistory: Array.from(tokenPriceHistory.entries()),
+      });
+
+      // Phase 2 (background): load remaining chains without blocking UX.
+      InteractionManager.runAfterInteractions(async () => {
+        try {
+          const remainingPromises = [
+            polyAccount ? fetchWithTimeout(blockchainService.getRealBalance('polygon', polyAccount.address), 8000) : null,
+            starknetAccount ? fetchWithTimeout(blockchainService.getRealBalance('starknet', starknetAccount.address), 8000) : null,
+            aztecAccount ? fetchWithTimeout(blockchainService.getRealBalance('aztec', aztecAccount.address), 8000) : null,
+            minaAccount ? fetchWithTimeout(blockchainService.getRealBalance('mina', minaAccount.address), 8000) : null,
+            arbitrumAccount ? fetchWithTimeout(blockchainService.getRealBalance('arbitrum', arbitrumAccount.address), 8000) : null,
+            optimismAccount ? fetchWithTimeout(blockchainService.getRealBalance('optimism', optimismAccount.address), 8000) : null,
+            baseAccount ? fetchWithTimeout(blockchainService.getRealBalance('base', baseAccount.address), 8000) : null,
+            nearAccount ? fetchWithTimeout(blockchainService.getRealBalance('near', nearAccount.address), 8000) : null,
+          ];
+
+          const remainingResults = await Promise.allSettled(remainingPromises);
+          const remainingBalances: RealBalance[] = remainingResults
+            .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && !!r.value)
+            .map((r) => r.value);
+
+          if (remainingBalances.length === 0) return;
+
+          // Merge and re-apply UI rules using a combined balance list.
+          const combined = [...realBalances, ...remainingBalances];
+
+          const excludedFromCards2 = ['OP', 'ARB', 'BASE', 'USDC'];
+          const filteredBalances2 = combined.filter(b => !excludedFromCards2.includes(b.symbol.toUpperCase()));
+
+          const total2 = combined.reduce((sum, b) => sum + b.balanceUSD, 0);
+          setTotalUSD(total2);
+
+          // Sort by existing rules (priority tokens first, then USD)
+          const priorityTokens2 = ['ETH', 'SOL', 'BTC'];
+          filteredBalances2.sort((a, b) => {
+            const aPriority = priorityTokens2.indexOf(a.symbol.toUpperCase());
+            const bPriority = priorityTokens2.indexOf(b.symbol.toUpperCase());
+            if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
+            if (aPriority !== -1) return -1;
+            if (bPriority !== -1) return 1;
+            return b.balanceUSD - a.balanceUSD;
+          });
+
+          setBalances(filteredBalances2);
+
+          persistHomeCache({
+            walletAddress: ethAccount.address,
+            totalUSD: total2,
+            balances: filteredBalances2,
+            privacyScore: score,
+            tokenPriceData: Array.from(newPriceData.entries()),
+            tokenPriceHistory: Array.from(tokenPriceHistory.entries()),
+          });
+        } catch (error) {
+          logger.error('Background balance refresh failed:', error);
+        }
+      });
     } catch (error) {
       logger.error(`❌ Failed to load wallet data:`, error);
-      Alert.alert('Error', `Failed to load wallet data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Don't show alert - just log error and let user see what we have
       setIsLoading(false);
       setIsRefreshing(false);
     }
@@ -444,6 +804,54 @@ export default function ProductionWalletScreen({ navigation }: any) {
     if (!walletAddress) return;
     Clipboard.setString(walletAddress);
     Alert.alert('Address Copied', 'Wallet address has been copied to clipboard');
+  };
+
+  /**
+   * Handle long press on fund card to show removal options
+   */
+  const handleCardLongPress = (symbol: string, chain: string, isFavorite: boolean = false) => {
+    const cardKey = `${symbol.toUpperCase()}-${chain}`;
+    
+    Alert.alert(
+      'Remove Card',
+      `Do you want to remove ${symbol} (${chain}) from the funds section?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            if (isFavorite) {
+              // Remove from favorites
+              setFavoriteTokens(prev => {
+                const updated = prev.filter(
+                  fav => !(fav.symbol.toUpperCase() === symbol.toUpperCase() && fav.chain === chain)
+                );
+                // Save to AsyncStorage
+                AsyncStorage.setItem('SafeMask_favorite_tokens', JSON.stringify(updated)).catch(err =>
+                  logger.error('Failed to save favorite tokens:', err)
+                );
+                return updated;
+              });
+            } else {
+              // Hide the balance card
+              setHiddenCards(prev => {
+                const updated = new Set(prev);
+                updated.add(cardKey);
+                // Save to AsyncStorage
+                AsyncStorage.setItem('SafeMask_hidden_cards', JSON.stringify(Array.from(updated))).catch(err =>
+                  logger.error('Failed to save hidden cards:', err)
+                );
+                return updated;
+              });
+            }
+          },
+        },
+      ]
+    );
   };
   
   if (isLoading) {
@@ -502,6 +910,12 @@ export default function ProductionWalletScreen({ navigation }: any) {
         
         {/* MY WALLET Section */}
         <Animated.View style={[styles.walletSection, getAnimatedStyle(0)]}>
+        <LinearGradient
+          colors={[Colors.card, 'rgba(20, 96, 247, 0.05)']} // Subtle blue tint
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.walletGradient}
+        >
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionLabel}>MY WALLET</Text>
             <TouchableOpacity 
@@ -520,12 +934,6 @@ export default function ProductionWalletScreen({ navigation }: any) {
               <Text style={styles.balanceAmount}>
                 {balanceHidden ? '••••••' : `$${totalUSD.toFixed(2)}`}
               </Text>
-              {!balanceHidden && (
-                <View style={styles.performanceRow}>
-                  <Text style={styles.performanceAmount}>+${changeAmount.toFixed(2)}</Text>
-                  <Text style={styles.performancePercent}>+{changePercent.toFixed(2)}%</Text>
-                </View>
-              )}
             </View>
           </View>
           
@@ -539,6 +947,7 @@ export default function ProductionWalletScreen({ navigation }: any) {
               <Text style={styles.actionButtonText}>Deposit</Text>
             </TouchableOpacity>
           </View>
+        </LinearGradient>
         </Animated.View>
         
         {/* FUNDS Section */}
@@ -558,11 +967,27 @@ export default function ProductionWalletScreen({ navigation }: any) {
               </TouchableOpacity>
               
               {/* Crypto Fund Cards from real balances */}
-              {balances.map((balance, index) => {
-                // Mock performance data for each asset
-                const isPositive = index % 2 === 0;
-                const mockChange = isPositive ? 268.12 : -82.0;
-                const mockChangePercent = isPositive ? 0.92 : -5.62;
+              {balances
+                .filter(balance => {
+                  const cardKey = `${balance.symbol.toUpperCase()}-${balance.chain}`;
+                  return !hiddenCards.has(cardKey);
+                })
+                .map((balance, index) => {
+                // Get real price data for this token
+                const priceData = tokenPriceData.get(balance.symbol);
+                const priceHistory = tokenPriceHistory.get(balance.symbol);
+                
+                // Get current token price
+                const currentPrice = priceData?.price || 0;
+                
+                // Determine if trend is positive for sparkline
+                let isPositive = true;
+                if (priceData && priceData.change24h !== undefined) {
+                  isPositive = priceData.change24h >= 0;
+                } else {
+                  // Fallback to mock data if price data not available
+                  isPositive = index % 2 === 0;
+                }
                 
                 return (
                   <TouchableOpacity
@@ -574,7 +999,14 @@ export default function ProductionWalletScreen({ navigation }: any) {
                         name: balance.chain,
                       })
                     }
+                    onLongPress={() => handleCardLongPress(balance.symbol, balance.chain, false)}
                   >
+                    <LinearGradient
+                      colors={[Colors.cardHighlight, 'rgba(255, 255, 255, 0.05)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ padding: Spacing.lg, width: '100%', height: '100%' }}
+                    >
                     <View style={styles.fundCardHeader}>
                       <ChainIcon chain={balance.chain.toLowerCase()} size={40} />
                       <View style={styles.fundCardInfo}>
@@ -583,62 +1015,69 @@ export default function ProductionWalletScreen({ navigation }: any) {
                       </View>
                     </View>
                     
-                    <SparklineGraph isPositive={isPositive} />
+                    <SparklineGraph isPositive={isPositive} priceHistory={priceHistory} />
                     
                     <View style={styles.fundCardValue}>
-                      <Text style={styles.fundCardAmount}>${balance.balanceUSD.toFixed(2)}</Text>
-                      <View style={styles.fundCardPerformance}>
-                        <Text style={[
-                          styles.fundCardChange,
-                          { color: isPositive ? Colors.success : Colors.error }
-                        ]}>
-                          {isPositive ? '+' : ''}{mockChange.toFixed(2)}
-                        </Text>
-                        <Text style={[
-                          styles.fundCardChangePercent,
-                          { color: isPositive ? Colors.success : Colors.error }
-                        ]}>
-                          {isPositive ? '+' : ''}{mockChangePercent.toFixed(2)}%
-                        </Text>
-                      </View>
+                      <Text style={styles.fundCardAmount}>
+                        {currentPrice > 0 
+                          ? currentPrice >= 1 
+                            ? `$${currentPrice.toFixed(2)}` 
+                            : `$${currentPrice.toFixed(4)}`
+                          : '$0.00'}
+                      </Text>
                     </View>
+                    </LinearGradient>
                   </TouchableOpacity>
                 );
               })}
 
               {/* Favorite tokens (quick access charts) */}
-              {favoriteTokens.map((fav, index) => (
-                <TouchableOpacity
-                  key={`${fav.chain}-${fav.symbol}-${index}`}
-                  style={styles.fundCard}
-                  onPress={() =>
-                    (navigation as any).navigate('TokenChart', {
-                      symbol: fav.symbol,
-                      name: fav.chain,
-                    })
-                  }
-                >
-                  <View style={styles.fundCardHeader}>
-                    <ChainIcon chain={fav.chain.toLowerCase()} size={40} />
-                    <View style={styles.fundCardInfo}>
-                      <Text style={styles.fundCardName}>{fav.chain}</Text>
-                      <Text style={styles.fundCardTicker}>{fav.symbol}</Text>
+              {favoriteTokens.map((fav, index) => {
+                // Get real price data for favorite tokens
+                const favPriceData = tokenPriceData.get(fav.symbol);
+                const favPriceHistory = tokenPriceHistory.get(fav.symbol);
+                const favCurrentPrice = favPriceData?.price || 0;
+                const favIsPositive = favPriceData ? (favPriceData.change24h || 0) >= 0 : true;
+                
+                return (
+                  <TouchableOpacity
+                    key={`${fav.chain}-${fav.symbol}-${index}`}
+                    style={styles.fundCard}
+                    onPress={() =>
+                      (navigation as any).navigate('TokenChart', {
+                        symbol: fav.symbol,
+                        name: fav.chain,
+                      })
+                    }
+                    onLongPress={() => handleCardLongPress(fav.symbol, fav.chain, true)}
+                  >
+                    <LinearGradient
+                      colors={[Colors.cardHighlight, 'rgba(255, 255, 255, 0.05)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ padding: Spacing.lg, width: '100%', height: '100%' }}
+                    >
+                    <View style={styles.fundCardHeader}>
+                      <ChainIcon chain={fav.chain.toLowerCase()} size={40} />
+                      <View style={styles.fundCardInfo}>
+                        <Text style={styles.fundCardName}>{fav.chain}</Text>
+                        <Text style={styles.fundCardTicker}>{fav.symbol}</Text>
+                      </View>
                     </View>
-                  </View>
-                  <SparklineGraph isPositive />
-                  <View style={styles.fundCardValue}>
-                    <Text style={styles.fundCardAmount}>—</Text>
-                    <View style={styles.fundCardPerformance}>
-                      <Text style={[styles.fundCardChange, { color: Colors.textSecondary }]}>
-                        Favorite
-                      </Text>
-                      <Text style={[styles.fundCardChangePercent, { color: Colors.textSecondary }]}>
-                        Tap for chart
+                    <SparklineGraph isPositive={favIsPositive} priceHistory={favPriceHistory} />
+                    <View style={styles.fundCardValue}>
+                      <Text style={styles.fundCardAmount}>
+                        {favCurrentPrice > 0 
+                          ? favCurrentPrice >= 1 
+                            ? `$${favCurrentPrice.toFixed(2)}` 
+                            : `$${favCurrentPrice.toFixed(4)}`
+                          : '—'}
                       </Text>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </ScrollView>
         </Animated.View>
@@ -678,6 +1117,17 @@ export default function ProductionWalletScreen({ navigation }: any) {
               </View>
               <Text style={styles.featureTitle}>NFC Pay</Text>
               <Text style={styles.featureDescription}>Tap to pay</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.featureCard}
+              onPress={() => navigation.navigate('OfflineMeshPayment')}
+            >
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="wifi-outline" size={24} color={Colors.accent} />
+              </View>
+              <Text style={styles.featureTitle}>Offline Pay</Text>
+              <Text style={styles.featureDescription}>No internet</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -739,40 +1189,163 @@ export default function ProductionWalletScreen({ navigation }: any) {
         <View style={styles.tokenModalBackdrop}>
           <View style={styles.tokenModalCard}>
             <View style={styles.tokenModalHeader}>
-              <Text style={styles.tokenModalTitle}>Add favorite token</Text>
-              <TouchableOpacity onPress={() => setShowTokenPicker(false)}>
+              <Text style={styles.tokenModalTitle}>Manage Tokens</Text>
+              <TouchableOpacity onPress={() => {
+                setShowTokenPicker(false);
+                setTokenSearchQuery(''); // Clear search when closing
+              }}>
                 <Ionicons name="close" size={20} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <FlatList
-              data={[
-                ...((KNOWN_TOKENS.ethereum || []).map(t => ({ ...t, chain: 'Ethereum' }))),
-                ...((KNOWN_TOKENS.polygon || []).map(t => ({ ...t, chain: 'Polygon' }))),
-              ]}
-              keyExtractor={(item) => `${item.chain}-${item.symbol}-${item.address}`}
-              renderItem={({ item }) => (
+            
+            {/* Search Input */}
+            <View style={styles.tokenSearchContainer}>
+              <Ionicons name="search" size={20} color={Colors.textSecondary} style={styles.tokenSearchIcon} />
+              <TextInput
+                style={styles.tokenSearchInput}
+                placeholder="Search tokens..."
+                placeholderTextColor={Colors.textSecondary}
+                value={tokenSearchQuery}
+                onChangeText={setTokenSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {tokenSearchQuery.length > 0 && (
                 <TouchableOpacity
-                  style={styles.tokenRow}
-                  onPress={() => {
-                    setFavoriteTokens(prev => {
-                      if (prev.find(p => p.symbol === item.symbol && p.chain === item.chain)) {
-                        return prev;
-                      }
-                      return [...prev, { symbol: item.symbol, chain: item.chain }];
-                    });
-                  }}
+                  onPress={() => setTokenSearchQuery('')}
+                  style={styles.tokenSearchClear}
                 >
-                  <View style={styles.tokenRowLeft}>
-                    <ChainIcon chain={item.chain.toLowerCase()} size={28} />
-                    <View>
-                      <Text style={styles.tokenRowSymbol}>{item.symbol}</Text>
-                      <Text style={styles.tokenRowChain}>{item.chain}</Text>
-                    </View>
-                  </View>
-                  <Ionicons name="star-outline" size={20} color={Colors.textSecondary} />
+                  <Ionicons name="close-circle" size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
               )}
-            />
+            </View>
+            
+            {/* Fixed height container for token list */}
+            <View style={styles.tokenListContainer}>
+              <FlatList
+              data={[
+                // Native chain tokens
+                { symbol: 'SOL', chain: 'Solana', address: '' },
+                { symbol: 'BTC', chain: 'Bitcoin', address: '' },
+                { symbol: 'MATIC', chain: 'Polygon', address: '' },
+                { symbol: 'ETH', chain: 'Ethereum', address: '' },
+                { symbol: 'ZEC', chain: 'Zcash', address: '' },
+                { symbol: 'NEAR', chain: 'NEAR', address: '' },
+                { symbol: 'MINA', chain: 'Mina', address: '' },
+                { symbol: 'STRK', chain: 'Starknet', address: '' },
+                // ERC-20 tokens from Ethereum
+                ...((KNOWN_TOKENS.ethereum || []).map(t => ({ ...t, chain: 'Ethereum' }))),
+                // ERC-20 tokens from Polygon
+                ...((KNOWN_TOKENS.polygon || []).map(t => ({ ...t, chain: 'Polygon' }))),
+              ].filter(item => {
+                // Filter based on search query
+                if (!tokenSearchQuery.trim()) return true;
+                const query = tokenSearchQuery.toLowerCase().trim();
+                return (
+                  item.symbol.toLowerCase().includes(query) ||
+                  item.chain.toLowerCase().includes(query)
+                );
+              })}
+              keyExtractor={(item, index) => `${item.chain}-${item.symbol.toUpperCase()}-${item.address || index}`}
+              ListEmptyComponent={
+                <View style={styles.tokenSearchEmpty}>
+                  <Ionicons name="search-outline" size={48} color={Colors.textSecondary} />
+                  <Text style={styles.tokenSearchEmptyText}>No tokens found</Text>
+                  <Text style={styles.tokenSearchEmptySubtext}>Try searching with a different term</Text>
+                </View>
+              }
+              renderItem={({ item }) => {
+                // Check if token is favorited
+                const isFavorite = favoriteTokens.some(
+                  fav => fav.symbol.toUpperCase() === item.symbol.toUpperCase() && fav.chain === item.chain
+                );
+                
+                // Check if token is displayed on screen (in balances and not hidden)
+                const isDisplayed = balances.some(balance => {
+                  const cardKey = `${balance.symbol.toUpperCase()}-${balance.chain}`;
+                  return balance.symbol.toUpperCase() === item.symbol.toUpperCase() && 
+                         balance.chain === item.chain &&
+                         !hiddenCards.has(cardKey);
+                }) || isFavorite;
+                
+                const handleToggleFavorite = () => {
+                  setFavoriteTokens(prev => {
+                    const existingIndex = prev.findIndex(
+                      p => p.symbol.toUpperCase() === item.symbol.toUpperCase() && p.chain === item.chain
+                    );
+                    
+                    let newFavorites: { symbol: string; chain: string }[];
+                    
+                    if (existingIndex !== -1) {
+                      // Remove from favorites (unfavorite)
+                      newFavorites = prev.filter((_, index) => index !== existingIndex);
+                    } else {
+                      // Add to favorites
+                      newFavorites = [...prev, { symbol: item.symbol, chain: item.chain }];
+                      
+                      // Fetch price data for the newly added favorite token
+                      PriceFeedService.getPrice(item.symbol).then(priceData => {
+                        setTokenPriceData(prev => {
+                          const newMap = new Map(prev);
+                          newMap.set(item.symbol, priceData);
+                          return newMap;
+                        });
+                        
+                        // Fetch historical prices
+                        PriceFeedService.getHistoricalPrices(item.symbol, 1).then(dayData => {
+                          const oneHourAgo = Date.now() - (60 * 60 * 1000);
+                          let historicalPrices = dayData.filter(p => p.timestamp >= oneHourAgo);
+                          if (historicalPrices.length < 5) {
+                            historicalPrices = dayData.slice(-15);
+                          } else {
+                            historicalPrices = historicalPrices.filter((_, index) => index % 3 === 0 || index === historicalPrices.length - 1);
+                          }
+                          
+                          setTokenPriceHistory(prev => {
+                            const newMap = new Map(prev);
+                            newMap.set(item.symbol, historicalPrices);
+                            return newMap;
+                          });
+                        }).catch(err => logger.error(`Failed to fetch historical prices for ${item.symbol}:`, err));
+                      }).catch(err => logger.error(`Failed to fetch price for ${item.symbol}:`, err));
+                    }
+                    
+                    // Save to AsyncStorage
+                    AsyncStorage.setItem('SafeMask_favorite_tokens', JSON.stringify(newFavorites)).catch(err =>
+                      logger.error('Failed to save favorite tokens:', err)
+                    );
+                    
+                    return newFavorites;
+                  });
+                };
+                
+                return (
+                  <TouchableOpacity
+                    style={styles.tokenRow}
+                    onPress={handleToggleFavorite}
+                  >
+                    <View style={styles.tokenRowLeft}>
+                      <ChainIcon chain={item.chain.toLowerCase()} size={28} />
+                      <View>
+                        <Text style={styles.tokenRowSymbol}>{item.symbol}</Text>
+                        <Text style={styles.tokenRowChain}>{item.chain}</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      onPress={handleToggleFavorite}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons 
+                        name={isDisplayed ? "star" : "star-outline"} 
+                        size={24} 
+                        color={isDisplayed ? Colors.warning : Colors.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              }}
+              />
+            </View>
           </View>
         </View>
       </Modal>
@@ -873,8 +1446,17 @@ const styles = StyleSheet.create({
   
   // MY WALLET Section
   walletSection: {
-    paddingHorizontal: Spacing.xl,
+    marginHorizontal: Spacing.xl,
     marginBottom: Spacing['2xl'],
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  walletGradient: {
+    padding: Spacing.xl,
+    paddingTop: Spacing['2xl'],
+    paddingBottom: Spacing['2xl'],
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -965,12 +1547,17 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.xl,
   },
   fundCard: {
-    width: 180,
-    padding: Spacing.lg,
-    backgroundColor: Colors.card,
-    borderRadius: 16,
+    width: 160,
+    marginRight: Spacing.md,
+    borderRadius: 20,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  fundCardGradient: {
+    padding: Spacing.lg,
+    width: '100%',
+    height: '100%',
   },
   addFundCard: {
     width: 100, // Thinner width for Add Funds card
@@ -1105,7 +1692,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing['4xl'],
     borderTopWidth: 1,
     borderColor: Colors.cardBorder,
-    maxHeight: '70%',
+    maxHeight: '85%',
   },
   tokenModalHeader: {
     flexDirection: 'row',
@@ -1117,6 +1704,52 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semibold,
+  },
+  tokenSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.lg,
+    minHeight: 44,
+  },
+  tokenSearchIcon: {
+    marginRight: Spacing.sm,
+  },
+  tokenSearchInput: {
+    flex: 1,
+    fontSize: Typography.fontSize.md,
+    color: Colors.textPrimary,
+    paddingVertical: Spacing.sm,
+  },
+  tokenSearchClear: {
+    marginLeft: Spacing.sm,
+    padding: Spacing.xs,
+  },
+  tokenSearchEmpty: {
+    flex: 1,
+    paddingVertical: Spacing['3xl'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 600,
+  },
+  tokenSearchEmptyText: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.textPrimary,
+    marginTop: Spacing.md,
+  },
+  tokenSearchEmptySubtext: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
+  },
+  tokenListContainer: {
+    height: 800, // Fixed height for consistent UX
+    flexGrow: 0, // Prevent growing beyond fixed height
   },
   tokenRow: {
     flexDirection: 'row',

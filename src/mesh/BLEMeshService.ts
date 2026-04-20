@@ -31,8 +31,13 @@ export class BLEMeshService {
   private manager: any; // Changed from BleManager to any
   private isScanning: boolean = false;
   private discoveredPeers: Map<string, BLEPeer> = new Map();
+  private connectedPeers: Map<string, any> = new Map();
   private scanCallback?: (peer: BLEPeer) => void;
   private isAvailable: boolean = false;
+  private maxConnections: number = 7; // BLE supports ~7 simultaneous connections
+  private scanTimeout?: NodeJS.Timeout;
+  private reconnectAttempts: Map<string, number> = new Map();
+  private maxReconnectAttempts: number = 3;
 
   private constructor() {
     if (BleManager) {
@@ -57,7 +62,7 @@ export class BLEMeshService {
 
   async initialize(): Promise<void> {
     if (!this.isAvailable) {
-      logger.warn('BLE is not available. Skipping initialization.');
+      logger.warn('⚠️ BLE is not available. Skipping initialization.');
       throw new Error('BLE module is not available. Please use a development build.');
     }
 
@@ -73,10 +78,64 @@ export class BLEMeshService {
         throw new Error('Bluetooth is not enabled');
       }
 
-      logger.info('BLE mesh service initialized');
+      // Set up disconnect handler
+      this.setupDisconnectHandler();
+
+      logger.info('✅ BLE mesh service initialized');
     } catch (error) {
       ErrorHandler.handle(error as Error, 'BLE Initialize');
       throw error;
+    }
+  }
+
+  /**
+   * Setup handler for device disconnections
+   */
+  private setupDisconnectHandler(): void {
+    this.manager.onDeviceDisconnected((error: any, device: any) => {
+      if (error) {
+        logger.error('BLE device disconnected with error:', error);
+      }
+      
+      if (device) {
+        logger.info(`Device disconnected: ${device.id}`);
+        this.connectedPeers.delete(device.id);
+        
+        // Attempt to reconnect if not at max attempts
+        const attempts = this.reconnectAttempts.get(device.id) || 0;
+        if (attempts < this.maxReconnectAttempts) {
+          this.attemptReconnect(device.id);
+        }
+      }
+    });
+  }
+
+  /**
+   * Attempt to reconnect to a disconnected peer
+   */
+  private async attemptReconnect(deviceId: string): Promise<void> {
+    const attempts = (this.reconnectAttempts.get(deviceId) || 0) + 1;
+    this.reconnectAttempts.set(deviceId, attempts);
+
+    logger.info(`🔄 Attempting to reconnect to ${deviceId} (attempt ${attempts}/${this.maxReconnectAttempts})`);
+
+    try {
+      // Wait before attempting reconnection
+      await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+      
+      await this.connectToPeer(deviceId);
+      
+      // Reset reconnect counter on success
+      this.reconnectAttempts.delete(deviceId);
+      logger.info(`✅ Successfully reconnected to ${deviceId}`);
+    } catch (error) {
+      logger.error(`❌ Failed to reconnect to ${deviceId}:`, error);
+      
+      if (attempts >= this.maxReconnectAttempts) {
+        logger.warn(`⚠️ Max reconnection attempts reached for ${deviceId}`);
+        this.discoveredPeers.delete(deviceId);
+        this.reconnectAttempts.delete(deviceId);
+      }
     }
   }
 
@@ -115,12 +174,12 @@ export class BLEMeshService {
 
   async startScanning(onPeerFound: (peer: BLEPeer) => void): Promise<void> {
     if (!this.isAvailable) {
-      logger.warn('BLE is not available. Cannot start scanning.');
+      logger.warn('⚠️ BLE is not available. Cannot start scanning.');
       return;
     }
 
     if (this.isScanning) {
-      logger.warn('Already scanning');
+      logger.warn('⚠️ Already scanning');
       return;
     }
 
@@ -129,14 +188,14 @@ export class BLEMeshService {
       this.discoveredPeers.clear();
       this.isScanning = true;
 
-      logger.info('Starting BLE scan...');
+      logger.info('🔍 Starting BLE scan...');
 
       this.manager.startDeviceScan(
         [SERVICE_UUID],
         { allowDuplicates: false },
         (error: any, device: any) => {
           if (error) {
-            logger.error('BLE scan error:', error);
+            logger.error('❌ BLE scan error:', error);
             this.stopScanning();
             return;
           }
@@ -151,7 +210,7 @@ export class BLEMeshService {
 
             if (!this.discoveredPeers.has(device.id)) {
               this.discoveredPeers.set(device.id, peer);
-              logger.info(`Discovered peer: ${device.name} (${device.id})`);
+              logger.info(`✅ Discovered peer: ${device.name} (${device.id})`);
               
               if (this.scanCallback) {
                 this.scanCallback(peer);
@@ -161,7 +220,8 @@ export class BLEMeshService {
         }
       );
 
-      setTimeout(() => {
+      // Auto-stop scan after 30 seconds
+      this.scanTimeout = setTimeout(() => {
         this.stopScanning();
       }, 30000);
     } catch (error) {
@@ -174,14 +234,25 @@ export class BLEMeshService {
   stopScanning(): void {
     if (!this.isAvailable || !this.isScanning) return;
 
+    if (this.scanTimeout) {
+      clearTimeout(this.scanTimeout);
+      this.scanTimeout = undefined;
+    }
+
     this.manager.stopDeviceScan();
     this.isScanning = false;
-    logger.info('BLE scan stopped');
+    logger.info('✅ BLE scan stopped');
   }
 
   async connectToPeer(peerId: string): Promise<void> {
     if (!this.isAvailable) {
       throw new Error('BLE module is not available');
+    }
+
+    // Check connection limit
+    if (this.connectedPeers.size >= this.maxConnections) {
+      logger.warn(`⚠️ Max BLE connections reached (${this.maxConnections}), cannot connect to ${peerId}`);
+      throw new Error('Max BLE connections reached');
     }
 
     try {
@@ -190,14 +261,22 @@ export class BLEMeshService {
         throw new Error('Peer not found');
       }
 
-      logger.info(`Connecting to ${peer.name}...`);
+      logger.info(`🔗 Connecting to ${peer.name}...`);
 
-      const device = await this.manager.connectToDevice(peer.device.id);
+      const device = await this.manager.connectToDevice(peer.device.id, {
+        timeout: 10000, // 10 second timeout
+        requestMTU: 512, // Request larger MTU for better throughput
+      });
+      
       await device.discoverAllServicesAndCharacteristics();
 
-      logger.info(`Connected to ${peer.name}`);
+      // Store connected device
+      this.connectedPeers.set(peerId, device);
+
+      logger.info(`✅ Connected to ${peer.name}`);
       ErrorHandler.success(`Connected to ${peer.name}`);
     } catch (error) {
+      logger.error(`❌ Failed to connect to ${peerId}:`, error);
       ErrorHandler.handle(error as Error, 'BLE Connect');
       throw error;
     }
@@ -256,5 +335,38 @@ export class BLEMeshService {
 
   isBLEAvailable(): boolean {
     return this.isAvailable;
+  }
+
+  /**
+   * Get number of connected peers
+   */
+  getConnectedCount(): number {
+    return this.connectedPeers.size;
+  }
+
+  /**
+   * Check if specific peer is connected
+   */
+  isConnected(peerId: string): boolean {
+    return this.connectedPeers.has(peerId);
+  }
+
+  /**
+   * Get connection statistics
+   */
+  getConnectionStats(): {
+    available: boolean;
+    scanning: boolean;
+    discovered: number;
+    connected: number;
+    maxConnections: number;
+  } {
+    return {
+      available: this.isAvailable,
+      scanning: this.isScanning,
+      discovered: this.discoveredPeers.size,
+      connected: this.connectedPeers.size,
+      maxConnections: this.maxConnections,
+    };
   }
 }

@@ -1,35 +1,10 @@
-/**
- * Zcash Blockchain Adapter
- * 
- * Real Zcash integration with shielded transactions using Sapling and Orchard protocols.
- * 
- * Features:
- * - Sapling shielded transactions (z-addresses)
- * - Orchard protocol support (latest privacy upgrade)
- * - lightwalletd client for blockchain sync
- * - Trial decryption for incoming notes
- * - View keys and full viewing keys
- * - Memo field encryption
- * 
- * Protocol:
- * 1. Generate shielded address (z-addr) with diversifier
- * 2. Create shielded outputs with note commitments
- * 3. Generate zk-SNARK proofs (Spend and Output descriptions)
- * 4. Trial decrypt with viewing key to detect incoming notes
- * 5. Compute nullifiers to prevent double-spending
- * 
- * lightwalletd: https://github.com/zcash/lightwalletd
- */
-
-/* eslint-disable @typescript-eslint/no-unused-vars, no-console */
-
 import { BaseAdapter, TransactionStatus, BlockchainEvent } from './adapter';
 import { Balance, TransactionRequest, Address, ZKProof } from '../types';
 import { CryptoUtils } from '../utils/crypto';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { randomBytes } from '@noble/hashes/utils';
 import { secp256k1 } from '@noble/curves/secp256k1';
-import { blake2b } from '@noble/hashes/blake2b';
+import { blake2b } from '@noble/hashes/blake2';
 
 // ============================================================================
 // Zcash Protocol Types

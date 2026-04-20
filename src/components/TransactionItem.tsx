@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../design/colors';
 import { Typography } from '../design/typography';
@@ -14,36 +14,25 @@ interface TransactionItemProps {
   time: string;
   color: string;
   isPrivate?: boolean;
-  confirmations?: number;
 }
 
-const getIcon = (type: string) => {
+const getIconName = (type: string) => {
   switch (type) {
-    case 'send':
-      return 'send';
-    case 'receive':
-      return 'arrow-back';
-    case 'swap':
-      return 'swap-horizontal';
-    case 'nfc':
-      return 'phone-portrait';
-    default:
-      return 'help-circle';
+    case 'send': return 'arrow-up';
+    case 'receive': return 'arrow-down';
+    case 'swap': return 'swap-horizontal';
+    case 'nfc': return 'radio-outline';
+    default: return 'help';
   }
 };
 
-const getTitle = (type: string, token: string) => {
+const getIconColor = (type: string) => {
   switch (type) {
-    case 'send':
-      return `Sent ${token}`;
-    case 'receive':
-      return `Received ${token}`;
-    case 'swap':
-      return `Swapped MATIC`;
-    case 'nfc':
-      return 'NFC Payment';
-    default:
-      return 'Transaction';
+    case 'send': return Colors.textSecondary;
+    case 'receive': return Colors.success;
+    case 'swap': return Colors.primary;
+    case 'nfc': return Colors.secondary;
+    default: return Colors.textMuted;
   }
 };
 
@@ -51,122 +40,77 @@ export default function TransactionItem({
   type,
   token,
   amount,
-  address,
-  description,
   time,
-  color,
-  isPrivate = false,
-  confirmations = 0,
+  isPrivate,
 }: TransactionItemProps) {
-  const isNegative = amount.startsWith('-');
+  const iconName = getIconName(type);
+  const iconColor = getIconColor(type);
+  const isPositive = type === 'receive';
 
   return (
-    <TouchableOpacity style={styles.item} activeOpacity={0.8}>
-      <View style={styles.left}>
-        <View style={[styles.iconContainer, { backgroundColor: color }]}>
-          <Ionicons name={getIcon(type)} size={20} color="#ffffff" />
-        </View>
-        <View>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>{getTitle(type, token)}</Text>
-            {isPrivate && (
-              <View style={styles.privacyBadge}>
-                <Ionicons name="lock-closed" size={12} color={Colors.accent} />
-                <Text style={styles.privacyBadgeText}>Private</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.subtitle}>
-            {description || (address ? `${type === 'send' ? 'To' : 'From'}: ${address}` : '')}
+    <View style={styles.container}>
+      <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+        <Ionicons name={iconName} size={20} color={iconColor} />
+      </View>
+
+      <View style={styles.content}>
+        <View style={styles.row}>
+          <Text style={styles.title}>
+            {type === 'send' ? 'Sent' : type === 'receive' ? 'Received' : type === 'swap' ? 'Swapped' : 'NFC Payment'} {token}
+          </Text>
+          <Text style={[styles.amount, { color: isPositive ? Colors.success : Colors.text }]}>
+            {isPositive ? '+' : '-'}{amount} {token}
           </Text>
         </View>
+
+        <View style={styles.row}>
+          <Text style={styles.subtitle}>{time} • {isPrivate ? 'Shielded' : 'Public'}</Text>
+          {isPrivate && (
+             <Ionicons name="shield-checkmark" size={12} color={Colors.textTertiary} />
+          )}
+        </View>
       </View>
-      <View style={styles.right}>
-        <Text style={[styles.amount, isNegative ? styles.negative : styles.positive]}>
-          {amount} {token}
-        </Text>
-        <Text style={styles.time}>{time}</Text>
-        {confirmations > 0 && (
-          <Text style={styles.confirmations}>✓ {confirmations} conf</Text>
-        )}
-      </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  item: {
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.03)',
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing.lg,
-  },
-  left: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    flex: 1,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
   },
   title: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.textPrimary,
-  },
-  privacyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    backgroundColor: Colors.accentLight,
-    borderRadius: 8,
-  },
-  privacyBadgeText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.accent,
-    fontWeight: Typography.fontWeight.medium,
-  },
-  subtitle: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-    lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
-  },
-  right: {
-    alignItems: 'flex-end',
-    marginLeft: Spacing.md,
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.medium,
+    color: Colors.text,
   },
   amount: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.bold,
-    marginBottom: Spacing.xs,
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.semibold,
   },
-  positive: {
-    color: Colors.success,
-  },
-  negative: {
-    color: Colors.error,
-  },
-  time: {
-    fontSize: Typography.fontSize.xs,
+  subtitle: {
+    fontSize: Typography.size.xs,
     color: Colors.textTertiary,
-  },
-  confirmations: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.success,
-    marginTop: Spacing.xs,
-    fontWeight: Typography.fontWeight.medium,
   },
 });

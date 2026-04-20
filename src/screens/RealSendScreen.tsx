@@ -16,6 +16,7 @@ import {
   Linking,
   Switch,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -1076,6 +1077,12 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
           <View style={styles.amountCard}>
+          <LinearGradient
+            colors={[Colors.card, 'rgba(20, 96, 247, 0.05)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.amountCardGradient}
+          >
             <TextInput
               style={styles.amountInput}
               placeholder="0.00"
@@ -1085,6 +1092,7 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
               keyboardType="decimal-pad"
             />
             <Text style={styles.amountSymbol}>{selectedChain.symbol}</Text>
+          </LinearGradient>
           </View>
         </View>
 
@@ -1145,10 +1153,17 @@ const RealSendScreen: React.FC<Props> = ({ navigation, route }) => {
         {/* Gas Estimate */}
         {parseFloat(gasEstimate) > 0 && (
           <View style={styles.gasCard}>
+          <LinearGradient
+            colors={[Colors.card, 'rgba(239, 80, 175, 0.05)']} // Pink accent for gas
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gasCardGradient}
+          >
             <Text style={styles.gasLabel}>Estimated Gas Fee</Text>
             <Text style={styles.gasValue}>
               {parseFloat(gasEstimate).toFixed(6)} {selectedChain.symbol}
             </Text>
+          </LinearGradient>
           </View>
         )}
 
@@ -1501,10 +1516,14 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.bold,
   },
   amountCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
+    padding: 0,
+    overflow: 'hidden',
+  },
+  amountCardGradient: {
     padding: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1527,11 +1546,15 @@ const styles = StyleSheet.create({
   gasCard: {
     marginHorizontal: Spacing.xl,
     marginBottom: Spacing.lg,
-    padding: Spacing.lg,
-    backgroundColor: Colors.card,
+    padding: 0,
+    backgroundColor: 'transparent',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+  },
+  gasCardGradient: {
+    padding: Spacing.lg,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

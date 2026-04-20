@@ -11,7 +11,7 @@ if (typeof global.process === 'undefined') {
   global.process = {
     env: { NODE_ENV: 'production' },
     version: '',
-    nextTick: (fn: Function) => setTimeout(fn, 0),
+    nextTick: (fn: () => void) => setTimeout(fn, 0),
   };
 }
 

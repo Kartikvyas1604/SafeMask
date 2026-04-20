@@ -1,5 +1,5 @@
 import { randomBytes } from '@noble/hashes/utils';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { Buffer } from '@craftzdog/react-native-buffer';
 import * as logger from '../utils/logger';
 

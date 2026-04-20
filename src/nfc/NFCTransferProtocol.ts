@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 import { Buffer } from '@craftzdog/react-native-buffer';
-import { blake2b } from '@noble/hashes/blake2b';
+import { blake2b } from '@noble/hashes/blake2';
 import { ed25519 } from '@noble/curves/ed25519';
 import { randomBytes as cryptoRandomBytes } from '@noble/hashes/utils';
 

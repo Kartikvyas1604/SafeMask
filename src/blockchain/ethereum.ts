@@ -26,7 +26,7 @@ const ERC20_ABI = [
 ];
 
 export interface EthereumConfig {
-  network: 'mainnet' | 'testnet' | 'polygon' | 'arbitrum' | 'optimism';
+  network: 'mainnet' | 'testnet' | 'polygon' | 'arbitrum' | 'optimism' | 'base' | 'bsc';
   rpcUrl?: string;
   infuraKey?: string;
   alchemyKey?: string;
@@ -72,6 +72,10 @@ export class EthereumAdapter extends BaseAdapter {
         return 'https://arb1.arbitrum.io/rpc';
       case 'optimism':
         return 'https://mainnet.optimism.io';
+      case 'base':
+        return 'https://mainnet.base.org';
+      case 'bsc':
+        return 'https://bsc-dataseed.binance.org';
       default:
         throw new Error(`Unsupported network: ${network}`);
     }

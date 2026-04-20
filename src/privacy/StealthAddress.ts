@@ -1,5 +1,5 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { Buffer } from '@craftzdog/react-native-buffer';
 import { ethers } from 'ethers';
 import * as logger from '../utils/logger';

@@ -1,6 +1,7 @@
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 import { ErrorHandler } from '../utils/errorHandler';
 import * as logger from '../utils/logger';
+import { NFCPaymentService, PaymentCardInfo } from './NFCPaymentService';
 
 export interface NFCTransaction {
   to: string;
@@ -14,8 +15,11 @@ export interface NFCTransaction {
 export class NFCService {
   private static instance: NFCService;
   private isInitialized: boolean = false;
+  private paymentService: NFCPaymentService;
 
-  private constructor() {}
+  private constructor() {
+    this.paymentService = NFCPaymentService.getInstance();
+  }
 
   static getInstance(): NFCService {
     if (!NFCService.instance) {
@@ -179,9 +183,46 @@ export class NFCService {
     }
   }
 
+  /**
+   * Read payment card using react-native-nfc-payment
+   * Android only - reads EMV payment cards
+   */
+  async readPaymentCard(): Promise<PaymentCardInfo | null> {
+    try {
+      if (!this.paymentService.isSupported()) {
+        throw new Error('Payment card reading is only available on Android');
+      }
+
+      const cardInfo = await this.paymentService.registerTagEvent({
+        contactLess: true,
+        readAllAids: true,
+        readTransactions: true,
+        removeDefaultParsers: false,
+        readAt: true,
+      });
+
+      return cardInfo;
+    } catch (error) {
+      logger.error('NFC payment card read error:', error);
+      ErrorHandler.handle(error as Error, 'NFC Payment Card Read');
+      return null;
+    } finally {
+      // Always unregister after reading
+      await this.paymentService.unregisterTagEvent();
+    }
+  }
+
+  /**
+   * Check if payment card reading is supported
+   */
+  isPaymentCardSupported(): boolean {
+    return this.paymentService.isSupported();
+  }
+
   async cleanup(): Promise<void> {
     try {
       await NfcManager.cancelTechnologyRequest();
+      await this.paymentService.cleanup();
       this.isInitialized = false;
     } catch (error) {
       logger.error('NFC cleanup error:', error);

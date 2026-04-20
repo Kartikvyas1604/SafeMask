@@ -174,6 +174,7 @@ export const STORAGE_KEYS = {
   DARK_MODE: '@SafeMask:dark_mode',
   RECENT_ADDRESSES: '@SafeMask:recent_addresses',
   CUSTOM_TOKENS: '@SafeMask:custom_tokens',
+  USERNAME: '@SafeMask:username',
 } as const;
 
 export const API_ENDPOINTS = {

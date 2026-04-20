@@ -8,6 +8,7 @@ import * as logger from '../utils/logger';
 import { SafeMaskWalletCore } from '../core/ZetarisWalletCore';
 import { FusionPlusClient } from '../fusion/FusionPlusClient';
 import MeshNetworkProtocol from '../mesh/MeshNetworkProtocol';
+import BLEMeshBridge from '../mesh/BLEMeshBridge';
 import NFCProtocol from '../nfc/NFCProtocol';
 import PrivacyMixer from '../privacy/PrivacyMixer';
 import MPCKeySharding from '../crypto/MPCKeySharding';
@@ -86,6 +87,7 @@ export class PrivacyWalletSDK {
   private wallet: SafeMaskWalletCore;
   private fusion?: FusionPlusClient;
   private mesh?: MeshNetworkProtocol;
+  private bleMeshBridge?: BLEMeshBridge;
   private nfc?: NFCProtocol;
   private mixer?: PrivacyMixer;
   private mpc?: MPCKeySharding;
@@ -134,6 +136,15 @@ export class PrivacyWalletSDK {
         this.mesh = new MeshNetworkProtocol();
         await this.mesh.start();
         logger.info('✅ Mesh Network initialized');
+
+        // Initialize BLE bridge for offline Bluetooth mesh when available
+        try {
+          this.bleMeshBridge = new BLEMeshBridge(this.mesh);
+          await this.bleMeshBridge.initialize();
+          logger.info('✅ BLE Mesh Bridge initialized');
+        } catch (error) {
+          logger.warn('⚠️ Failed to initialize BLE Mesh Bridge (continuing without BLE mesh)', error);
+        }
       }
 
       // Initialize NFC

@@ -1,339 +1,436 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
-  Switch,
+  StyleSheet,
+  Animated,
+  StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import meshNetwork, { Peer } from '../mesh/MeshNetwork';
+import { Colors } from '../design/colors';
+import { Typography } from '../design/typography';
+import { Spacing } from '../design/spacing';
 
-export default function MeshNetworkScreen() {
-  const insets = useSafeAreaInsets();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [peers, setPeers] = useState<Peer[]>([]);
-  const [stats, setStats] = useState({
-    nodeId: '',
-    peers: 0,
-    offlineQueue: 0,
-    messageCache: 0,
-    isOnline: false,
-  });
-  const [isDiscovering, setIsDiscovering] = useState(false);
-
-  // Memoize functions to prevent re-creation on every render
-  const loadPeers = useCallback(() => {
-    const peerList = meshNetwork.getPeers();
-    setPeers(peerList);
-  }, []);
-
-  const loadStats = useCallback(() => {
-    const networkStats = meshNetwork.getNetworkStats();
-    setStats(networkStats);
-  }, []);
-
-  const initializeMesh = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      await meshNetwork.initialize();
-      loadPeers();
-      loadStats();
-    } catch (error) {
-      console.error('Mesh initialization failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadPeers, loadStats]);
+const RadarView = ({ online }: { online: boolean }) => {
+  const pulseAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    let isMounted = true;
-    let updateTimeout: NodeJS.Timeout | null = null;
-
-    // Debounce peer/stats updates to prevent excessive re-renders
-    const debouncedUpdate = () => {
-      if (updateTimeout) clearTimeout(updateTimeout);
-      updateTimeout = setTimeout(() => {
-        if (isMounted) {
-          loadPeers();
-          loadStats();
-        }
-      }, 300); // 300ms debounce
-    };
-
-    const onPeerDiscovered = () => {
-      if (isMounted) debouncedUpdate();
-    };
-
-    const onPeerConnected = () => {
-      if (isMounted) debouncedUpdate();
-    };
-
-    const onPeerDisconnected = () => {
-      if (isMounted) debouncedUpdate();
-    };
-
-    const onNetworkStatus = () => {
-      if (isMounted) loadStats();
-    };
-
-    initializeMesh();
-
-    meshNetwork.on('peer:discovered', onPeerDiscovered);
-    meshNetwork.on('peer:connected', onPeerConnected);
-    meshNetwork.on('peer:disconnected', onPeerDisconnected);
-    meshNetwork.on('network:status', onNetworkStatus);
-
-    return () => {
-      isMounted = false;
-      if (updateTimeout) clearTimeout(updateTimeout);
-      meshNetwork.off('peer:discovered', onPeerDiscovered);
-      meshNetwork.off('peer:connected', onPeerConnected);
-      meshNetwork.off('peer:disconnected', onPeerDisconnected);
-      meshNetwork.off('network:status', onNetworkStatus);
-    };
-  }, [initializeMesh, loadPeers, loadStats]);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await Promise.all([
-        new Promise(resolve => { loadPeers(); resolve(null); }),
-        new Promise(resolve => { loadStats(); resolve(null); })
-      ]);
-    } finally {
-      setIsRefreshing(false);
+    if (online) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(0);
     }
-  }, [loadPeers, loadStats]);
-
-  const handleDiscoverPeers = useCallback(async () => {
-    if (isDiscovering) return; // Prevent multiple simultaneous discoveries
-    
-    try {
-      setIsDiscovering(true);
-      await meshNetwork.discoverPeers();
-      loadPeers();
-      loadStats();
-    } catch (error) {
-      console.error('Peer discovery failed:', error);
-    } finally {
-      setIsDiscovering(false);
-    }
-  }, [isDiscovering, loadPeers, loadStats]);
-
-  const handleToggleNetwork = useCallback((enabled: boolean) => {
-    try {
-      meshNetwork.setNetworkStatus(enabled);
-      loadStats();
-
-      if (enabled) {
-        meshNetwork.processOfflineQueue();
-      }
-    } catch (error) {
-      console.error('Failed to toggle network:', error);
-    }
-  }, [loadStats]);
-
-  const handleSync = useCallback(async (peerId: string) => {
-    try {
-      await meshNetwork.syncWithPeer(peerId);
-    } catch (error) {
-      console.error('Sync failed:', error);
-    }
-  }, []);
-
-  const formatNodeId = (nodeId: string) => {
-    return nodeId.substring(0, 8) + '...' + nodeId.substring(nodeId.length - 8);
-  };
-
-  const formatLastSeen = (timestamp: number) => {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    if (seconds < 60) return `${seconds}s ago`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    return `${Math.floor(seconds / 3600)}h ago`;
-  };
-
-  const getProtocolColor = (protocol: string) => {
-    switch (protocol) {
-      case 'ble':
-        return '#3b82f6';
-      case 'wifi':
-        return '#10b981';
-      case 'lora':
-        return '#f59e0b';
-      default:
-        return '#6b7280';
-    }
-  };
-
-  const getReputationColor = (reputation: number) => {
-    if (reputation >= 80) return '#10b981';
-    if (reputation >= 50) return '#f59e0b';
-    return '#ef4444';
-  };
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#0a0a0f', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#00d4ff" />
-        <Text style={{ color: '#9ca3af', marginTop: 16, fontSize: 14 }}>
-          Initializing mesh network...
-        </Text>
-      </View>
-    );
-  }
+  }, [online]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0a0a0f', paddingTop: insets.top }}>
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#00d4ff" />
-        }
+    <View style={styles.radarContainer}>
+      <View style={[styles.ring, { width: 200, height: 200, opacity: 0.1 }]} />
+      <View style={[styles.ring, { width: 140, height: 140, opacity: 0.2 }]} />
+      <View style={[styles.ring, { width: 80, height: 80, opacity: 0.3 }]} />
+      
+      {online && (
+        <Animated.View
+          style={[
+            styles.ring,
+            {
+              width: 200,
+              height: 200,
+              borderColor: Colors.primary,
+              opacity: pulseAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.5, 0],
+              }),
+              transform: [{
+                scale: pulseAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.4, 1.2],
+                }),
+              }],
+              position: 'absolute',
+            },
+          ]}
+        />
+      )}
+
+      <View style={[styles.centerNode, online ? styles.nodeOnline : styles.nodeOffline]}>
+        <Ionicons name={online ? "radio" : "cloud-offline"} size={32} color={Colors.white} />
+      </View>
+    </View>
+  );
+};
+
+const PeerItem = ({ peer }: { peer: Peer }) => (
+  <View style={styles.peerItem}>
+    <View style={styles.peerAvatar}>
+      <Text style={styles.peerInitial}>{peer.id ? peer.id.substring(0, 2).toUpperCase() : '??'}</Text>
+      <View style={[styles.statusDot, { backgroundColor: peer.isConnected ? Colors.success : Colors.textMuted }]} />
+    </View>
+    <View style={styles.peerInfo}>
+      <Text style={styles.peerId}>{peer.id ? peer.id.substring(0, 8) + '...' : 'Unknown Peer'}</Text>
+      <View style={styles.peerMeta}>
+        <Ionicons name={peer.protocol === 'ble' ? "bluetooth" : "wifi"} size={12} color={Colors.info} />
+        <Text style={styles.peerMetaText}>{peer.protocol.toUpperCase()} • {peer.latency}ms</Text>
+      </View>
+    </View>
+    <TouchableOpacity style={styles.actionButton}>
+      <Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.textSecondary} />
+    </TouchableOpacity>
+  </View>
+);
+
+export default function MeshNetworkScreen() {
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [peers, setPeers] = useState<Peer[]>([]);
+  const [stats, setStats] = useState({ 
+    isOnline: false,
+    connectedPeers: 0,
+    latency: 0,
+    uptime: '0%' 
+  });
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const addLog = (msg: string) => {
+    const time = new Date().toLocaleTimeString();
+    setLogs(prev => [`[${time}] ${msg}`, ...prev].slice(0, 5));
+  };
+
+  const updateNetworkStatus = () => {
+    const networkStats = meshNetwork.getNetworkStats();
+    setStats({
+      isOnline: networkStats.isOnline,
+      connectedPeers: networkStats.connectedPeers,
+      latency: networkStats.averageLatency,
+      uptime: '99%' 
+    });
+  };
+
+  useEffect(() => {
+    // Initial status
+    updateNetworkStatus();
+
+    // Event listeners
+    const onNetworkReady = () => {
+      updateNetworkStatus();
+      addLog('Network initialized and ready');
+    };
+    
+    const onPeerConnected = (peer: Peer) => {
+      updateNetworkStatus();
+      setPeers(prev => {
+        const filtered = prev.filter(p => p.id !== peer.id);
+        return [peer, ...filtered];
+      });
+      addLog(`Peer connected: ${peer.id.substring(0, 8)}`);
+    };
+
+    const onPeerDisconnected = (peer: Peer) => {
+      updateNetworkStatus();
+      setPeers(prev => prev.map(p => p.id === peer.id ? { ...p, isConnected: false } : p));
+      addLog(`Peer disconnected: ${peer.id.substring(0, 8)}`);
+    };
+
+    meshNetwork.on('network:ready', onNetworkReady);
+    meshNetwork.on('peer:connected', onPeerConnected);
+    meshNetwork.on('peer:disconnected', onPeerDisconnected);
+
+    meshNetwork.discoverPeers().then(foundPeers => {
+      setPeers(foundPeers);
+      updateNetworkStatus();
+      if(foundPeers.length > 0) {
+        addLog(`Discovered ${foundPeers.length} peers nearby`);
+      }
+    });
+
+    return () => {
+      meshNetwork.off('network:ready', onNetworkReady);
+      meshNetwork.off('peer:connected', onPeerConnected);
+      meshNetwork.off('peer:disconnected', onPeerDisconnected);
+    };
+  }, []);
+
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await meshNetwork.discoverPeers();
+    updateNetworkStatus();
+    setIsRefreshing(false);
+  };
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="light-content" />
+      
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color={Colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Mesh Network</Text>
+        <TouchableOpacity style={styles.settingsButton}>
+          <Ionicons name="settings-outline" size={24} color={Colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
-        <View style={{ padding: 16 }}>
-          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-            <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '600', marginBottom: 16 }}>
-              Node Status
-            </Text>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text style={{ color: '#9ca3af', fontSize: 14 }}>Node ID</Text>
-              <Text style={{ color: '#00d4ff', fontSize: 14, fontFamily: 'monospace' }}>
-                {formatNodeId(stats.nodeId)}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text style={{ color: '#9ca3af', fontSize: 14 }}>Network Status</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: stats.isOnline ? '#10b981' : '#ef4444', fontSize: 14, marginRight: 8 }}>
-                  {stats.isOnline ? 'Online' : 'Offline'}
-                </Text>
-                <Switch
-                  value={stats.isOnline}
-                  onValueChange={handleToggleNetwork}
-                  trackColor={{ false: '#374151', true: '#00d4ff' }}
-                  thumbColor="#ffffff"
-                />
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text style={{ color: '#9ca3af', fontSize: 14 }}>Connected Peers</Text>
-              <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>{stats.peers}</Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text style={{ color: '#9ca3af', fontSize: 14 }}>Offline Queue</Text>
-              <Text style={{ color: stats.offlineQueue > 0 ? '#f59e0b' : '#10b981', fontSize: 14, fontWeight: '600' }}>
-                {stats.offlineQueue}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ color: '#9ca3af', fontSize: 14 }}>Message Cache</Text>
-              <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>{stats.messageCache}</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleDiscoverPeers}
-            disabled={isDiscovering}
-            style={{
-              backgroundColor: isDiscovering ? '#374151' : '#00d4ff',
-              borderRadius: 12,
-              padding: 16,
-              alignItems: 'center',
-              marginBottom: 24,
-            }}
-          >
-            {isDiscovering ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={{ color: isDiscovering ? '#9ca3af' : '#0a0a0f', fontSize: 16, fontWeight: '600' }}>
-                Discover Peers
-              </Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={{ marginBottom: 16 }}>
-            <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '600', marginBottom: 12 }}>
-              Connected Peers ({peers.length})
-            </Text>
-
-            {peers.length === 0 ? (
-              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 24, alignItems: 'center' }}>
-                <Text style={{ color: '#6b7280', fontSize: 14 }}>No peers connected</Text>
-                <Text style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>
-                  Tap "Discover Peers" to find nearby nodes
-                </Text>
-              </View>
-            ) : (
-              peers.map((peer) => (
-                <View
-                  key={peer.id}
-                  style={{
-                    backgroundColor: '#1a1a2e',
-                    borderRadius: 12,
-                    padding: 16,
-                    marginBottom: 12,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
-                      {formatNodeId(peer.id)}
-                    </Text>
-                    <View
-                      style={{
-                        backgroundColor: getProtocolColor(peer.protocol),
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 6,
-                      }}
-                    >
-                      <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>
-                        {peer.protocol.toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text style={{ color: '#9ca3af', fontSize: 14 }}>Latency</Text>
-                    <Text style={{ color: '#ffffff', fontSize: 14 }}>{peer.latency}ms</Text>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text style={{ color: '#9ca3af', fontSize: 14 }}>Reputation</Text>
-                    <Text style={{ color: getReputationColor(peer.reputation), fontSize: 14, fontWeight: '600' }}>
-                      {peer.reputation}/100
-                    </Text>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <Text style={{ color: '#9ca3af', fontSize: 14 }}>Last Seen</Text>
-                    <Text style={{ color: '#ffffff', fontSize: 14 }}>{formatLastSeen(peer.lastSeen)}</Text>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={() => handleSync(peer.id)}
-                    style={{
-                      backgroundColor: '#374151',
-                      borderRadius: 8,
-                      padding: 12,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ color: '#00d4ff', fontSize: 14, fontWeight: '600' }}>Sync</Text>
-                  </TouchableOpacity>
-                </View>
-              ))
-            )}
+        <View style={styles.radarSection}>
+          <RadarView online={stats.isOnline} />
+          <View style={styles.statusBadge}>
+            <View style={[styles.statusDot, { backgroundColor: stats.isOnline ? Colors.success : Colors.error }]} />
+            <Text style={styles.statusText}>{stats.isOnline ? 'Network Active' : 'Offline'}</Text>
           </View>
         </View>
+
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats.connectedPeers}</Text>
+            <Text style={styles.statLabel}>Active Peers</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats.uptime}</Text>
+            <Text style={styles.statLabel}>Uptime</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats.latency}ms</Text>
+            <Text style={styles.statLabel}>Latency</Text>
+          </View>
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Nearby Nodes</Text>
+          <TouchableOpacity onPress={onRefresh}>
+            <Text style={styles.sectionLink}>Scan</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.peerList}>
+          {peers.length === 0 ? (
+            <Text style={styles.emptyText}>No peers found. Pull to scan.</Text>
+          ) : (
+            peers.map((peer, i) => (
+              <PeerItem key={i} peer={peer} />
+            ))
+          )}
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Network Activity</Text>
+        </View>
+        
+        <View style={styles.activityLog}>
+          {logs.length === 0 ? (
+            <Text style={styles.logText}>Waiting for network events...</Text>
+          ) : (
+            logs.map((log, i) => (
+              <Text key={i} style={styles.logText}>{log}</Text>
+            ))
+          )}
+        </View>
+
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.screenPadding,
+    paddingBottom: Spacing.md,
+  },
+  backButton: { padding: Spacing.sm },
+  settingsButton: { padding: Spacing.sm },
+  headerTitle: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text,
+  },
+  scrollContent: { paddingBottom: Spacing['4xl'] },
+  radarSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['3xl'],
+    marginBottom: Spacing.lg,
+  },
+  radarContainer: {
+    width: 240,
+    height: 240,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ring: {
+    position: 'absolute',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 999,
+  },
+  centerNode: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+  },
+  nodeOnline: {
+    backgroundColor: Colors.primary,
+  },
+  nodeOffline: {
+    backgroundColor: Colors.textMuted,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.cardHighlight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Spacing.radius.round,
+    marginTop: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: {
+    color: Colors.textSecondary,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.medium,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.screenPadding,
+    marginBottom: Spacing['2xl'],
+    gap: Spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderRadius: Spacing.radius.lg,
+    padding: Spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  statValue: {
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: Typography.size.xs,
+    color: Colors.textTertiary,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.screenPadding,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.text,
+  },
+  sectionLink: {
+    color: Colors.primary,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.medium,
+  },
+  peerList: {
+    paddingHorizontal: Spacing.screenPadding,
+    marginBottom: Spacing['2xl'],
+    gap: Spacing.md,
+  },
+  peerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    padding: Spacing.md,
+    borderRadius: Spacing.radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    marginBottom: Spacing.xs,
+  },
+  peerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.cardHighlight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    marginRight: Spacing.md,
+  },
+  peerInitial: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.textSecondary,
+  },
+  peerInfo: { flex: 1 },
+  peerId: {
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.semibold,
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  peerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  peerMetaText: {
+    fontSize: Typography.size.xs,
+    color: Colors.textTertiary,
+  },
+  actionButton: { padding: Spacing.sm },
+  activityLog: {
+    marginHorizontal: Spacing.screenPadding,
+    padding: Spacing.md,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: Spacing.radius.md,
+    borderLeftWidth: 2,
+    borderLeftColor: Colors.textMuted,
+  },
+  logText: {
+    fontFamily: Typography.fontFamily.mono,
+    fontSize: Typography.size.xs,
+    color: Colors.textMuted,
+    marginBottom: 4,
+  },
+  emptyText: {
+    color: Colors.textMuted,
+    textAlign: 'center',
+    padding: Spacing.lg,
+  },
+});

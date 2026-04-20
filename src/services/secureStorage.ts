@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { pbkdf2 } from '@noble/hashes/pbkdf2';
 import { randomBytes as nobleRandomBytes } from '@noble/hashes/utils';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { CryptoUtils } from '../utils/crypto';
 import * as Keychain from 'react-native-keychain';
 

@@ -4,7 +4,7 @@
  */
 
 import { ethers } from 'ethers';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { randomBytes } from '@noble/hashes/utils';
 import { Buffer } from '@craftzdog/react-native-buffer';
 import * as logger from '../utils/logger';

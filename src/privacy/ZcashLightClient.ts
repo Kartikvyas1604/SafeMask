@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { Buffer } from '@craftzdog/react-native-buffer';
-import { blake2b } from '@noble/hashes/blake2b';
+import { blake2b } from '@noble/hashes/blake2';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ZcashSaplingWallet, SaplingNote, SaplingTransaction } from './ZcashSaplingWallet';
 
